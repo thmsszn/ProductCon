@@ -1,0 +1,4 @@
+Pillow>=10.1
+numpy>=1.24
+# Optional für --remove-bg ai (KI-Freistellung von Fotos):
+# rembg[cpu]>=2.0

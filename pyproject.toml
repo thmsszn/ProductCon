@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "productcon"
+version = "1.0.0"
+description = "Setzt Bilder/Icons einheitlich auf einen Military-Hintergrund (Produktbilder)."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["Pillow>=10.1", "numpy>=1.24"]
+
+[project.optional-dependencies]
+ai = ["rembg[cpu]>=2.0"]
+dev = ["pytest"]
+
+[project.scripts]
+productcon = "productcon.cli:main"
+
+[tool.setuptools]
+packages = ["productcon"]
+
+[tool.setuptools.package-data]
+productcon = ["fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
