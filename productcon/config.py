@@ -27,7 +27,8 @@ class Settings:
     frame: bool = True
 
     # Produkt
-    scale: float = 0.8              # Anteil der Produktfläche, den das Motiv füllt
+    scale: float = 0.8              # Grundgröße des Motivs, Anteil der Produktfläche (0..1)
+    auto_scale: bool = True         # alle Motive gleich groß wirken lassen (lange größer, kompakte kleiner)
     remove_bg: str = "auto"         # auto | on | off | ai
     tolerance: int = 40             # Farbabstand für die Hintergrund-Erkennung
     tint: str | None = None         # Icons einfärben, z.B. "#c9b877"

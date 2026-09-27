@@ -68,7 +68,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--no-frame", dest="frame", action="store_false", help="Eckrahmen/Skalen ausblenden")
 
     g = p.add_argument_group("Motiv")
-    g.add_argument("--scale", type=float, help="Wie viel der Produktfläche das Motiv füllt, 0..1 (Standard: 0.8)")
+    g.add_argument("--scale", type=float, help="Grundgröße des Motivs, Anteil der Produktfläche 0..1 (Standard: 0.8)")
+    g.add_argument("--no-auto-scale", dest="auto_scale", action="store_false",
+                   help="Motiv nur einpassen, statt alle Produkte gleich groß wirken zu lassen")
     g.add_argument("--remove-bg", choices=REMOVE_BG_MODES, help="Hintergrund entfernen: auto (Standard), on, off, ai")
     g.add_argument("--tolerance", type=int, help="Toleranz für einfarbige Hintergründe (Standard: 40)")
     g.add_argument("--tint", help="Motiv einfarbig einfärben, z.B. \"#c9b877\" (für Icons)")
@@ -106,7 +108,7 @@ def resolve_settings(args: argparse.Namespace) -> Settings:
         settings = Settings.load(config)
 
     overrides = {}
-    for key in ("theme", "background", "seed", "camo_strength", "grid", "frame", "scale", "remove_bg",
+    for key in ("theme", "background", "seed", "camo_strength", "grid", "frame", "scale", "auto_scale", "remove_bg",
                 "tolerance", "tint", "shadow", "glow", "title", "subtitle", "brand", "tag", "title_font",
                 "format", "quality"):
         if hasattr(args, key):

@@ -1,6 +1,6 @@
 """ProductCon – einheitliche Produktbilder auf Military-Hintergrund."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from .background import render_background  # noqa: E402
 from .compose import compose  # noqa: E402

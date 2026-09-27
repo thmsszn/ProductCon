@@ -13,8 +13,10 @@ Eckrahmen, optional Titel und Shopname).
    einfarbigem Hintergrund (z.B. weiß) wird dieser automatisch entfernt. Weiße Flächen
    *im* Produkt bleiben erhalten, und an den Kanten entsteht kein heller Saum.
 2. **Zuschneiden** – leere Ränder werden abgeschnitten.
-3. **Einpassen** – das Motiv wird immer in die gleiche Fläche eingepasst und zentriert,
-   egal wie groß das Original ist (16-px-Icon oder 6000-px-Foto).
+3. **Automatische Skalierung** – jedes Motiv wird so skaliert, dass alle Produkte gleich
+   groß wirken, egal wie groß das Original ist (16-px-Icon oder 6000-px-Foto) und egal
+   welche Form es hat: Lange Produkte (Gewehr, Messer, Zielfernrohr) werden größer,
+   kompakte (Patch, Rucksack) etwas kleiner. Danach wird es zentriert.
 4. **Hintergrund** – immer derselbe (gleicher Seed = pixelgleiches Tarnmuster),
    inkl. Schlagschatten unter dem Motiv.
 5. **Texte** (optional) – Titel in Stencil-Schrift, Untertitel, Shopname oben links,
@@ -125,7 +127,8 @@ python -m productcon --theme night --brand "Mein Shop" --title "{name}" --save-c
 | `seed`           | `1337`     | Variante des Tarnmusters |
 | `camo_strength`  | `0.55`     | Stärke des Tarnmusters (0 = nur Verlauf) |
 | `grid`, `frame`  | `true`     | Raster bzw. Eckrahmen/Skalen anzeigen |
-| `scale`          | `0.8`      | Wie viel der Produktfläche das Motiv ausfüllt (0–1) |
+| `scale`          | `0.8`      | Grundgröße des Motivs als Anteil der Produktfläche (0–1) |
+| `auto_scale`     | `true`     | Alle Produkte gleich groß wirken lassen (siehe unten); `false` = nur einpassen |
 | `remove_bg`      | `auto`     | Hintergrund entfernen: `auto`, `on`, `off`, `ai` (siehe unten) |
 | `tolerance`      | `40`       | Wie stark Pixel von der Hintergrundfarbe abweichen dürfen |
 | `tint`           | `null`     | Motiv einfarbig einfärben, z.B. `"#c9b877"` (für Icons) |
@@ -139,6 +142,19 @@ python -m productcon --theme night --brand "Mein Shop" --title "{name}" --save-c
 | `title_font`     | `null`     | Eigene `.ttf`/`.otf` für den Titel |
 | `format`         | `jpg`      | `jpg`, `png` oder `webp` |
 | `quality`        | `92`       | Qualität für jpg/webp |
+
+## Automatische Skalierung
+
+Würde man jedes Motiv nur in dieselbe Fläche einpassen, wirkt ein langes Zielfernrohr
+winzig neben einem runden Patch – obwohl beide gleich breit sind. ProductCon gleicht das
+aus: Jedes Motiv bekommt die gleiche *optische Fläche* (Außenmaße, gewichtet mit der
+Deckung). Lange oder hohe Produkte dürfen dafür bis an den Rand der Produktfläche
+wachsen, kompakte werden etwas kleiner, luftige Motive (z.B. Icons mit Aussparungen)
+etwas größer.
+
+- `scale` bestimmt weiterhin die Gesamtgröße (größer/kleiner für alle Motive).
+- Ausschalten mit `--no-auto-scale` bzw. `"auto_scale": false` – dann wird jedes Motiv
+  nur in `scale` × Produktfläche eingepasst (Verhalten bis Version 1.0).
 
 ## Hintergrund entfernen (`--remove-bg`)
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 from .config import Settings
@@ -36,9 +37,40 @@ def product_area(settings: Settings, has_text: bool) -> Box:
     return Box(inset, inset, w - inset, bottom)
 
 
-def fit_product(product: Image.Image, box: Box, scale: float) -> Image.Image:
-    max_w, max_h = box.width * scale, box.height * scale
-    factor = min(max_w / product.width, max_h / product.height)
+# Automatische Skalierung: Bezugsgröße ist ein kompaktes, quadratisches Produkt
+# (z.B. ein runder Patch) mit dieser Deckung ...
+REFERENCE_COVERAGE = 0.8
+# ... das etwas kleiner als "scale" dargestellt wird, damit lange Produkte
+# (Gewehr, Messer, Zielfernrohr) im Vergleich größer werden können.
+REFERENCE_SIZE = 0.875
+
+
+def coverage(product: Image.Image) -> float:
+    """Anteil der sichtbaren Pixel im Rahmen des Motivs (0..1)."""
+    return float(np.asarray(product.getchannel("A"), dtype=np.float32).mean() / 255.0)
+
+
+def scale_factor(product: Image.Image, box: Box, scale: float, auto: bool = True) -> float:
+    """Vergrößerungsfaktor für das (zugeschnittene) Motiv.
+
+    auto=False: Motiv wird in scale × Produktfläche eingepasst – lange Produkte
+    wirken dadurch deutlich kleiner als kompakte.
+    auto=True: Alle Motive bekommen die gleiche optische Fläche (Rahmenfläche,
+    gewichtet mit der Deckung); lange Produkte dürfen dafür bis an den Rand der
+    Produktfläche wachsen, kompakte werden etwas kleiner.
+    """
+    w, h = product.size
+    fits = min(box.width / w, box.height / h)  # größter Faktor, der noch in die Fläche passt
+    if not auto:
+        return fits * scale
+    ref = min(box.width, box.height) * scale * REFERENCE_SIZE
+    density = min(1.0, max(0.15, coverage(product)))
+    factor = ref * np.sqrt(np.sqrt(REFERENCE_COVERAGE) / (w * h * np.sqrt(density)))
+    return float(min(factor, fits))
+
+
+def fit_product(product: Image.Image, box: Box, scale: float, auto: bool = True) -> Image.Image:
+    factor = scale_factor(product, box, scale, auto)
     size = (max(1, round(product.width * factor)), max(1, round(product.height * factor)))
     return product.resize(size, Image.Resampling.LANCZOS)
 
@@ -135,7 +167,7 @@ def compose(
     theme = get_theme(settings.theme)
 
     box = product_area(settings, bool(title or subtitle))
-    fitted = fit_product(product, box, settings.scale)
+    fitted = fit_product(product, box, settings.scale, settings.auto_scale)
     x = round(box.left + (box.width - fitted.width) / 2)
     y = round(box.top + (box.height - fitted.height) / 2)
     alpha = fitted.getchannel("A")

@@ -8,6 +8,7 @@
   "grid": true,
   "frame": true,
   "scale": 0.8,
+  "auto_scale": true,
   "remove_bg": "auto",
   "tolerance": 40,
   "tint": null,

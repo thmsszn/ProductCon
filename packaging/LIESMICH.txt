@@ -26,6 +26,9 @@ Die Datei "productcon.json" mit dem Editor öffnen und Werte ändern, z.B.:
   "tint": "#c9b877"            schwarze Icons einfärben
   "glow": 0.4                  Lichtkante für dunkle Produkte (0 = aus)
   "scale": 0.8                 wie groß das Produkt erscheint (0 bis 1)
+  "auto_scale": true           alle Produkte gleich groß wirken lassen (lange
+                               Produkte größer, kompakte etwas kleiner);
+                               false = jedes Bild nur in den Rahmen einpassen
 
 Texte, die nicht angezeigt werden sollen, auf null lassen (ohne Anführungszeichen).
 

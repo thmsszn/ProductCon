@@ -204,3 +204,52 @@ def test_exe_mode_uses_folder_next_to_exe(tmp_path, monkeypatch):
     assert main(["--no-pause"]) == 0
     assert Image.open(app / "output" / "a.png").size == (300, 300)
     assert len(pauses) == 1  # --no-pause wartet nicht
+
+
+def _solid(w, h, hole=0):
+    img = Image.new("RGBA", (w, h), (40, 40, 40, 255))
+    if hole:
+        ImageDraw.Draw(img).rectangle((hole, hole, w - hole - 1, h - hole - 1), fill=(0, 0, 0, 0))
+    return img
+
+
+def _visible_area(img):
+    return float(np.asarray(img.getchannel("A"), dtype=np.float32).sum() / 255)
+
+
+def test_auto_scale_makes_long_and_compact_products_look_more_alike():
+    from productcon.compose import Box, fit_product
+
+    box = Box(0, 0, 1000, 1000)
+    square, long = _solid(400, 400), _solid(1000, 200)
+    old = [_visible_area(fit_product(p, box, 0.8, auto=False)) for p in (square, long)]
+    new = [_visible_area(fit_product(p, box, 0.8, auto=True)) for p in (square, long)]
+    assert old[0] / old[1] > 4.5            # vorher: Quadrat hat 5x so viel Fläche
+    assert new[0] / new[1] < old[0] / old[1] * 0.6
+    assert fit_product(long, box, 0.8, auto=True).width > fit_product(long, box, 0.8, auto=False).width
+    assert fit_product(square, box, 0.8, auto=True).width < fit_product(square, box, 0.8, auto=False).width
+
+
+def test_auto_scale_never_leaves_the_product_area():
+    from productcon.compose import Box, fit_product
+
+    box = Box(0, 0, 800, 500)
+    for w, h in ((5000, 100), (100, 5000), (300, 300), (8, 8)):
+        fitted = fit_product(_solid(w, h), box, 1.0, auto=True)
+        assert fitted.width <= 800 and fitted.height <= 500
+
+
+def test_auto_scale_enlarges_airy_motifs():
+    from productcon.compose import Box, fit_product
+
+    box = Box(0, 0, 1000, 1000)
+    solid = fit_product(_solid(300, 300), box, 0.8, auto=True)
+    ring = fit_product(_solid(300, 300, hole=40), box, 0.8, auto=True)  # Rahmen mit großem Loch
+    assert ring.width > solid.width
+
+
+def test_auto_scale_can_be_switched_off(workdir):
+    Settings(width=300, height=300, format="png", auto_scale=False).save(workdir / "cfg.json")
+    assert Settings.load(workdir / "cfg.json").auto_scale is False
+    assert main(["--no-auto-scale", "--save-config", str(workdir / "cli.json")]) == 0
+    assert json.loads((workdir / "cli.json").read_text(encoding="utf-8"))["auto_scale"] is False
