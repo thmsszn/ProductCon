@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -17,6 +18,22 @@ from .themes import THEMES
 DEFAULT_CONFIG = "productcon.json"
 DEFAULT_INPUT = "input"
 DEFAULT_OUTPUT = "output"
+
+
+def is_frozen() -> bool:
+    """Läuft als EXE (PyInstaller)?"""
+    return bool(getattr(sys, "frozen", False))
+
+
+def app_dir() -> Path:
+    """Basis für input/, output/ und productcon.json.
+
+    Als EXE: der Ordner der EXE (Doppelklick/Drag & Drop starten in beliebigen
+    Arbeitsordnern). Sonst: der aktuelle Arbeitsordner.
+    """
+    if is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(".")
 
 
 def _parse_size(value: str) -> tuple[int, int]:
@@ -75,14 +92,16 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Nur den leeren Hintergrund speichern (z.B. zum Nachbearbeiten) und beenden")
     g.add_argument("--save-config", metavar="DATEI", default=None,
                    help="Aktuelle Einstellungen als JSON speichern (für immer gleiche Ergebnisse)")
+    g.add_argument("--no-pause", action="store_true", default=False,
+                   help="EXE: am Ende nicht auf Enter warten und Ausgabeordner nicht öffnen")
     return p
 
 
 def resolve_settings(args: argparse.Namespace) -> Settings:
     settings = Settings()
     config = args.config
-    if config is None and Path(DEFAULT_CONFIG).is_file():
-        config = DEFAULT_CONFIG
+    if config is None and (app_dir() / DEFAULT_CONFIG).is_file():
+        config = app_dir() / DEFAULT_CONFIG
     if config:
         settings = Settings.load(config)
 
@@ -158,17 +177,33 @@ def main(argv: list[str] | None = None) -> int:
         except (AttributeError, ValueError):
             pass
     args = build_parser().parse_args(argv)
+    interactive = is_frozen() and not args.no_pause
 
+    code, out_dir = run(args)
+
+    if interactive:
+        # Per Doppelklick/Drag & Drop gestartet: Ergebnis zeigen, Fenster offen halten
+        if out_dir is not None and out_dir.is_dir() and os.name == "nt":
+            os.startfile(out_dir.resolve())  # type: ignore[attr-defined]
+        try:
+            input("\nEnter drücken zum Schließen …")
+        except (EOFError, KeyboardInterrupt):
+            pass
+    return code
+
+
+def run(args: argparse.Namespace) -> tuple[int, Path | None]:
+    """Führt die Verarbeitung aus; liefert Exit-Code und Ausgabeordner."""
     if args.list_themes:
         for name, theme in THEMES.items():
             print(f"  {name:<10} {theme.description}")
-        return 0
+        return 0, None
 
     try:
         settings = resolve_settings(args)
     except (ValueError, OSError, TypeError) as exc:
         print(f"Fehler in den Einstellungen: {exc}", file=sys.stderr)
-        return 2
+        return 2, None
 
     if args.save_config:
         settings.save(args.save_config)
@@ -178,25 +213,28 @@ def main(argv: list[str] | None = None) -> int:
         target = Path(args.export_background)
         render_background(settings).save(target)
         print(f"Hintergrund gespeichert: {target}")
-        return 0
+        return 0, None
 
     inputs = args.inputs
     if not inputs:
         if args.save_config:
-            return 0
-        default_dir = Path(DEFAULT_INPUT)
+            return 0, None
+        default_dir = app_dir() / DEFAULT_INPUT
         if not default_dir.is_dir():
             default_dir.mkdir(parents=True)
-            print(f"Ordner '{default_dir}/' angelegt – Bilder hineinlegen und erneut starten.")
-            return 0
+            print(f"Ordner '{default_dir}' angelegt – Bilder hineinlegen und erneut starten.")
+            return 0, None
         inputs = [str(default_dir)]
 
     files = collect_inputs(inputs)
     if not files:
         print("Keine Bilder gefunden. Unterstützt: " + ", ".join(sorted(SUPPORTED_EXTENSIONS)), file=sys.stderr)
-        return 1
+        if not args.inputs:
+            print(f"Bilder in den Ordner '{app_dir() / DEFAULT_INPUT}' legen oder auf das Programm ziehen.",
+                  file=sys.stderr)
+        return 1, None
 
-    out_dir = Path(args.output or DEFAULT_OUTPUT)
+    out_dir = Path(args.output) if args.output else app_dir() / DEFAULT_OUTPUT
     cache = BackgroundCache(settings)
     used: set[Path] = set()
     failed = 0
@@ -223,7 +261,9 @@ def main(argv: list[str] | None = None) -> int:
             failed += 1
             print(f"  ✘ {path.name}: {exc}", file=sys.stderr)
 
+    done = out_dir if failed < len(files) else None
     if failed:
         print(f"{failed} von {len(files)} Bild(ern) fehlgeschlagen.", file=sys.stderr)
-        return 1
-    return 0
+        return 1, done
+    print(f"Fertig: {out_dir.resolve()}")
+    return 0, done

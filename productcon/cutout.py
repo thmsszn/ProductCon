@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -181,6 +182,10 @@ _ai_session = None
 def remove_background_ai(img: Image.Image) -> Image.Image:
     """Hintergrund per KI (rembg) entfernen – auch bei unruhigen Fotos."""
     global _ai_session
+    if getattr(sys, "frozen", False):
+        raise ImageError(
+            "KI-Freistellung ist in der EXE nicht enthalten – dafür die Python-Version mit rembg nutzen"
+        )
     try:
         from rembg import new_session, remove  # type: ignore
     except ImportError as exc:

@@ -1,0 +1,63 @@
+name: Windows-EXE bauen
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    permissions:
+      contents: write  # nur für das Release bei Tags v*
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pytest
+
+      - name: Tests
+        run: pytest -q
+
+      - name: EXE bauen
+        run: pyinstaller --noconfirm packaging/ProductCon.spec
+
+      - name: EXE testen
+        shell: pwsh
+        run: |
+          .\dist\ProductCon.exe examples -o smoke --title "{name}" --no-pause
+          if ($LASTEXITCODE -ne 0) { throw "ProductCon.exe ist fehlgeschlagen" }
+          $n = (Get-ChildItem smoke -Filter *.jpg).Count
+          if ($n -ne 3) { throw "Erwartet 3 Bilder, gefunden: $n" }
+
+      - name: Paket zusammenstellen
+        shell: pwsh
+        run: |
+          $dir = "release/ProductCon"
+          New-Item -ItemType Directory -Force -Path "$dir/input", "$dir/beispiele" | Out-Null
+          Copy-Item dist/ProductCon.exe $dir
+          Copy-Item productcon.json $dir
+          Copy-Item packaging/LIESMICH.txt $dir
+          Copy-Item packaging/input-hinweis.txt "$dir/input/HIER BILDER REINLEGEN.txt"
+          Copy-Item examples/* "$dir/beispiele"
+          Copy-Item productcon/fonts/OFL.txt "$dir/Schriften-Lizenz.txt"
+          Compress-Archive -Path $dir -DestinationPath ProductCon-Windows.zip -Force
+
+      - name: Als Download bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProductCon-Windows
+          path: release/
+
+      - name: Release erstellen (nur bei Tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ProductCon-Windows.zip

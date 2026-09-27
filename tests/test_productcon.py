@@ -177,3 +177,30 @@ def test_config_in_working_dir_is_loaded_automatically(workdir):
 def test_first_run_creates_input_folder(workdir):
     assert main([]) == 0
     assert (workdir / "input").is_dir()
+
+
+def test_exe_mode_uses_folder_next_to_exe(tmp_path, monkeypatch):
+    """Als EXE liegen input/, output/ und productcon.json neben der EXE – egal von wo gestartet."""
+    import sys
+
+    app = tmp_path / "ProductCon"
+    app.mkdir()
+    elsewhere = tmp_path / "anderswo"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(app / "ProductCon.exe"))
+    pauses = []
+    monkeypatch.setattr("builtins.input", lambda prompt="": pauses.append(prompt))
+
+    assert main([]) == 0  # erster Start legt input/ neben der EXE an
+    assert (app / "input").is_dir() and not (elsewhere / "input").exists()
+    assert len(pauses) == 1  # Fenster bleibt offen
+
+    Settings(width=300, height=300, format="png").save(app / "productcon.json")
+    icon = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
+    ImageDraw.Draw(icon).rectangle((5, 5, 35, 35), fill=(200, 0, 0, 255))
+    icon.save(app / "input" / "a.png")
+    assert main(["--no-pause"]) == 0
+    assert Image.open(app / "output" / "a.png").size == (300, 300)
+    assert len(pauses) == 1  # --no-pause wartet nicht

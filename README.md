@@ -20,7 +20,43 @@ Eckrahmen, optional Titel und Shopname).
 5. **Texte** (optional) – Titel in Stencil-Schrift, Untertitel, Shopname oben links,
    Kategorie oben rechts.
 
-## Installation
+## Windows-EXE (ohne Python)
+
+Fertige `ProductCon.exe` herunterladen:
+
+1. Im GitHub-Repo auf **Actions → „Windows-EXE bauen“** gehen, den neuesten
+   erfolgreichen Lauf öffnen und unten bei *Artifacts* **ProductCon-Windows** laden
+   (bei getaggten Versionen `v…` liegt die ZIP zusätzlich unter **Releases**).
+2. ZIP entpacken. Der Ordner enthält `ProductCon.exe`, `productcon.json`,
+   `input/`, `beispiele/` und eine `LIESMICH.txt`.
+3. Bilder in `input/` legen und `ProductCon.exe` doppelklicken – oder Bilder bzw.
+   Ordner direkt auf die EXE ziehen. Die Ergebnisse landen in `output/`, der Ordner
+   öffnet sich am Ende automatisch.
+
+`input/`, `output/` und `productcon.json` werden immer **neben der EXE** gesucht, egal
+von wo sie gestartet wird. Das Aussehen änderst du in `productcon.json` mit dem Editor.
+
+Hinweise:
+- Die EXE ist nicht signiert. Windows SmartScreen fragt deshalb beim ersten Start
+  nach: *Weitere Informationen → Trotzdem ausführen*.
+- Die KI-Freistellung (`--remove-bg ai`) ist in der EXE nicht enthalten (das Modell wäre
+  zu groß). Dafür die Python-Version verwenden.
+- Aus der Eingabeaufforderung: `ProductCon.exe --help`. Mit `--no-pause` wartet sie am
+  Ende nicht auf Enter und öffnet keinen Ordner (für Skripte).
+
+**EXE selbst bauen** (unter Windows):
+
+```bash
+pip install -r requirements.txt pyinstaller
+pyinstaller --noconfirm packaging/ProductCon.spec
+# → dist/ProductCon.exe
+```
+
+Jeder Push baut die EXE über GitHub Actions automatisch neu
+(`.github/workflows/build-exe.yml`). Ein Tag wie `v1.0.0` erstellt zusätzlich ein Release
+mit der ZIP-Datei.
+
+## Installation (Python-Version)
 
 Voraussetzung: [Python](https://www.python.org/downloads/) ab 3.9.
 
@@ -30,7 +66,7 @@ pip install -r requirements.txt
 
 ## Schnellstart
 
-**Windows:** Bilder einfach per Drag & Drop auf **`ProductCon.bat`** ziehen – oder Bilder
+**Windows mit Python:** Bilder einfach per Drag & Drop auf **`ProductCon.bat`** ziehen – oder Bilder
 in den Ordner `input/` legen und `ProductCon.bat` doppelklicken. Die fehlenden Pakete
 werden beim ersten Start automatisch installiert. Die Ergebnisse landen in `output/`.
 

@@ -1,0 +1,43 @@
+ProductCon – einheitliche Produktbilder im Military-Look
+=========================================================
+
+SO GEHT'S
+---------
+1. Bilder in den Ordner "input" legen und ProductCon.exe doppelklicken
+   – ODER –
+   Bilder (oder einen ganzen Ordner) direkt auf ProductCon.exe ziehen.
+2. Die fertigen Bilder landen im Ordner "output" (öffnet sich automatisch).
+
+Beim allerersten Start zeigt Windows evtl. "Der Computer wurde durch Windows
+geschützt". Dann auf "Weitere Informationen" -> "Trotzdem ausführen" klicken
+(die EXE ist nicht signiert).
+
+AUSSEHEN ANPASSEN
+-----------------
+Die Datei "productcon.json" mit dem Editor öffnen und Werte ändern, z.B.:
+
+  "theme": "desert"            woodland, desert, night oder urban
+  "title": "{name}"            Titel unter dem Produkt ({name} = Dateiname)
+  "subtitle": "Art.-Nr. {index:04d}"
+  "brand": "Mein Shop"         kleiner Text oben links
+  "tag": "Optics"              kleiner Text oben rechts
+  "width": 2000, "height": 2000
+  "format": "jpg"              jpg, png oder webp
+  "tint": "#c9b877"            schwarze Icons einfärben
+  "glow": 0.4                  Lichtkante für dunkle Produkte (0 = aus)
+  "scale": 0.8                 wie groß das Produkt erscheint (0 bis 1)
+
+Texte, die nicht angezeigt werden sollen, auf null lassen (ohne Anführungszeichen).
+
+TIPPS
+-----
+- Am besten funktionieren PNGs mit transparentem Hintergrund oder Fotos auf
+  weißem/einfarbigem Hintergrund. Bei unruhigem Hintergrund bleibt das Bild
+  rechteckig.
+- Bleiben Reste vom weißen Hintergrund stehen: "tolerance" erhöhen (z.B. 60).
+- Im Ordner "beispiele" liegen Testbilder – einfach auf die EXE ziehen.
+
+KOMMANDOZEILE (für Fortgeschrittene)
+------------------------------------
+  ProductCon.exe --help
+  ProductCon.exe bilder\ --theme night --title "{name}" --no-pause

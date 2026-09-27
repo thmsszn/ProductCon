@@ -1,2 +1,4 @@
 *.bat text eol=crlf
 *.ttf binary
+packaging/*.txt text eol=crlf
+*.ico binary
