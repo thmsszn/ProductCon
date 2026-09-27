@@ -26,7 +26,7 @@ Fertige `ProductCon.exe` herunterladen:
 
 1. Im GitHub-Repo auf **Actions → „Windows-EXE bauen“** gehen, den neuesten
    erfolgreichen Lauf öffnen und unten bei *Artifacts* **ProductCon-Windows** laden
-   (bei getaggten Versionen `v…` liegt die ZIP zusätzlich unter **Releases**).
+   (dauerhafte Downloads liegen unter **Releases**).
 2. ZIP entpacken. Der Ordner enthält `ProductCon.exe`, `productcon.json`,
    `input/`, `beispiele/` und eine `LIESMICH.txt`.
 3. Bilder in `input/` legen und `ProductCon.exe` doppelklicken – oder Bilder bzw.
@@ -53,8 +53,9 @@ pyinstaller --noconfirm packaging/ProductCon.spec
 ```
 
 Jeder Push baut die EXE über GitHub Actions automatisch neu
-(`.github/workflows/build-exe.yml`). Ein Tag wie `v1.0.0` erstellt zusätzlich ein Release
-mit der ZIP-Datei.
+(`.github/workflows/build-exe.yml`). Ein neues Release mit der ZIP-Datei entsteht, wenn du
+einen Tag wie `v1.0.1` pushst – oder unter **Actions → „Windows-EXE bauen“ → Run workflow**
+bei *release_tag* eine Versionsnummer einträgst.
 
 ## Installation (Python-Version)
 
