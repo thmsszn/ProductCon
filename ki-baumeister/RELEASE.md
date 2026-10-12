@@ -1,9 +1,9 @@
-**Download:** `ki-baumeister-…jar` unten bei *Assets* herunterladen und in den `mods`-Ordner legen.
+**Am einfachsten: `KI-Baumeister-Komplettpaket.zip`** unten bei *Assets* herunterladen, entpacken und `Installieren.bat` doppelklicken.
+Das Skript richtet das Fabric-Profil im Minecraft Launcher ein, kopiert KI-Baumeister und Fabric API in den `mods`-Ordner
+und installiert bei Bedarf Ollama samt passendem KI-Modell. Ist Ollama schon installiert, wird nur das Modell geprüft.
 
-Benötigt **Minecraft 26.3**, **Fabric Loader ≥ 0.19.5**, **Fabric API** und **Ollama** (lokal, z.B. `ollama pull qwen2.5:14b`).
+Nur die Mod: `ki-baumeister-…jar` in den `mods`-Ordner legen (benötigt **Minecraft 26.3**, **Fabric Loader ≥ 0.19.5**, **Fabric API**, **Ollama**).
 
-1. Minecraft mit Fabric starten, Einzelspielerwelt öffnen, **K** drücken.
-2. Zwei Ecken setzen, Bauwerk beschreiben, **✦ KI-Plan erstellen**.
-3. Vorschau prüfen, **▶ Bauen** – oder **↶ Rückgängig**.
+Im Spiel: Einzelspielerwelt öffnen, **K** drücken, zwei Ecken setzen, Bauwerk beschreiben, **✦ KI-Plan erstellen**, Vorschau prüfen, **▶ Bauen** – oder **↶ Rückgängig**.
 
-Vor großen Bauten eine Sicherung der Welt anlegen. Anleitung: `ki-baumeister/README.md` im Repository.
+Vor großen Bauten eine Sicherung der Welt anlegen. Ausführliche Anleitung: `ANLEITUNG.txt` im Komplettpaket.

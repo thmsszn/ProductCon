@@ -1,0 +1,47 @@
+KI-Baumeister – Komplettpaket für Minecraft __MC__ (Fabric)
+==========================================================
+
+INHALT
+  Installieren.bat          Doppelklick = alles automatisch einrichten
+  Installieren.ps1          das eigentliche Installationsskript
+  mods\                     KI-Baumeister __MOD__ und Fabric API __FAPI__
+  fabric\                   Fabric-Loader-Profil __LOADER__ und offizieller Fabric-Installer (Reserve)
+  paket.json                Versionsangaben für das Skript
+
+VORAUSSETZUNGEN
+  - Windows 10/11 mit gekauftem Minecraft: Java Edition
+  - Der offizielle Minecraft Launcher wurde mindestens einmal gestartet
+  - Internet (der Launcher lädt Minecraft und Fabric beim ersten Start, Ollama ca. 1,6 GB)
+
+SO GEHT'S
+  1. ZIP vollständig entpacken (nicht direkt im ZIP öffnen).
+  2. Minecraft Launcher schließen.
+  3. Doppelklick auf "Installieren.bat". Das Skript
+       - legt im Launcher das Profil "KI-Baumeister (Fabric __MC__)" an,
+       - kopiert die Mods nach %APPDATA%\.minecraft\mods (alte Versionen landen in mods\_alte-versionen),
+       - installiert auf Wunsch Ollama und lädt ein passendes KI-Modell
+         (qwen2.5:7b ab 8 GB RAM, qwen2.5:14b ab 24 GB RAM für schönere Bauwerke).
+     Falls Windows "Der Computer wurde durch Windows geschützt" meldet:
+     "Weitere Informationen" -> "Trotzdem ausführen".
+  4. Minecraft Launcher öffnen, unten links das Profil "KI-Baumeister (Fabric __MC__)" wählen, "Spielen".
+  5. Einzelspielerwelt öffnen (vorher eine Sicherung anlegen!) und K drücken.
+
+IM SPIEL
+  - Auf einen Block schauen -> "Ecke 1 setzen", zur anderen Ecke schauen -> "Ecke 2 setzen".
+  - Bauwerk beschreiben oder eine Vorlage anklicken -> "KI-Plan erstellen" (Strg+Enter).
+  - Vorschau in der Welt prüfen -> "Bauen". Danebengegangen? -> "Rückgängig".
+  - "Anpassen" ändert den aktuellen Plan, z.B. "Dach aus Kupfer, zweites Stockwerk".
+
+PROBLEME
+  - "Ollama offline" im Menü: Ollama über das Startmenü starten (Symbol erscheint unten rechts).
+  - "Modell nicht installiert": Eingabeaufforderung öffnen und  ollama pull qwen2.5:7b  eingeben.
+  - Spiel startet nicht: Im mods-Ordner liegen Mods für eine andere Minecraft-Version.
+    Diese in einen anderen Ordner verschieben (das Skript bietet das an).
+  - Manuelle Installation statt Skript: fabric\fabric-installer-*.exe starten (benötigt Java),
+    Minecraft __MC__ und Loader __LOADER__ wählen, dann die Dateien aus mods\ nach
+    %APPDATA%\.minecraft\mods kopieren und Ollama von https://ollama.com/download installieren.
+
+ENTFERNEN
+  - Im Launcher unter "Installationen" das Profil "KI-Baumeister" löschen.
+  - ki-baumeister-*.jar und fabric-api-*.jar aus %APPDATA%\.minecraft\mods löschen.
+  - Ollama über "Apps & Features" deinstallieren.

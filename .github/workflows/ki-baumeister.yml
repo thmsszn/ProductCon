@@ -24,8 +24,8 @@ defaults:
 jobs:
   build-jar:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # nur für das Release
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v5
 
@@ -94,12 +94,170 @@ jobs:
           path: ki-baumeister/build/libs/*.jar
           if-no-files-found: error
 
-      - name: Release erstellen (manuell oder Commit mit [release])
-        if: inputs.release || contains(github.event.head_commit.message, '[release]')
-        uses: softprops/action-gh-release@v2
+  package:
+    name: Komplettpaket (ZIP)
+    needs: build-jar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
         with:
-          tag_name: ki-baumeister-v${{ steps.ver.outputs.version }}
+          name: ki-baumeister-${{ needs.build-jar.outputs.version }}
+          path: ki-baumeister/build/libs
+
+      - name: Komplettpaket zusammenstellen
+        run: |
+          set -euo pipefail
+          prop() { grep "^$1=" gradle.properties | cut -d= -f2; }
+          MC=$(prop minecraft_version); LOADER=$(prop loader_version); FAPI=$(prop fabric_api_version); VER=$(prop mod_version)
+          PROFILE="fabric-loader-$LOADER-$MC"
+          OUT="$RUNNER_TEMP/KI-Baumeister-Komplettpaket"
+          mkdir -p "$OUT/mods" "$OUT/fabric"
+          MODJAR=$(basename build/libs/*.jar)
+          cp "build/libs/$MODJAR" "$OUT/mods/"
+
+          curl -fsSL --retry 3 -o "$OUT/mods/fabric-api-$FAPI.jar" \
+            "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$FAPI/fabric-api-$FAPI.jar"
+          curl -fsSL --retry 3 -o "$OUT/fabric/$PROFILE.json" \
+            "https://meta.fabricmc.net/v2/versions/loader/$MC/$LOADER/profile/json"
+          jq -e --arg id "$PROFILE" --arg mc "$MC" '.id == $id and .inheritsFrom == $mc and (.libraries | length) > 0' "$OUT/fabric/$PROFILE.json"
+
+          INST=$(curl -fsSL --retry 3 https://meta.fabricmc.net/v2/versions/installer | jq -r '[.[] | select(.stable)][0].url')
+          curl -fsSL --retry 3 -o "$OUT/fabric/$(basename "$INST")" "$INST"
+          curl -fsSL --retry 3 -o "$OUT/fabric/$(basename "${INST%.jar}.exe")" "${INST%.jar}.exe" \
+            || echo "Kein Fabric-Installer als .exe verfügbar – nur .jar im Paket."
+          cp src/main/resources/assets/ki_baumeister/icon.png "$OUT/fabric/icon.png"
+
+          cp paket/Installieren.ps1 paket/Installieren.bat "$OUT/"
+          { printf '\xEF\xBB\xBF'; sed -e "s/__MC__/$MC/g" -e "s/__LOADER__/$LOADER/g" -e "s/__FAPI__/$FAPI/g" -e "s/__MOD__/$VER/g" paket/ANLEITUNG.txt; } > "$OUT/ANLEITUNG.txt"
+          jq -n --arg mc "$MC" --arg loader "$LOADER" --arg fapi "$FAPI" --arg mod "$VER" --arg profile "$PROFILE" --arg jar "$MODJAR" \
+            '{minecraft: $mc, loader: $loader, fabricApi: $fapi, modVersion: $mod, profileId: $profile, modJar: $jar}' > "$OUT/paket.json"
+
+          (cd "$RUNNER_TEMP" && zip -r -X -q "$GITHUB_WORKSPACE/KI-Baumeister-Komplettpaket.zip" KI-Baumeister-Komplettpaket)
+          unzip -l "$GITHUB_WORKSPACE/KI-Baumeister-Komplettpaket.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KI-Baumeister-Komplettpaket
+          path: KI-Baumeister-Komplettpaket.zip
+          if-no-files-found: error
+
+  test-installer:
+    name: Installer auf Windows testen
+    needs: package
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: KI-Baumeister-Komplettpaket
+
+      - name: Skript prüfen (Parser + PSScriptAnalyzer)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive -Path KI-Baumeister-Komplettpaket.zip -DestinationPath entpackt -Force
+          $script = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket\Installieren.ps1').Path
+          $tokens = $null; $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$errors)
+          if ($errors) { $errors | Format-List | Out-String | Write-Host; throw 'Syntaxfehler im Installer' }
+          try {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+            Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+          } catch {
+            Write-Warning "PSScriptAnalyzer nicht installierbar, nur Parser-Prüfung: $_"
+            return
+          }
+          $findings = Invoke-ScriptAnalyzer -Path $script -Severity Error, Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseApprovedVerbs, PSUseSingularNouns, PSAvoidUsingInvokeExpression
+          $findings | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+          if ($findings | Where-Object Severity -eq 'Error') { throw 'PSScriptAnalyzer meldet Fehler' }
+
+      - name: Installation in Test-Minecraft-Ordner (Windows PowerShell 5.1)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket').Path
+          $installer = Join-Path $pkgDir 'Installieren.ps1'
+          $pkg = [IO.File]::ReadAllText((Join-Path $pkgDir 'paket.json')) | ConvertFrom-Json
+          $utf8 = New-Object Text.UTF8Encoding($false)
+
+          # 1) Ohne Launcher-Daten muss das Skript mit Fehlercode 1 abbrechen.
+          $empty = Join-Path $env:RUNNER_TEMP 'leer'
+          New-Item -ItemType Directory -Force $empty | Out-Null
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $empty -SkipOllama -NonInteractive
+          if ($LASTEXITCODE -ne 1) { throw "Erwartet Exitcode 1 ohne Launcher, war $LASTEXITCODE" }
+
+          # 2) Vorhandener Launcher mit Profil (Umlaute, Datum), alter Fabric API und fremdem Mod; Pfad mit Leerzeichen.
+          $mc = Join-Path $env:RUNNER_TEMP 'Mein Minecraft'
+          New-Item -ItemType Directory -Force (Join-Path $mc 'mods') | Out-Null
+          $initial = '{"profiles":{"abc":{"name":"Mein Profil \u00e4\u00f6\u00fc","type":"custom","created":"2025-01-01T00:00:00.000Z","lastVersionId":"latest-release","icon":"Grass"}},"settings":{"enableSnapshots":false,"locale":"de-de"},"version":3}'
+          [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), $initial, $utf8)
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\fabric-api-0.150.0+26.1.jar'), 'alt')
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\anderer-mod.jar'), 'fremd')
+
+          foreach ($run in 1..2) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -SkipOllama -NonInteractive
+            if ($LASTEXITCODE -ne 0) { throw "Installer-Lauf $run fehlgeschlagen (Exitcode $LASTEXITCODE)" }
+          }
+
+          $lpPath = Join-Path $mc 'launcher_profiles.json'
+          $bytes = [IO.File]::ReadAllBytes($lpPath)
+          if ($bytes[0] -eq 0xEF) { throw 'launcher_profiles.json wurde mit BOM gespeichert' }
+          $lp = [IO.File]::ReadAllText($lpPath, $utf8) | ConvertFrom-Json
+          $p = $lp.profiles.'ki-baumeister-fabric'
+          if (-not $p) { throw 'KI-Baumeister-Profil fehlt' }
+          if ($p.lastVersionId -ne $pkg.profileId) { throw "lastVersionId falsch: $($p.lastVersionId)" }
+          if ($p.type -ne 'custom' -or -not $p.icon.StartsWith('data:image/png;base64,')) { throw 'Profil unvollständig' }
+          if (@($lp.profiles.PSObject.Properties).Count -ne 2) { throw 'Profil doppelt angelegt' }
+          $expectedName = 'Mein Profil ' + [char]0xE4 + [char]0xF6 + [char]0xFC
+          if ($lp.profiles.abc.name -ne $expectedName) { throw "Vorhandenes Profil beschädigt: $($lp.profiles.abc.name)" }
+          if ($lp.profiles.abc.created -ne '2025-01-01T00:00:00.000Z') { throw 'Datum im vorhandenen Profil verändert' }
+          if ($lp.settings.locale -ne 'de-de' -or $lp.version -ne 3 -or $lp.settings.enableSnapshots -ne $false) { throw 'Launcher-Einstellungen beschädigt' }
+
+          $versionJson = Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).json"
+          if (-not (Test-Path $versionJson)) { throw 'Versions-JSON fehlt' }
+          $v = [IO.File]::ReadAllText($versionJson) | ConvertFrom-Json
+          if ($v.id -ne $pkg.profileId -or $v.inheritsFrom -ne $pkg.minecraft) { throw 'Versions-JSON ungültig' }
+          if (-not (Test-Path (Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).jar"))) { throw 'Platzhalter-JAR fehlt' }
+
+          $mods = Join-Path $mc 'mods'
+          if (-not (Test-Path -LiteralPath (Join-Path $mods $pkg.modJar))) { throw 'KI-Baumeister-JAR fehlt' }
+          if (-not (Test-Path -LiteralPath (Join-Path $mods "fabric-api-$($pkg.fabricApi).jar"))) { throw 'Fabric API fehlt' }
+          if (Test-Path -LiteralPath (Join-Path $mods 'fabric-api-0.150.0+26.1.jar')) { throw 'Alte Fabric API liegt noch im mods-Ordner' }
+          if (-not (Test-Path -LiteralPath (Join-Path $mods '_alte-versionen\fabric-api-0.150.0+26.1.jar'))) { throw 'Alte Fabric API nicht gesichert' }
+          if (-not (Test-Path -LiteralPath (Join-Path $mods 'anderer-mod.jar'))) { throw 'Fremder Mod wurde ohne Zustimmung verschoben' }
+          if (-not (Test-Path -LiteralPath "$lpPath.vor-ki-baumeister.bak")) { throw 'Sicherung der Launcher-Profile fehlt' }
+          Write-Host 'Installer-Test bestanden.' -ForegroundColor Green
+
+  release:
+    name: GitHub-Release
+    needs: [build-jar, test-installer]
+    if: inputs.release || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ki-baumeister-${{ needs.build-jar.outputs.version }}
+          path: dist
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: KI-Baumeister-Komplettpaket
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ki-baumeister-v${{ needs.build-jar.outputs.version }}
           target_commitish: ${{ github.sha }}
-          name: KI-Baumeister ${{ steps.ver.outputs.version }} (Minecraft 26.3, Fabric)
+          name: KI-Baumeister ${{ needs.build-jar.outputs.version }} (Minecraft 26.3, Fabric)
           body_path: ki-baumeister/RELEASE.md
-          files: ki-baumeister/build/libs/*.jar
+          overwrite_files: true
+          files: |
+            dist/*.jar
+            dist/KI-Baumeister-Komplettpaket.zip
