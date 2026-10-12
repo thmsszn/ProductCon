@@ -164,6 +164,8 @@ jobs:
           $tokens = $null; $errors = $null
           [void][System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$errors)
           if ($errors) { $errors | Format-List | Out-String | Write-Host; throw 'Syntaxfehler im Installer' }
+          # PowerShell wertet typografische Anführungszeichen wie normale aus – sie beenden Strings unbemerkt.
+          if ([IO.File]::ReadAllText($script) -match '[\u2018\u2019\u201A\u201B\u201C\u201D\u201E]') { throw 'Typografische Anführungszeichen im Installer' }
           try {
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
             Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
@@ -197,9 +199,16 @@ jobs:
           [IO.File]::WriteAllText((Join-Path $mc 'mods\fabric-api-0.150.0+26.1.jar'), 'alt')
           [IO.File]::WriteAllText((Join-Path $mc 'mods\anderer-mod.jar'), 'fremd')
 
+          $profileLabel = "'KI-Baumeister (Fabric $($pkg.minecraft))'"
           foreach ($run in 1..2) {
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -SkipOllama -NonInteractive
-            if ($LASTEXITCODE -ne 0) { throw "Installer-Lauf $run fehlgeschlagen (Exitcode $LASTEXITCODE)" }
+            $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -SkipOllama -NonInteractive 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            Write-Host $out
+            if ($code -ne 0) { throw "Installer-Lauf $run fehlgeschlagen (Exitcode $code)" }
+            foreach ($expected in @("Launcher-Profil $profileLabel", "das Profil $profileLabel w", 'Fertig!')) {
+              if (-not $out.Contains($expected)) { throw "Ausgabe von Lauf $run enthaelt nicht: $expected" }
+            }
+            if ($out -match 'FEHLER|Exception|CommandNotFound|not recognized|nicht als Name') { throw "Fehlermeldung in Ausgabe von Lauf $run" }
           }
 
           $lpPath = Join-Path $mc 'launcher_profiles.json'
@@ -230,6 +239,61 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $mods 'anderer-mod.jar'))) { throw 'Fremder Mod wurde ohne Zustimmung verschoben' }
           if (-not (Test-Path -LiteralPath "$lpPath.vor-ki-baumeister.bak")) { throw 'Sicherung der Launcher-Profile fehlt' }
           Write-Host 'Installer-Test bestanden.' -ForegroundColor Green
+
+      - name: Ollama-Schritt testen (Ollama schon installiert, Fake-Server)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket').Path
+          $installer = Join-Path $pkgDir 'Installieren.ps1'
+          $utf8 = New-Object Text.UTF8Encoding($false)
+
+          # Fake-"ollama"-Befehl, der Aufrufe protokolliert
+          $bin = Join-Path $env:RUNNER_TEMP 'fake-ollama'
+          New-Item -ItemType Directory -Force $bin | Out-Null
+          [IO.File]::WriteAllText((Join-Path $bin 'ollama.cmd'), "@echo off`r`necho %*>>`"%~dp0calls.txt`"`r`nexit /b 0`r`n")
+
+          # Fake-Ollama-Server auf Port 11434
+          $server = Start-Job -ScriptBlock {
+            $l = New-Object Net.HttpListener
+            $l.Prefixes.Add('http://localhost:11434/')
+            $l.Start()
+            while ($true) {
+              $ctx = $l.GetContext()
+              $body = switch ($ctx.Request.Url.AbsolutePath) {
+                '/api/version' { '{"version":"0.40.3"}' }
+                '/api/tags' { '{"models":[{"name":"llama3.1:8b","size":4900000000},{"name":"qwen2.5:14b","size":8900000000},{"name":"qwen2.5:72b","size":47000000000}]}' }
+                default { '{}' }
+              }
+              $bytes = [Text.Encoding]::UTF8.GetBytes($body)
+              $ctx.Response.ContentType = 'application/json'
+              $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+              $ctx.Response.Close()
+            }
+          }
+          for ($i = 0; $i -lt 30; $i++) {
+            try { Invoke-RestMethod http://localhost:11434/api/version -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
+          }
+
+          $mc = Join-Path $env:RUNNER_TEMP 'mc-ollama'
+          New-Item -ItemType Directory -Force (Join-Path $mc 'config') | Out-Null
+          [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), '{"profiles":{}}', $utf8)
+          [IO.File]::WriteAllText((Join-Path $mc 'config\ki_baumeister.json'), '{"blocksPerTick":123,"model":"gibtsnicht:1b"}', $utf8)
+
+          $env:PATH = "$bin;$env:PATH"
+          $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -NonInteractive 2>&1 | Out-String
+          $code = $LASTEXITCODE
+          Write-Host $out
+          Stop-Job $server; Remove-Job $server -Force
+          if ($code -ne 0) { throw "Installer mit Ollama fehlgeschlagen (Exitcode $code)" }
+          if ($out -match 'FEHLER|Exception|CommandNotFound') { throw 'Fehlermeldung in der Ausgabe' }
+
+          $cfg = [IO.File]::ReadAllText((Join-Path $mc 'config\ki_baumeister.json'), $utf8) | ConvertFrom-Json
+          if ($cfg.model -ne 'qwen2.5:14b') { throw "Erwartet vorhandenes Modell qwen2.5:14b, eingetragen: $($cfg.model)" }
+          if ($cfg.blocksPerTick -ne 123) { throw 'Vorhandene Einstellung blocksPerTick ging verloren' }
+          $calls = Join-Path $bin 'calls.txt'
+          if ((Test-Path $calls) -and ((Get-Content $calls -Raw) -match 'pull')) { throw 'Modell wurde unnötig heruntergeladen' }
+          if (-not $out.Contains('qwen2.5:14b ist installiert')) { throw 'Vorhandenes Modell nicht erkannt' }
+          Write-Host 'Ollama-Test bestanden.' -ForegroundColor Green
 
   release:
     name: GitHub-Release

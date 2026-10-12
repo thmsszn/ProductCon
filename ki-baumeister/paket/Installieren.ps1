@@ -71,6 +71,29 @@ function Find-Ollama {
     return $null
 }
 
+function Start-Ollama([string]$Exe) {
+    # Bevorzugt die Ollama-App (Symbol im Infobereich), sonst den Server direkt.
+    $app = Join-Path (Split-Path -Parent $Exe) 'ollama app.exe'
+    if (Test-Path -LiteralPath $app) { Start-Process -FilePath $app }
+    else { Start-Process -FilePath $Exe -ArgumentList 'serve' -WindowStyle Hidden }
+}
+
+function Get-OllamaModels {
+    try {
+        $tags = Invoke-RestMethod -Uri "$OllamaUrl/api/tags" -TimeoutSec 10
+        return @($tags.models | ForEach-Object { [pscustomobject]@{ Name = [string]$_.name; Size = [double]$_.size } })
+    } catch {
+        Write-Note "Modellliste nicht abrufbar: $($_.Exception.Message)"
+        return @()
+    }
+}
+
+function Test-ModelInstalled($Models, [string]$Name) {
+    # "qwen2.5" entspricht "qwen2.5:latest"
+    $wanted = if ($Name.Contains(':')) { $Name } else { "${Name}:latest" }
+    return [bool]($Models | Where-Object { $_.Name -eq $wanted -or $_.Name -eq $Name })
+}
+
 function Stop-WithMessage([string]$Text) {
     Write-Fail $Text
     exit 1
@@ -142,7 +165,7 @@ if ($existing) {
     $profiles.profiles | Add-Member -NotePropertyName $profileKey -NotePropertyValue $entry
 }
 Save-Utf8NoBom $profilesPath ($profiles | ConvertTo-Json -Depth 64)
-Write-Ok "Launcher-Profil „KI-Baumeister (Fabric $($pkg.minecraft))“ (Sicherung: $(Split-Path -Leaf $backup))"
+Write-Ok "Launcher-Profil 'KI-Baumeister (Fabric $($pkg.minecraft))' (Sicherung: $(Split-Path -Leaf $backup))"
 
 # --- 3. Mods ----------------------------------------------------------------
 Write-Step 'Mods kopieren'
@@ -225,47 +248,69 @@ if ($SkipOllama) {
         Write-Ok "Ollama: $ollama"
         if (-not (Test-OllamaServer)) {
             Write-Host '    Starte Ollama ...'
-            Start-Process -FilePath $ollama -ArgumentList 'serve' -WindowStyle Hidden
+            Start-Ollama $ollama
             for ($i = 0; $i -lt 30 -and -not (Test-OllamaServer); $i++) { Start-Sleep -Seconds 1 }
         }
         if (-not (Test-OllamaServer)) {
             Write-Note 'Ollama antwortet nicht. Bitte Ollama einmal über das Startmenü starten und Installieren.bat erneut ausführen.'
         } else {
-            $installed = @()
-            try { $installed = @((Invoke-RestMethod -Uri "$OllamaUrl/api/tags" -TimeoutSec 10).models | ForEach-Object { $_.name }) } catch {}
+            $models = @(Get-OllamaModels)
+            $ramGb = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+            if ($models.Count -gt 0) {
+                Write-Host '    Bereits installierte Modelle:'
+                foreach ($m in $models) { Write-Host ('      - {0} ({1:N1} GB)' -f $m.Name, ($m.Size / 1GB)) }
+            }
+
+            $configPath = Join-Path $MinecraftDir 'config\ki_baumeister.json'
+            if (-not $Model -and (Test-Path $configPath)) {
+                # Bereits in der Mod eingestelltes Modell beibehalten, wenn es installiert ist.
+                try {
+                    $configured = [string](Read-JsonFile $configPath).model
+                    if ($configured -and (Test-ModelInstalled $models $configured)) { $Model = $configured }
+                } catch { Write-Note 'config\ki_baumeister.json ist unlesbar.' }
+            }
 
             if (-not $Model) {
-                $ramGb = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
-                if ($ramGb -ge 24) { $Model = 'qwen2.5:14b' } else { $Model = 'qwen2.5:7b' }
-                Write-Host "    Arbeitsspeicher: $ramGb GB -> empfohlenes Modell: $Model"
-                Write-Host '      qwen2.5:7b  (ca. 4,7 GB) – für PCs mit 8–16 GB RAM'
-                Write-Host '      qwen2.5:14b (ca. 9 GB)   – schönere Bauwerke, ab 16 GB RAM / 8 GB Grafikspeicher'
+                # Vorhandenes, passendes Modell bevorzugen (gleiche Reihenfolge wie in der Mod), sonst eines empfehlen.
+                $maxBytes = [math]::Max(4GB, $ramGb * 0.6GB)
+                foreach ($prefix in @('qwen3', 'qwen2.5', 'gemma3', 'llama3.1', 'llama3', 'mistral')) {
+                    $hit = $models | Where-Object { $_.Name -like "$prefix*" -and $_.Size -ge 3GB -and $_.Size -le $maxBytes } |
+                        Sort-Object Size -Descending | Select-Object -First 1
+                    if ($hit) { $Model = $hit.Name; break }
+                }
+                $recommended = if ($ramGb -ge 24) { 'qwen2.5:14b' } else { 'qwen2.5:7b' }
+                if (-not $Model) { $Model = $recommended }
+                Write-Host "    Arbeitsspeicher: $ramGb GB -> Vorschlag: $Model"
+                Write-Host '      Download-Empfehlungen: qwen2.5:7b (ca. 4,7 GB, ab 8 GB RAM) oder qwen2.5:14b (ca. 9 GB, schönere Bauwerke, ab 24 GB RAM)'
                 if (-not $NonInteractive) {
-                    $choice = Read-Host "    Modell wählen (Enter = $Model, oder Namen eingeben, z.B. qwen2.5:14b)"
+                    $choice = Read-Host "    Modell wählen (Enter = $Model, oder Namen eingeben)"
                     if (-not [string]::IsNullOrWhiteSpace($choice)) { $Model = $choice.Trim() }
                 }
             }
 
-            if ($installed -contains $Model) {
-                Write-Ok "Modell $Model ist bereits installiert."
-            } elseif (Ask-YesNo "Modell $Model jetzt herunterladen?" $true) {
+            if (Test-ModelInstalled $models $Model) {
+                Write-Ok "Modell $Model ist installiert."
+            } elseif (Ask-YesNo "Modell $Model ist noch nicht installiert. Jetzt herunterladen?" $true) {
                 & $ollama pull $Model
-                if ($LASTEXITCODE -ne 0) { Write-Note "Herunterladen von $Model fehlgeschlagen. Später in einer Konsole: ollama pull $Model" }
-                else { Write-Ok "Modell $Model installiert." }
+                $models = @(Get-OllamaModels)
+                if ($LASTEXITCODE -eq 0 -and (Test-ModelInstalled $models $Model)) { Write-Ok "Modell $Model installiert." }
+                else { Write-Note "Herunterladen von $Model fehlgeschlagen. Später in einer Konsole: ollama pull $Model" }
             }
 
-            # Modell in der Mod-Konfiguration eintragen
-            $configDir = Join-Path $MinecraftDir 'config'
-            New-Item -ItemType Directory -Force -Path $configDir | Out-Null
-            $configPath = Join-Path $configDir 'ki_baumeister.json'
-            if (Test-Path $configPath) {
-                $cfg = Read-JsonFile $configPath
+            if (Test-ModelInstalled $models $Model) {
+                # Modell in der Mod-Konfiguration eintragen
+                New-Item -ItemType Directory -Force -Path (Split-Path -Parent $configPath) | Out-Null
+                $cfg = $null
+                if (Test-Path $configPath) {
+                    try { $cfg = Read-JsonFile $configPath } catch { Write-Note 'config\ki_baumeister.json war unlesbar und wird neu angelegt.' }
+                }
+                if ($null -eq $cfg) { $cfg = [pscustomobject]@{} }
                 Set-JsonProperty $cfg 'model' $Model
+                Save-Utf8NoBom $configPath ($cfg | ConvertTo-Json -Depth 8)
+                Write-Ok "Mod nutzt Modell $Model (config\ki_baumeister.json)"
             } else {
-                $cfg = [pscustomobject]@{ model = $Model }
+                Write-Note 'Kein Modell eingetragen – die Mod wählt beim Start automatisch ein installiertes Modell.'
             }
-            Save-Utf8NoBom $configPath ($cfg | ConvertTo-Json -Depth 8)
-            Write-Ok "Mod nutzt Modell $Model (config\ki_baumeister.json)"
         }
     }
 }
@@ -273,7 +318,7 @@ if ($SkipOllama) {
 # --- Fertig -----------------------------------------------------------------
 Write-Host ''
 Write-Host '  Fertig!' -ForegroundColor Green
-Write-Host "  1. Minecraft Launcher öffnen und unten links das Profil „KI-Baumeister (Fabric $($pkg.minecraft))“ wählen."
+Write-Host "  1. Minecraft Launcher öffnen und unten links das Profil 'KI-Baumeister (Fabric $($pkg.minecraft))' wählen."
 Write-Host '  2. Spielen – beim ersten Start lädt der Launcher Minecraft und Fabric automatisch.'
 Write-Host '  3. Einzelspielerwelt öffnen (vorher Sicherung anlegen) und K drücken.'
 Write-Host ''
