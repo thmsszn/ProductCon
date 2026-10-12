@@ -82,6 +82,16 @@ jobs:
               echo "$out"
             fi
           done < "$RUNNER_TEMP/classes.txt"
+          if [ -f .ci-diagnose-resources ]; then
+            MCJAR=$(grep -m1 'minecraft-merged\|minecraft-client' "$RUNNER_TEMP/cp.txt" || true)
+            echo "== Ressourcen aus $MCJAR"
+            while read -r res; do
+              [ -z "$res" ] && continue
+              echo "===== $res"
+              unzip -p "$MCJAR" "$res" 2>&1 | head -40 || true
+            done < .ci-diagnose-resources
+            unzip -l "$MCJAR" | grep -E 'assets/minecraft/(items|models/item)/golden_axe|textures/item/golden_axe' || true
+          fi
 
       - name: Version lesen
         id: ver

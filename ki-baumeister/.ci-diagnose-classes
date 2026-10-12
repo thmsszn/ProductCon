@@ -1,0 +1,37 @@
+net.minecraft.world.item.Item
+net.minecraft.world.item.Item$Properties
+net.minecraft.world.item.Rarity
+net.minecraft.world.InteractionResult
+net.minecraft.world.InteractionHand
+net.minecraft.world.item.context.UseOnContext getClickedPos|getPlayer|getLevel|getHand|getItemInHand
+net.minecraft.core.Registry register
+net.minecraft.core.registries.Registries ITEM|BLOCK
+net.minecraft.resources.ResourceKey create
+net.minecraft.world.item.CreativeModeTabs TOOLS|FUNCTIONAL
+net.minecraft.world.entity.player.Inventory add\(|getSelected|getItem
+net.minecraft.world.entity.player.Player getInventory|getMainHandItem|isShiftKeyDown|getItemInHand
+net.minecraft.world.item.ItemStack is\(|getItem\(|has\(|set\(|getHoverName|ItemStack\(net
+net.minecraft.server.players.PlayerList getPlayer
+net.minecraft.server.level.ServerPlayer getUUID|getInventory
+net.minecraft.nbt.NbtIo
+net.minecraft.nbt.CompoundTag put|CompoundTag\(
+net.minecraft.nbt.ListTag
+net.minecraft.SharedConstants getCurrentVersion|WORLD_VERSION|DATA_VERSION
+net.minecraft.WorldVersion
+net.minecraft.world.level.material.MapColor col|calculateARGBColor|NONE
+net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase getMapColor
+net.fabricmc.api.ModInitializer
+net.fabricmc.fabric.api.event.player.AttackBlockCallback
+net.fabricmc.fabric.api.event.player.UseBlockCallback
+net.fabricmc.fabric.api.event.player.UseItemCallback
+net.fabricmc.fabric.api.event.player.AttackBlockCallback$AttackBlockCallback
+net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents
+net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTabOutput
+net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
+net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
+net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+net.minecraft.commands.Commands literal|argument
+net.minecraft.world.item.component.TooltipDisplay
+net.minecraft.core.component.DataComponents CUSTOM_NAME|ENCHANTMENT_GLINT_OVERRIDE|RARITY|LORE|ITEM_NAME|MAX_STACK_SIZE
+net.minecraft.world.item.component.ItemLore
+net.minecraft.world.level.Level getBlockState|isClientSide
