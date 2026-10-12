@@ -13,3 +13,9 @@ wizard-fantasy|13|42|13|{"summary":"Zauberturm","type":"tower","style":"fantasy"
 drum-stone|19|46|19|{"summary":"Burgturm mit Wehrgang und Kegeldach","type":"tower","style":"stone","floors":5,"roof":"cone","features":["interior","path"],"rooms":[]}
 small-rustic|7|14|7|{"summary":"Kleiner Wachturm","type":"tower","style":"rustic","floors":2,"roof":"gable","features":["interior"],"rooms":[]}
 lighthouse-coast|27|52|27|{"summary":"Leuchtturm mit Waerterhaus","type":"lighthouse","style":"medieval","floors":4,"features":["interior","path","lanterns","garden"],"rooms":[]}
+burg-gross|48|40|44|{"summary":"Grosse Burg mit Ringmauer, Ecktuermen und Palas","type":"castle","style":"stone","floors":3,"roof":"cone","features":["garden","lanterns","interior"],"rooms":["bedroom","library","bedroom","office"]}
+burg-mittel|33|30|33|{"summary":"Mittelalterliche Burg","type":"castle","style":"medieval","floors":2,"features":["interior","lanterns"],"rooms":[]}
+burg-nordisch|29|24|27|{"summary":"Nordische Festung","type":"castle","style":"nordic","floors":2,"roof":"hip","features":["interior"],"rooms":["bedroom","storage"]}
+burg-klein|17|22|19|{"summary":"Kleine Burg, Wohnturm mit Rundturm","type":"castle","style":"stone","floors":2,"roof":"cone","features":["interior"],"rooms":["bedroom"]}
+burg-wueste|23|17|25|{"summary":"Wuestenfestung","type":"castle","style":"desert","floors":2,"features":["interior"],"rooms":[]}
+burg-mini|7|8|7|{"summary":"Mini-Wehrturm","type":"castle","style":"stone","floors":1,"features":[],"rooms":[]}

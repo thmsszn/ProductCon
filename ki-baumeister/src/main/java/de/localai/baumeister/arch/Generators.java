@@ -9,7 +9,7 @@ final class Generators {
     }
 
     static Voxels castle(Site site) {
-        return new HouseGenerator(site).build();
+        return new CastleGenerator(site).build();
     }
 
     static Voxels temple(Site site) {
