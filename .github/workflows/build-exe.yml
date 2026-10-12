@@ -4,6 +4,9 @@ on:
   push:
     branches: ["**"]
     tags: ["v*"]
+    paths-ignore:
+      - "ki-baumeister/**"
+      - ".github/workflows/ki-baumeister.yml"
   workflow_dispatch:
     inputs:
       release_tag:

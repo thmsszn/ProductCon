@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "ki_baumeister",
+  "version": "${version}",
+  "name": "KI-Baumeister (lokal)",
+  "description": "Bauwerke per lokaler Ollama-KI planen und bauen.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "de.localai.baumeister.BaumeisterClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

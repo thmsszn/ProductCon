@@ -1,0 +1,51 @@
+net.minecraft.client.gui.GuiGraphics
+net.minecraft.client.gui.screens.Screen
+net.minecraft.client.gui.components.AbstractWidget
+net.minecraft.client.gui.components.AbstractButton
+net.minecraft.client.gui.components.Button
+net.minecraft.client.gui.components.Button$Builder
+net.minecraft.client.gui.components.EditBox
+net.minecraft.client.gui.components.MultiLineEditBox
+net.minecraft.client.gui.components.Tooltip
+net.minecraft.client.gui.Font width|split|lineHeight|drawInBatch
+net.minecraft.client.KeyMapping
+net.minecraft.client.KeyMapping$Category
+net.minecraft.resources.Identifier
+net.minecraft.resources.ResourceLocation
+net.minecraft.client.Minecraft getInstance|player|level|hitResult|getSingleplayerServer|setScreen|execute|gui|screen|font|getWindow|options|isPaused|getDeltaTracker
+net.minecraft.client.gui.Gui OverlayMessage|setOverlay
+net.minecraft.world.entity.player.Player displayClientMessage|sendOverlay|sendSystemMessage
+net.minecraft.world.entity.Entity  pick\(|blockPosition|level\(|getX\(|getEyePosition|position\(|getDirection|getYRot
+net.minecraft.commands.arguments.blocks.BlockStateParser
+net.minecraft.commands.arguments.blocks.BlockStateParser$BlockResult
+net.minecraft.world.level.block.Block updateFromNeighbourShapes|UPDATE_|defaultBlockState|getName
+net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase rotate|canOcclude|isAir|hasProperty|getValue|setValue|isSolidRender|getBlock\(|hasBlockEntity|is\(
+net.minecraft.world.level.block.state.StateHolder
+net.minecraft.world.level.block.Rotation
+net.minecraft.server.MinecraftServer getLevel|overworld|execute|isSameThread
+net.minecraft.world.level.Level setBlock|getBlockState|dimension|addParticle|addAlwaysVisibleParticle|getBlockEntity|isLoaded|isClientSide
+net.minecraft.client.multiplayer.ClientLevel addParticle|addAlwaysVisibleParticle|getGameTime
+net.minecraft.core.particles.DustParticleOptions
+net.minecraft.core.particles.ParticleTypes END_ROD|HAPPY|DUST|ELECTRIC|WAX|GLOW|FLAME|COMPOSTER
+net.minecraft.world.level.block.state.properties.BlockStateProperties DOUBLE_BLOCK_HALF|BED_PART|HORIZONTAL_FACING
+net.minecraft.core.BlockPos asLong|of\(|BlockPos\(|relative|above
+net.minecraft.core.registries.BuiltInRegistries BLOCK
+net.minecraft.core.Registry getOptional|getKey|containsKey|get\(
+net.minecraft.network.chat.Component literal|translatable|empty
+net.minecraft.world.phys.BlockHitResult
+net.minecraft.world.phys.HitResult
+net.minecraft.client.input.KeyEvent
+net.minecraft.client.input.MouseButtonEvent
+net.minecraft.client.input.CharacterEvent
+net.minecraft.client.gui.components.events.GuiEventListener
+net.minecraft.client.gui.narration.NarrationElementOutput
+net.minecraft.client.renderer.RenderPipelines
+net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
+net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
+net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
+net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
+net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
+net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
+net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback
+net.fabricmc.loader.api.FabricLoader getConfigDir|getInstance|getModContainer
