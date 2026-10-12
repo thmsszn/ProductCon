@@ -1,6 +1,8 @@
 package de.localai.baumeister;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import de.localai.baumeister.arch.BuildingSpec;
+import de.localai.baumeister.arch.Voxels;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -22,9 +24,9 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
-/** Wandelt einen {@link BuildPlan} in eine sortierte Liste konkreter Blockplatzierungen um. */
+/** Wandelt das Voxel-Raster der Architektur-Engine in sortierte, gedrehte Blockplatzierungen um. */
 public final class PlanCompiler {
-    /** Blöcke, die die KI nie setzen darf. */
+    /** Blöcke, die nie gesetzt werden. */
     private static final Set<String> FORBIDDEN = Set.of(
         "tnt", "command_block", "chain_command_block", "repeating_command_block", "structure_block",
         "structure_void", "jigsaw", "barrier", "light", "lava", "fire", "soul_fire", "nether_portal",
@@ -36,7 +38,8 @@ public final class PlanCompiler {
     public record Material(Block block, int count) {}
 
     public record Result(
-        BuildPlan plan,
+        BuildingSpec spec,
+        Voxels voxels,
         BuildRegion region,
         List<Placement> placements,
         List<Material> materials,
@@ -46,51 +49,39 @@ public final class PlanCompiler {
 
     private PlanCompiler() {}
 
-    public static Result compile(BuildPlan plan, BuildRegion region, boolean clearArea) {
-        int w = region.localWidth(), h = region.localHeight(), d = region.localDepth();
+    /** Prüft, ob ein Blockzustand-Text im Spiel existiert (für die Material-Auswahl der Engine). */
+    public static boolean exists(String block) {
+        return resolve(block) != null;
+    }
+
+    public static Result compile(BuildingSpec spec, Voxels vox, BuildRegion region) {
+        int w = vox.w, h = vox.h, d = vox.d;
         BlockState[] grid = new BlockState[w * h * d];
         Map<String, BlockState> cache = new HashMap<>();
         Set<String> rejected = new LinkedHashSet<>();
-        Grid g = new Grid(grid, w, h, d);
-
-        for (BuildPlan.Element e : plan.elements()) {
-            BlockState state = cache.computeIfAbsent(e.block(), PlanCompiler::resolve);
-            if (state == null) {
-                rejected.add(e.block());
-                continue;
-            }
-            int x1 = clamp(Math.min(e.x1(), e.x2()), w), x2 = clamp(Math.max(e.x1(), e.x2()), w);
-            int y1 = clamp(Math.min(e.y1(), e.y2()), h), y2 = clamp(Math.max(e.y1(), e.y2()), h);
-            int z1 = clamp(Math.min(e.z1(), e.z2()), d), z2 = clamp(Math.max(e.z1(), e.z2()), d);
-            switch (e.shape()) {
-                case BLOCK -> {
-                    if (inside(e.x1(), w) && inside(e.y1(), h) && inside(e.z1(), d)) g.set(e.x1(), e.y1(), e.z1(), state);
+        for (int y = 0; y < h; y++)
+            for (int z = 0; z < d; z++)
+                for (int x = 0; x < w; x++) {
+                    String s = vox.get(x, y, z);
+                    if (s == null) continue;
+                    BlockState state = cache.computeIfAbsent(s, PlanCompiler::resolve);
+                    if (state == null) {
+                        rejected.add(s);
+                        continue;
+                    }
+                    grid[(y * d + z) * w + x] = state;
                 }
-                case FILL -> g.box(x1, y1, z1, x2, y2, z2, (x, y, z) -> state);
-                case HOLLOW -> g.box(x1, y1, z1, x2, y2, z2, (x, y, z) ->
-                    x == x1 || x == x2 || y == y1 || y == y2 || z == z1 || z == z2 ? state : Blocks.AIR.defaultBlockState());
-                case WALLS -> g.box(x1, y1, z1, x2, y2, z2, (x, y, z) ->
-                    x == x1 || x == x2 || z == z1 || z == z2 ? state : null);
-                case ROOF -> roof(g, x1, clamp(e.y1(), h), z1, x2, e.y2() > e.y1() ? clamp(e.y2(), h) : h - 1, z2, state);
-                case CYLINDER -> cylinder(g, x1, y1, z1, x2, y2, z2, state);
-            }
-        }
-
         completeMultiBlocks(grid, w, h, d);
 
         List<Placement> air = new ArrayList<>();
         List<Placement> solid = new ArrayList<>();
         List<Placement> attached = new ArrayList<>();
         Map<Block, Integer> counts = new IdentityHashMap<>();
-        BlockState airState = Blocks.AIR.defaultBlockState();
-        for (int y = 0; y < h; y++) {
-            for (int z = 0; z < d; z++) {
+        for (int y = 0; y < h; y++)
+            for (int z = 0; z < d; z++)
                 for (int x = 0; x < w; x++) {
                     BlockState s = grid[(y * d + z) * w + x];
-                    if (s == null) {
-                        if (!clearArea) continue;
-                        s = airState;
-                    }
+                    if (s == null) continue;
                     Placement p = new Placement(region.toWorld(x, y, z), s.rotate(region.rotation()));
                     if (s.isAir()) air.add(p);
                     else {
@@ -99,8 +90,6 @@ public final class PlanCompiler {
                         else attached.add(p);
                     }
                 }
-            }
-        }
         // Erst Luft (von oben nach unten), dann tragende Blöcke, zuletzt Anbauteile (Türen, Fackeln, Glas …).
         Collections.reverse(air);
         List<Placement> all = new ArrayList<>(air.size() + solid.size() + attached.size());
@@ -111,8 +100,7 @@ public final class PlanCompiler {
         List<Material> materials = new ArrayList<>();
         counts.forEach((b, c) -> materials.add(new Material(b, c)));
         materials.sort((a, b) -> Integer.compare(b.count(), a.count()));
-
-        return new Result(plan, region, List.copyOf(all), List.copyOf(materials),
+        return new Result(spec, vox, region, List.copyOf(all), List.copyOf(materials),
             solid.size() + attached.size(), air.size(), List.copyOf(rejected));
     }
 
@@ -120,14 +108,10 @@ public final class PlanCompiler {
     static BlockState resolve(String raw) {
         String s = raw.trim().toLowerCase(Locale.ROOT);
         if (s.isEmpty()) return null;
-        // "oak planks" → "oak_planks", aber "[facing=south, half=top]" → "[facing=south,half=top]"
         int open = s.indexOf('[');
         s = open < 0 ? s.replace(' ', '_') : s.substring(0, open).trim().replace(' ', '_') + s.substring(open).replace(" ", "");
         BlockState state = parse(s);
-        if (state == null) {
-            int bracket = s.indexOf('[');
-            if (bracket > 0) state = parse(s.substring(0, bracket));
-        }
+        if (state == null && open > 0) state = parse(s.substring(0, s.indexOf('[')));
         if (state == null) return null;
         Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         if ("minecraft".equals(id.getNamespace()) && FORBIDDEN.contains(id.getPath())) return null;
@@ -143,52 +127,10 @@ public final class PlanCompiler {
         }
     }
 
-    /** Walmdach: Ringe, die pro Ebene auf jeder Seite um 1 kleiner werden; Treppen zeigen nach außen. */
-    private static void roof(Grid g, int x1, int y1, int z1, int x2, int yMax, int z2, BlockState state) {
-        boolean stairs = state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
-            && state.hasProperty(BlockStateProperties.STAIRS_SHAPE);
-        for (int i = 0; ; i++) {
-            int y = y1 + i, ax = x1 + i, bx = x2 - i, az = z1 + i, bz = z2 - i;
-            if (y > yMax || y >= g.h || ax > bx || az > bz) break;
-            for (int x = ax; x <= bx; x++) {
-                for (int z = az; z <= bz; z++) {
-                    if (x != ax && x != bx && z != az && z != bz) continue;
-                    BlockState s = state;
-                    if (stairs) {
-                        // Treppen steigen zur Mitte hin an: "facing" zeigt zur Dachmitte.
-                        Direction dir = z == az ? Direction.SOUTH : z == bz ? Direction.NORTH : x == ax ? Direction.EAST : Direction.WEST;
-                        s = state.setValue(BlockStateProperties.HORIZONTAL_FACING, dir);
-                    }
-                    g.set(x, y, z, s);
-                }
-            }
-        }
-    }
-
-    /** Runde, hohle Wand (Turm); innen wird Luft gesetzt. */
-    private static void cylinder(Grid g, int x1, int y1, int z1, int x2, int y2, int z2, BlockState state) {
-        double cx = (x1 + x2 + 1) / 2.0, cz = (z1 + z2 + 1) / 2.0;
-        double rx = (x2 - x1 + 1) / 2.0, rz = (z2 - z1 + 1) / 2.0;
-        BlockState air = Blocks.AIR.defaultBlockState();
-        for (int x = x1; x <= x2; x++) {
-            for (int z = z1; z <= z2; z++) {
-                if (!inEllipse(x, z, cx, cz, rx, rz)) continue;
-                boolean edge = !inEllipse(x + 1, z, cx, cz, rx, rz) || !inEllipse(x - 1, z, cx, cz, rx, rz)
-                    || !inEllipse(x, z + 1, cx, cz, rx, rz) || !inEllipse(x, z - 1, cx, cz, rx, rz);
-                for (int y = y1; y <= y2; y++) g.set(x, y, z, edge ? state : air);
-            }
-        }
-    }
-
-    private static boolean inEllipse(int x, int z, double cx, double cz, double rx, double rz) {
-        double dx = (x + 0.5 - cx) / rx, dz = (z + 0.5 - cz) / rz;
-        return dx * dx + dz * dz <= 1.0;
-    }
-
     /** Ergänzt obere Türhälften und Bett-Kopfteile, entfernt verwaiste Hälften. */
     private static void completeMultiBlocks(BlockState[] grid, int w, int h, int d) {
-        for (int y = 0; y < h; y++) {
-            for (int z = 0; z < d; z++) {
+        for (int y = 0; y < h; y++)
+            for (int z = 0; z < d; z++)
                 for (int x = 0; x < w; x++) {
                     int i = (y * d + z) * w + x;
                     BlockState s = grid[i];
@@ -204,45 +146,11 @@ public final class PlanCompiler {
                     } else if (s.hasProperty(BlockStateProperties.BED_PART) && s.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
                         && s.getValue(BlockStateProperties.BED_PART) == BedPart.FOOT) {
                         Direction f = s.getValue(BlockStateProperties.HORIZONTAL_FACING);
-                        int hx = x + stepX(f), hz = z + stepZ(f);
-                        if (inside(hx, w) && inside(hz, d)) grid[(y * d + hz) * w + hx] = s.setValue(BlockStateProperties.BED_PART, BedPart.HEAD);
+                        int hx = x + (f == Direction.EAST ? 1 : f == Direction.WEST ? -1 : 0);
+                        int hz = z + (f == Direction.SOUTH ? 1 : f == Direction.NORTH ? -1 : 0);
+                        if (hx >= 0 && hx < w && hz >= 0 && hz < d) grid[(y * d + hz) * w + hx] = s.setValue(BlockStateProperties.BED_PART, BedPart.HEAD);
                         else grid[i] = null;
                     }
                 }
-            }
-        }
-    }
-
-    private static int stepX(Direction d) {
-        return d == Direction.EAST ? 1 : d == Direction.WEST ? -1 : 0;
-    }
-
-    private static int stepZ(Direction d) {
-        return d == Direction.SOUTH ? 1 : d == Direction.NORTH ? -1 : 0;
-    }
-
-    private static int clamp(int v, int size) {
-        return Math.max(0, Math.min(size - 1, v));
-    }
-
-    private static boolean inside(int v, int size) {
-        return v >= 0 && v < size;
-    }
-
-    @FunctionalInterface
-    private interface CellFn {
-        BlockState at(int x, int y, int z);
-    }
-
-    private record Grid(BlockState[] cells, int w, int h, int d) {
-        void set(int x, int y, int z, BlockState s) {
-            if (s != null) cells[(y * d + z) * w + x] = s;
-        }
-
-        void box(int x1, int y1, int z1, int x2, int y2, int z2, CellFn fn) {
-            for (int y = y1; y <= y2; y++)
-                for (int z = z1; z <= z2; z++)
-                    for (int x = x1; x <= x2; x++) set(x, y, z, fn.at(x, y, z));
-        }
     }
 }

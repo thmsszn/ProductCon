@@ -3,12 +3,19 @@
   "id": "ki_baumeister",
   "version": "${version}",
   "name": "KI-Baumeister",
-  "description": "Beschreibe ein Bauwerk – eine lokale KI (Ollama) entwirft den Bauplan, du prüfst die Vorschau in der Welt und baust mit einem Klick. Inklusive Rückgängig.",
-  "authors": ["thmsszn"],
+  "description": "Beschreibe ein Bauwerk – eine lokale KI (Ollama) entwirft es als Architekt, eine Architektur-Engine baut daraus ein realistisches Gebäude mit Einrichtung. Vorschau als Hologramm, Ecken per Baumeister-Axt, Export als Schematic, Rückgängig.",
+  "authors": [
+    "thmsszn"
+  ],
   "icon": "assets/ki_baumeister/icon.png",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
-    "client": ["de.localai.baumeister.BaumeisterClient"]
+    "main": [
+      "de.localai.baumeister.BaumeisterMod"
+    ],
+    "client": [
+      "de.localai.baumeister.BaumeisterClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=${loader_version}",

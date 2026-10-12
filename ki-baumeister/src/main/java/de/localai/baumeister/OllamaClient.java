@@ -101,15 +101,12 @@ public final class OllamaClient {
         private volatile InputStream stream;
         private volatile int contentChars;
         private volatile int thinkingChars;
-        private volatile int elements;
         private volatile boolean truncated;
         private final long startedAt = System.currentTimeMillis();
 
         public CompletableFuture<String> result() { return result; }
         public int contentChars() { return contentChars; }
         public int thinkingChars() { return thinkingChars; }
-        /** Anzahl bereits empfangener Bauelemente (grob, für die Fortschrittsanzeige). */
-        public int elements() { return elements; }
         /** {@code true}, wenn die Ausgabe wegen des Token-Limits abgeschnitten wurde. */
         public boolean truncated() { return truncated; }
         public boolean isThinking() { return contentChars == 0 && thinkingChars > 0; }
@@ -168,9 +165,7 @@ public final class OllamaClient {
         }
 
         private String readStream(InputStream in) throws IOException {
-            StringBuilder content = new StringBuilder(8192);
-            int scanFrom = 0;
-            int count = 0;
+            StringBuilder content = new StringBuilder(2048);
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -186,13 +181,6 @@ public final class OllamaClient {
                         if (msg.has("content") && msg.get("content").isJsonPrimitive()) {
                             content.append(msg.get("content").getAsString());
                             contentChars = content.length();
-                            int idx;
-                            while ((idx = content.indexOf("\"type\"", scanFrom)) >= 0) {
-                                count++;
-                                scanFrom = idx + 6;
-                            }
-                            scanFrom = Math.max(scanFrom, content.length() - 6);
-                            elements = count;
                         }
                     }
                     if (chunk.has("done") && chunk.get("done").getAsBoolean()) {

@@ -5,10 +5,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import de.localai.baumeister.arch.Architect;
+import de.localai.baumeister.arch.BuildingSpec;
+import de.localai.baumeister.arch.Palette;
+import de.localai.baumeister.arch.SchematicWriter;
+import de.localai.baumeister.arch.Voxels;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -54,10 +60,16 @@ public final class Session {
     public static void captureCorner(boolean first) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        BlockPos pos;
         HitResult hit = mc.player.pick(96.0, 1.0f, false);
-        if (hit instanceof BlockHitResult bhr && hit.getType() == HitResult.Type.BLOCK) pos = bhr.getBlockPos();
-        else pos = mc.player.blockPosition();
+        BlockPos pos = hit instanceof BlockHitResult bhr && hit.getType() == HitResult.Type.BLOCK
+            ? bhr.getBlockPos() : mc.player.blockPosition();
+        setCorner(first, pos);
+    }
+
+    /** Ecke setzen (auch von der Baumeister-Axt aufgerufen). */
+    public static void setCorner(boolean first, BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
         if (first) cornerA = pos;
         else cornerB = pos;
         if (result != null && cornerA != null && cornerB != null) {
@@ -86,26 +98,26 @@ public final class Session {
 
     /** Fehlermeldung, falls der Bereich fehlt oder zu groß ist, sonst {@code null}. */
     public static String validateRegion() {
-        if (cornerA == null || cornerB == null) return "Bitte zuerst beide Ecken setzen.";
+        if (cornerA == null || cornerB == null) return "Bitte zuerst beide Ecken setzen (Baumeister-Axt oder Knöpfe).";
         ModConfig cfg = ModConfig.get();
         BuildRegion r = BuildRegion.of(cornerA, cornerB, Minecraft.getInstance().player.position());
         if (r.sizeX() > cfg.maxHorizontalSize || r.sizeZ() > cfg.maxHorizontalSize || r.sizeY() > cfg.maxHeight) {
             return "Bereich zu groß: maximal " + cfg.maxHorizontalSize + "×" + cfg.maxHeight + "×" + cfg.maxHorizontalSize + ".";
         }
         if (r.volume() > cfg.maxVolume) return "Bereich zu groß: maximal " + fmtInt(cfg.maxVolume) + " Raumblöcke.";
-        if (r.sizeX() < 3 || r.sizeZ() < 3 || r.sizeY() < 3) return "Bereich zu klein: mindestens 3×3×3.";
+        if (r.sizeX() < 5 || r.sizeZ() < 5 || r.sizeY() < 5) return "Bereich zu klein: mindestens 5×5×5 für ein Gebäude.";
         return null;
     }
 
+    /**
+     * Lässt die KI einen Entwurf (Typ, Stil, Geschosse, Materialien …) wählen und baut daraus mit der
+     * Architektur-Engine das Gebäude. Ist Ollama nicht erreichbar, entsteht der Entwurf aus Stichworten.
+     */
     public static void generate(String prompt, String model, boolean refine) {
         Minecraft mc = Minecraft.getInstance();
         if (generation != null || mc.player == null) return;
         if (prompt == null || prompt.isBlank()) {
-            setStatus(Tone.WARN, refine ? "Beschreibe, was am Plan geändert werden soll." : "Beschreibe zuerst, was gebaut werden soll.");
-            return;
-        }
-        if (model == null || model.isBlank()) {
-            setStatus(Tone.ERROR, "Kein Ollama-Modell gewählt. In der Konsole z.B.: ollama pull qwen2.5:14b");
+            setStatus(Tone.WARN, refine ? "Beschreibe, was am Entwurf geändert werden soll." : "Beschreibe zuerst, was gebaut werden soll.");
             return;
         }
         refine = refine && canRefine();
@@ -114,7 +126,7 @@ public final class Session {
         if (refine) {
             region = result.region();
             messages.addAll(conversation);
-            messages.add(new OllamaClient.Message("user", PlanPrompt.refinement(prompt, region)));
+            messages.add(new OllamaClient.Message("user", PlanPrompt.refinement(prompt)));
         } else {
             String error = validateRegion();
             if (error != null) {
@@ -125,64 +137,147 @@ public final class Session {
             messages.add(new OllamaClient.Message("system", PlanPrompt.system()));
             messages.add(new OllamaClient.Message("user", PlanPrompt.request(prompt, region)));
         }
+        if (model == null || model.isBlank() || Boolean.FALSE.equals(ollamaOnline)) {
+            // Ohne KI: Entwurf aus Stichworten
+            BuildingSpec spec = Architect.fromKeywords(prompt);
+            result = compile(spec, region);
+            setStatus(Tone.WARN, "Ollama nicht erreichbar – Entwurf aus Stichworten erstellt: " + describe(spec) + ".");
+            return;
+        }
 
         ModConfig cfg = ModConfig.get();
-        OllamaClient.Generation gen = OllamaClient.chat(cfg, model, messages, PlanPrompt.schema());
+        OllamaClient.Generation gen = OllamaClient.chat(cfg, model, messages, BuildingSpec.schema());
         generation = gen;
-        boolean clear = cfg.clearArea;
         boolean refining = refine;
-        setStatus(Tone.BUSY, refine ? "KI passt den Plan an …" : "KI entwirft den Bauplan …");
+        setStatus(Tone.BUSY, refine ? "Der KI-Architekt überarbeitet den Entwurf …" : "Der KI-Architekt entwirft das Gebäude …");
 
         gen.result()
-            .thenApplyAsync(text -> new Outcome(text, PlanCompiler.compile(PlanParser.parse(text), region, clear)),
-                BaumeisterClient.EXECUTOR)
+            .thenApplyAsync(text -> {
+                BuildingSpec spec = BuildingSpec.parse(text);
+                return new Outcome(text, compile(spec, region));
+            }, BaumeisterClient.EXECUTOR)
             .whenComplete((res, err) -> mc.execute(() -> {
                 if (generation != gen) return;
                 generation = null;
                 if (err != null) {
                     Throwable cause = err instanceof CompletionException && err.getCause() != null ? err.getCause() : err;
-                    if (cause instanceof CancellationException) setStatus(Tone.INFO, "Abgebrochen.");
-                    else {
+                    if (cause instanceof CancellationException) {
+                        setStatus(Tone.INFO, "Abgebrochen.");
+                        return;
+                    }
+                    BaumeisterClient.LOG.warn("KI-Entwurf fehlgeschlagen, nutze Stichworte", cause);
+                    if (!refining) {
+                        BuildingSpec spec = Architect.fromKeywords(prompt);
+                        result = compile(spec, region);
+                        setStatus(Tone.WARN, "KI-Fehler (" + cause.getMessage() + ") – Entwurf aus Stichworten: " + describe(spec) + ".");
+                    } else {
                         setStatus(Tone.ERROR, cause.getMessage() != null ? cause.getMessage() : cause.toString());
-                        BaumeisterClient.LOG.warn("Bauplan-Erzeugung fehlgeschlagen", cause);
                     }
                     return;
                 }
-                String text = res.text();
-                PlanCompiler.Result compiled = res.compiled();
-                if (compiled.solidBlocks() == 0) {
-                    setStatus(Tone.ERROR, "Der Plan enthält keine setzbaren Blöcke. Bitte erneut versuchen.");
-                    return;
-                }
-                result = compiled;
-                // Nur System, (ergänzten) Auftrag und den neuesten Plan behalten, damit der Kontext klein bleibt.
+                result = res.compiled();
+                // Nur System, (ergänzten) Auftrag und den neuesten Entwurf behalten.
                 OllamaClient.Message request = messages.get(1);
                 if (refining) request = new OllamaClient.Message("user", request.content() + "\nAlso: " + prompt.trim());
-                conversation = List.of(messages.get(0), request, new OllamaClient.Message("assistant", text));
-                StringBuilder msg = new StringBuilder(refining ? "Plan angepasst: " : "Plan fertig: ")
-                    .append(fmtInt(compiled.solidBlocks())).append(" Blöcke aus ")
-                    .append(compiled.plan().elements().size()).append(" Elementen. Prüfe die Vorschau und klicke „Bauen“.");
-                Tone t = Tone.OK;
-                if (gen.truncated()) {
-                    msg.append(" Hinweis: Antwort war zu lang und wurde gekürzt.");
-                    t = Tone.WARN;
-                }
-                if (!compiled.rejected().isEmpty()) {
-                    msg.append(" Ignoriert: ").append(String.join(", ", compiled.rejected().stream().limit(3).toList()));
-                    t = Tone.WARN;
-                }
-                setStatus(t, msg.toString());
+                conversation = List.of(messages.get(0), request, new OllamaClient.Message("assistant", res.text()));
+                setStatus(Tone.OK, (refining ? "Entwurf angepasst: " : "Entwurf fertig: ") + describe(result.spec()) + " – "
+                    + fmtInt(result.solidBlocks()) + " Blöcke. Prüfe das Hologramm und klicke „Bauen“.");
             }));
+    }
+
+    /** Baut den Entwurf mit der Architektur-Engine und rechnet ihn in Minecraft-Blöcke um. */
+    private static PlanCompiler.Result compile(BuildingSpec spec, BuildRegion region) {
+        Voxels vox = Architect.generate(spec, region.localWidth(), region.localHeight(), region.localDepth(), PlanCompiler::exists);
+        return PlanCompiler.compile(spec, vox, region);
+    }
+
+    /** Gleicher Entwurf, andere Variante (Zufall für Details, Pflanzen, Einrichtung). */
+    public static void variant() {
+        if (result == null || generation != null) return;
+        BuildingSpec spec = result.spec().withSeed(result.spec().seed() * 31 + 17);
+        result = compile(spec, result.region());
+        setStatus(Tone.OK, "Neue Variante: " + describe(spec) + ".");
+    }
+
+    public static String describe(BuildingSpec spec) {
+        return typeName(spec.type()) + ", " + styleName(spec.style()) + ", " + spec.floors()
+            + (spec.floors() == 1 ? " Geschoss" : " Geschosse");
+    }
+
+    public static String typeName(BuildingSpec.Type t) {
+        return switch (t) {
+            case HOUSE -> "Wohnhaus";
+            case COTTAGE -> "Hütte";
+            case MANSION -> "Herrenhaus";
+            case TAVERN -> "Taverne";
+            case BARN -> "Scheune";
+            case MODERN_HOUSE -> "Moderne Villa";
+            case TOWER -> "Turm";
+            case LIGHTHOUSE -> "Leuchtturm";
+            case CASTLE -> "Burg";
+            case TEMPLE -> "Tempel";
+            case CHURCH -> "Kirche";
+        };
+    }
+
+    public static String styleName(Palette.Style s) {
+        return switch (s) {
+            case MEDIEVAL -> "mittelalterlich";
+            case RUSTIC -> "rustikal";
+            case NORDIC -> "nordisch";
+            case FANTASY -> "Fantasy";
+            case VICTORIAN -> "viktorianisch";
+            case JAPANESE -> "japanisch";
+            case DESERT -> "Wüste";
+            case MODERN -> "modern";
+            case CLASSICAL -> "antik";
+            case STONE -> "Stein";
+        };
     }
 
     public static void cancelGeneration() {
         if (generation != null) generation.cancel();
     }
 
-    /** Nach Änderung von „Bereich leeren“ den vorhandenen Plan neu berechnen. */
-    public static void recompile() {
-        if (result == null) return;
-        result = PlanCompiler.compile(result.plan(), result.region(), ModConfig.get().clearArea);
+    /** Speichert den aktuellen Entwurf als Sponge-Schematic (.schem) für WorldEdit/Litematica. */
+    public static void saveSchematic() {
+        if (result == null) {
+            setStatus(Tone.WARN, "Erst einen Entwurf erstellen.");
+            return;
+        }
+        PlanCompiler.Result r = result;
+        String name = r.spec().type().id() + "-" + r.spec().style().name().toLowerCase(Locale.ROOT) + "-"
+            + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("schematics");
+        java.nio.file.Path file = dir.resolve("ki-baumeister-" + name + ".schem");
+        BaumeisterClient.EXECUTOR.execute(() -> {
+            try {
+                java.nio.file.Files.createDirectories(dir);
+                try (var out = java.nio.file.Files.newOutputStream(file)) {
+                    SchematicWriter.write(r.voxels(), net.minecraft.SharedConstants.WORLD_VERSION, r.spec().summary(), out);
+                }
+                Minecraft.getInstance().execute(() -> setStatus(Tone.OK, "Gespeichert: schematics/" + file.getFileName()));
+            } catch (Exception e) {
+                BaumeisterClient.LOG.warn("Schematic speichern fehlgeschlagen", e);
+                Minecraft.getInstance().execute(() -> setStatus(Tone.ERROR, "Speichern fehlgeschlagen: " + e.getMessage()));
+            }
+        });
+    }
+
+    /** Gibt dem Spieler eine Baumeister-Axt (Einzelspieler). */
+    public static void giveAxe() {
+        Minecraft mc = Minecraft.getInstance();
+        IntegratedServer server = mc.getSingleplayerServer();
+        if (server == null || mc.player == null) {
+            setStatus(Tone.WARN, "Die Axt gibt es per Knopf nur im Einzelspieler – im Kreativ-Inventar unter „Werkzeuge“.");
+            return;
+        }
+        java.util.UUID id = mc.player.getUUID();
+        server.execute(() -> {
+            var player = server.getPlayerList().getPlayer(id);
+            if (player != null) player.getInventory().add(new ItemStack(BaumeisterMod.BAUMEISTER_AXT));
+        });
+        setStatus(Tone.OK, "Baumeister-Axt erhalten: Linksklick = Ecke 1, Rechtsklick = Ecke 2.");
     }
 
     public static void build() {

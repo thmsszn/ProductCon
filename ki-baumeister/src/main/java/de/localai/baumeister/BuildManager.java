@@ -118,7 +118,9 @@ public final class BuildManager {
         }
         int budget = j.perTick;
         if (!j.shaping) {
-            while (budget-- > 0 && j.index < j.placements.size()) {
+            // Nur echte Änderungen zählen; unveränderte Positionen (z.B. Luft auf Luft) werden schnell übersprungen.
+            int scanLimit = j.perTick * 16;
+            while (budget > 0 && scanLimit-- > 0 && j.index < j.placements.size()) {
                 PlanCompiler.Placement p = j.placements.get(j.index++);
                 BlockPos pos = p.pos();
                 if (!level.isLoaded(pos)) {
@@ -127,6 +129,7 @@ public final class BuildManager {
                 }
                 BlockState old = level.getBlockState(pos);
                 if (old == p.state()) continue;
+                budget--;
                 // Truhen, Öfen usw. des Spielers nie überschreiben.
                 if (!j.undo && old.hasBlockEntity()) {
                     j.protectedBlocks++;

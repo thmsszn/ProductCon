@@ -2,5 +2,9 @@
   "key.category.ki_baumeister.main": "AI Master Builder",
   "key.ki_baumeister.open": "Open AI Master Builder",
   "key.ki_baumeister.corner1": "Set corner 1 (look target)",
-  "key.ki_baumeister.corner2": "Set corner 2 (look target)"
+  "key.ki_baumeister.corner2": "Set corner 2 (look target)",
+  "item.ki_baumeister.baumeister_axt": "Master Builder's Axe",
+  "item.ki_baumeister.baumeister_axt.tip1": "Left-click block: corner 1",
+  "item.ki_baumeister.baumeister_axt.tip2": "Right-click block: corner 2",
+  "item.ki_baumeister.baumeister_axt.tip3": "Right-click air: open builder menu"
 }

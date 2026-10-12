@@ -20,19 +20,17 @@ public final class ModConfig {
     public String model = "qwen2.5:14b";
     public double temperature = 0.5;
     /** Mindest-Kontextgröße; wird bei langen Gesprächen automatisch erhöht. */
-    public int contextSize = 8192;
-    public int maxOutputTokens = 8192;
+    public int contextSize = 4096;
+    public int maxOutputTokens = 2048;
     public int timeoutMinutes = 10;
     /** Wie viele Blöcke pro Server-Tick gesetzt werden (20 Ticks = 1 Sekunde). */
     public int blocksPerTick = 400;
     public int maxHorizontalSize = 64;
     public int maxHeight = 64;
     public int maxVolume = 160_000;
-    /** Alles im Bereich, was nicht zum Bauplan gehört, durch Luft ersetzen. */
-    public boolean clearArea = false;
-    /** Bereich und Bauplan als Partikel-Vorschau in der Welt anzeigen. */
+    /** Bereich und Gebäude als Hologramm in der Welt anzeigen. */
     public boolean preview = true;
-    public String lastPrompt = "Gemütliches Holzhaus mit Steinfundament, Spitzdach, großen Fenstern und Laternen";
+    public String lastPrompt = "Mittelalterliches Fachwerkhaus mit Steinsockel, zwei Stockwerken, Satteldach, Kamin und Garten";
 
     public static ModConfig get() {
         if (instance == null) instance = load();

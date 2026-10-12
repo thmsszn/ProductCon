@@ -39,11 +39,22 @@ public final class BaumeisterClient implements ClientModInitializer {
         // Version 1.0.0 hat -1 in die options.txt geschrieben – beim Start reparieren.
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> repairUnboundKeys());
 
+        // Baumeister-Axt: Ecken setzen und Menü öffnen (läuft auf dem Client-Thread)
+        BaumeisterMod.cornerHandler = (first, pos) -> {
+            Minecraft mc = Minecraft.getInstance();
+            Session.setCorner(first, pos);
+            if (mc.player != null) mc.player.sendOverlayMessage(Component.literal("§6" + Session.status()));
+        };
+        BaumeisterMod.menuHandler = () -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.gui.screen() == null) mc.gui.setScreen(new BuilderScreen());
+        };
+
         ClientTickEvents.END_CLIENT_TICK.register(BaumeisterClient::tick);
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "progress"), ProgressHud::extract);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(Session::reset));
         BuildManager.register();
-        LOG.info("KI-Baumeister geladen – Taste K öffnet das Menü.");
+        LOG.info("KI-Baumeister geladen – Taste K oder Baumeister-Axt öffnet das Menü.");
     }
 
     private static void repairUnboundKeys() {

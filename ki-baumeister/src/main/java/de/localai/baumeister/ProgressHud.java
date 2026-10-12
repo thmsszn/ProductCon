@@ -45,7 +45,7 @@ final class ProgressHud {
         if (gen != null) {
             long secs = gen.elapsedMillis() / 1000;
             text = gen.contentChars() == 0 ? "✦ KI denkt nach … " + secs + " s"
-                : "✦ KI entwirft Bauplan … " + gen.elements() + " Elemente · " + secs + " s";
+                : "✦ KI-Architekt entwirft … " + secs + " s";
             color = Ui.ACCENT;
             fraction = -1f;
         } else if (p.running()) {

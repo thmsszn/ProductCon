@@ -2,5 +2,9 @@
   "key.category.ki_baumeister.main": "KI-Baumeister",
   "key.ki_baumeister.open": "KI-Baumeister öffnen",
   "key.ki_baumeister.corner1": "Ecke 1 setzen (Blickziel)",
-  "key.ki_baumeister.corner2": "Ecke 2 setzen (Blickziel)"
+  "key.ki_baumeister.corner2": "Ecke 2 setzen (Blickziel)",
+  "item.ki_baumeister.baumeister_axt": "Baumeister-Axt",
+  "item.ki_baumeister.baumeister_axt.tip1": "Linksklick auf Block: Ecke 1",
+  "item.ki_baumeister.baumeister_axt.tip2": "Rechtsklick auf Block: Ecke 2",
+  "item.ki_baumeister.baumeister_axt.tip3": "Rechtsklick in die Luft: Baumeister-Menü"
 }

@@ -15,12 +15,13 @@ import net.minecraft.world.level.block.Block;
 /** Hauptfenster des KI-Baumeisters (Taste K). */
 public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen {
     private static final String[][] PRESETS = {
-        {"Haus", "Gemütliches Holzhaus mit Steinfundament, Spitzdach aus Fichtentreppen, großen Fenstern, Kamin und Laternen"},
-        {"Modern", "Modernes Haus aus weißem Beton und Glas mit Flachdach, großen Fensterfronten und Terrasse"},
-        {"Turm", "Runder mittelalterlicher Steinturm mit Zinnen, schmalen Fenstern, Holzböden und Fackeln"},
-        {"Burg", "Kleine Burg mit dicken Mauern, vier Ecktürmen, Tor an der Vorderseite und Innenhof"},
-        {"Tempel", "Antiker Tempel aus Quarz mit Säulenreihen, Treppenstufen und flachem Giebeldach"},
-        {"Brücke", "Steinbrücke mit Bögen, Mauer-Geländer und Laternen"},
+        {"Haus", "Mittelalterliches Fachwerkhaus mit Steinsockel, zwei Stockwerken, Satteldach, Kamin, Veranda, Fensterläden und Garten"},
+        {"Villa", "Moderne Villa mit großen Glasfronten, Flachdach-Terrasse, Pool und offenem Wohnbereich"},
+        {"Turm", "Runder Zauberturm aus Stein mit spitzem Kegeldach, Wendeltreppe und Bibliothek"},
+        {"Burg", "Burg mit Mauern, Ecktürmen, Torhaus, Innenhof und Bergfried"},
+        {"Kirche", "Steinkirche mit Glockenturm, Buntglasfenstern und Kirchenbänken"},
+        {"Tempel", "Antiker Tempel aus Quarz mit Säulen, Treppenstufen und Giebeldach"},
+        {"Japan", "Japanisches Haus mit Walmdach, weißen Wänden, dunklem Holz und Kirschbäumen"},
     };
 
     private static final int PAD = 10;
@@ -28,7 +29,9 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
     private int px, py, pw, ph, colW, leftX, rightX, bodyY;
     private MultiLineEditBox promptBox;
     private FlatButton modelButton;
-    private FlatButton clearToggle;
+    private FlatButton axeButton;
+    private FlatButton variantButton;
+    private FlatButton saveButton;
     private FlatButton previewToggle;
     private FlatButton generateButton;
     private FlatButton refineButton;
@@ -85,19 +88,16 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
 
         int toggleY = modelY + 24;
         int half = (colW - 4) / 2;
-        clearToggle = addRenderableWidget(new FlatButton(leftX, toggleY, half, 16, Component.empty(), FlatButton.Style.CHIP, in -> {
-            cfg.clearArea = !cfg.clearArea;
-            cfg.save();
-            Session.recompile();
-        }));
-        clearToggle.setTooltip(Tooltip.create(Component.literal(
-            "An: Alles im Bereich, was nicht zum Plan gehört (Erde, Bäume …), wird entfernt.")));
+        axeButton = addRenderableWidget(new FlatButton(leftX, toggleY, half, 16, Component.literal("⚒ Axt holen"),
+            FlatButton.Style.CHIP, in -> Session.giveAxe()));
+        axeButton.setTooltip(Tooltip.create(Component.literal(
+            "Baumeister-Axt: Linksklick auf einen Block = Ecke 1, Rechtsklick = Ecke 2, Rechtsklick in die Luft = Menü")));
         previewToggle = addRenderableWidget(new FlatButton(leftX + half + 4, toggleY, colW - half - 4, 16, Component.empty(),
             FlatButton.Style.CHIP, in -> {
                 cfg.preview = !cfg.preview;
                 cfg.save();
             }));
-        previewToggle.setTooltip(Tooltip.create(Component.literal("Rahmen und Partikel-Vorschau des Plans in der Welt")));
+        previewToggle.setTooltip(Tooltip.create(Component.literal("Rahmen und Hologramm des Gebäudes in der Welt anzeigen")));
 
         int cornerY = bodyY + 11;
         int cornerW = (colW - 26) / 2;
@@ -111,6 +111,15 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
         FlatButton clear = addRenderableWidget(new FlatButton(rightX + colW - 18, cornerY, 18, 18, Component.literal("✕"),
             FlatButton.Style.SECONDARY, in -> Session.clearCorners()));
         clear.setTooltip(Tooltip.create(Component.literal("Ecken und Plan verwerfen")));
+
+        int cardLabelY = bodyY + 68;
+        int sw = font.width("Schematic") + 10, vw = font.width("Variante") + 10;
+        saveButton = addRenderableWidget(new FlatButton(rightX + colW - sw, cardLabelY, sw, 12, Component.literal("Schematic"),
+            FlatButton.Style.CHIP, in -> Session.saveSchematic()));
+        saveButton.setTooltip(Tooltip.create(Component.literal("Als .schem speichern (WorldEdit, Litematica) – Ordner „schematics“")));
+        variantButton = addRenderableWidget(new FlatButton(rightX + colW - sw - vw - 3, cardLabelY, vw, 12, Component.literal("Variante"),
+            FlatButton.Style.CHIP, in -> Session.variant()));
+        variantButton.setTooltip(Tooltip.create(Component.literal("Gleicher Entwurf, andere Details (sofort, ohne KI)")));
 
         int actionY = py + ph - 28;
         int aw = pw - PAD * 2;
@@ -128,12 +137,12 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
         int ax = px + PAD;
         generateButton = addRenderableWidget(new FlatButton(ax, actionY, widths[0], 20, Component.empty(), FlatButton.Style.PRIMARY,
             in -> onGenerate(false)));
-        generateButton.setTooltip(Tooltip.create(Component.literal("Neuen Bauplan von der lokalen KI erstellen lassen (Strg+Enter)")));
+        generateButton.setTooltip(Tooltip.create(Component.literal("Der KI-Architekt entwirft das Gebäude, die Engine baut es (Strg+Enter)")));
         ax += widths[0] + gap;
         refineButton = addRenderableWidget(new FlatButton(ax, actionY, widths[1], 20, Component.literal("Anpassen"),
             FlatButton.Style.SECONDARY, in -> onGenerate(true)));
         refineButton.setTooltip(Tooltip.create(Component.literal(
-            "Den aktuellen Plan mit dem Text im Eingabefeld ändern, z.B. „Dach aus Kupfer, zweites Stockwerk“")));
+            "Den Entwurf mit dem Text im Eingabefeld ändern, z.B. „drei Stockwerke, Dach aus Kupfer, mit Balkon“")));
         ax += widths[1] + gap;
         buildButton = addRenderableWidget(new FlatButton(ax, actionY, widths[2], 20, Component.empty(), FlatButton.Style.SUCCESS,
             in -> {
@@ -189,12 +198,12 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
 
         String model = cfg.model.isBlank() ? "kein Modell" : cfg.model;
         modelButton.setMessage(Component.literal("◆ " + model + (Session.models.size() > 1 ? "  ▾" : "")));
-        clearToggle.setMessage(Component.literal("Bereich leeren: " + (cfg.clearArea ? "An" : "Aus")));
-        clearToggle.setSelected(cfg.clearArea);
+        variantButton.active = Session.result != null && !generating;
+        saveButton.active = Session.result != null;
         previewToggle.setMessage(Component.literal("Vorschau: " + (cfg.preview ? "An" : "Aus")));
         previewToggle.setSelected(cfg.preview);
 
-        generateButton.setMessage(Component.literal(generating ? "■ Abbrechen" : "✦ KI-Plan erstellen"));
+        generateButton.setMessage(Component.literal(generating ? "■ Abbrechen" : "✦ KI-Entwurf"));
         generateButton.setStyle(generating ? FlatButton.Style.DANGER : FlatButton.Style.PRIMARY);
         refineButton.active = !generating && Session.canRefine();
         buildButton.setMessage(Component.literal(progress.running() ? "■ Stopp" : "▶ Bauen"));
@@ -292,24 +301,26 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
         }
 
         int cardY = bodyY + 70;
-        sectionLabel(g, "BAUPLAN", rightX, cardY);
+        sectionLabel(g, "ENTWURF", rightX, cardY);
         cardY += 11;
-        int cardH = clearToggle.getY() + clearToggle.getHeight() - cardY;
+        int cardH = axeButton.getY() + axeButton.getHeight() - cardY;
         Ui.card(g, rightX, cardY, colW, cardH, Ui.CARD, Ui.CARD_BORDER);
         PlanCompiler.Result result = Session.result;
         int tx = rightX + 6, ty = cardY + 6, tw = colW - 12;
         if (result == null) {
-            String hint = Session.generation != null ? "Die KI arbeitet …" : "Noch kein Plan. Beschreibe links dein Bauwerk und klicke „KI-Plan erstellen“.";
+            String hint = Session.generation != null ? "Die KI arbeitet …" : "Noch kein Entwurf. Beschreibe links dein Gebäude und klicke „KI-Entwurf“.";
             g.textWithWordWrap(font, Component.literal(hint), tx, ty, tw, Ui.MUTED);
             return;
         }
-        List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(result.plan().summary()), tw);
+        List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(result.spec().summary()), tw);
         for (int i = 0; i < Math.min(2, lines.size()); i++) {
             g.text(font, lines.get(i), tx, ty + i * 10, Ui.TEXT, false);
         }
         ty += Math.min(2, lines.size()) * 10 + 2;
-        String stats = Session.fmtInt(result.solidBlocks()) + " Blöcke · " + result.plan().elements().size() + " Elemente"
-            + (result.airBlocks() > 0 ? " · " + Session.fmtInt(result.airBlocks()) + " Luft" : "");
+        g.text(font, Ui.ellipsize(font, Session.describe(result.spec()), tw), tx, ty, Ui.VIOLET, false);
+        ty += 10;
+        String stats = Session.fmtInt(result.solidBlocks()) + " Blöcke · " + result.voxels().w + "×" + result.voxels().h + "×"
+            + result.voxels().d;
         g.text(font, Ui.ellipsize(font, stats, tw), tx, ty, Ui.ACCENT, false);
         ty += 12;
 
@@ -347,7 +358,7 @@ public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen
             long secs = gen.elapsedMillis() / 1000;
             text = gen.isThinking() ? "KI denkt nach … " + secs + " s"
                 : gen.contentChars() == 0 ? "Warte auf Ollama (Modell wird geladen) … " + secs + " s"
-                : "Empfange Bauplan … " + gen.elements() + " Elemente · " + Ui.compact(gen.contentChars()) + " Zeichen · " + secs + " s";
+                : "KI-Architekt schreibt den Entwurf … " + Ui.compact(gen.contentChars()) + " Zeichen · " + secs + " s";
             color = Ui.ACCENT;
             fraction = -1f;
             bar = true;

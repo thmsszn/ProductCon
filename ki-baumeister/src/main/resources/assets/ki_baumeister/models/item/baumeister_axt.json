@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "ki_baumeister:item/baumeister_axt"
+  }
+}
