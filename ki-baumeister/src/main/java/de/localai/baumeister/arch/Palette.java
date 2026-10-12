@@ -79,7 +79,7 @@ public record Palette(
             case JAPANESE -> new Palette("stone_bricks", "white_terracotta", "white_terracotta", "stripped_dark_oak_log",
                 spruce, Materials.family("deepslate_tile"), darkOak, "white_stained_glass_pane", "spruce_door",
                 "spruce_trapdoor", "dark_oak_fence", "lantern", "stone_bricks", "gravel", "moss_block", "green_carpet",
-                "white", "cherry_leaves", true, false, false, 4, Roof.HIP);
+                "white", "cherry_leaves", true, false, false, 5, Roof.HIP);
             case DESERT -> new Palette("sandstone", "smooth_sandstone", "smooth_sandstone", "cut_sandstone",
                 Materials.family("acacia"), Materials.family("smooth_sandstone"), Materials.family("sandstone"),
                 "glass_pane", "acacia_door", "acacia_trapdoor", "acacia_fence", "lantern", "sandstone", "sand",
