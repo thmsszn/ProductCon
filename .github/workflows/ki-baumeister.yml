@@ -156,7 +156,7 @@ jobs:
         with:
           name: KI-Baumeister-Komplettpaket
 
-      - name: Skript prüfen (Parser + PSScriptAnalyzer)
+      - name: Skript pruefen (Parser + PSScriptAnalyzer)
         run: |
           $ErrorActionPreference = 'Stop'
           Expand-Archive -Path KI-Baumeister-Komplettpaket.zip -DestinationPath entpackt -Force
@@ -164,13 +164,13 @@ jobs:
           $tokens = $null; $errors = $null
           [void][System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$errors)
           if ($errors) { $errors | Format-List | Out-String | Write-Host; throw 'Syntaxfehler im Installer' }
-          # PowerShell wertet typografische Anführungszeichen wie normale aus – sie beenden Strings unbemerkt.
-          if ([IO.File]::ReadAllText($script) -match '[\u2018\u2019\u201A\u201B\u201C\u201D\u201E]') { throw 'Typografische Anführungszeichen im Installer' }
+          # PowerShell wertet typografische Anfuehrungszeichen wie normale aus - sie beenden Strings unbemerkt.
+          if ([IO.File]::ReadAllText($script) -match '[\u2018\u2019\u201A\u201B\u201C\u201D\u201E]') { throw 'Typografische Anfuehrungszeichen im Installer' }
           try {
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
             Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
           } catch {
-            Write-Warning "PSScriptAnalyzer nicht installierbar, nur Parser-Prüfung: $_"
+            Write-Warning "PSScriptAnalyzer nicht installierbar, nur Parser-Pruefung: $_"
             return
           }
           $findings = Invoke-ScriptAnalyzer -Path $script -Severity Error, Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseApprovedVerbs, PSUseSingularNouns, PSAvoidUsingInvokeExpression
@@ -197,7 +197,7 @@ jobs:
           $mc = Join-Path $env:RUNNER_TEMP 'Mein Minecraft'
           $game = Join-Path $mc 'ki-baumeister'
           New-Item -ItemType Directory -Force (Join-Path $mc 'mods'), (Join-Path $game 'mods'), (Join-Path $mc 'saves\Welt 1') | Out-Null
-          $initial = '{"profiles":{"abc":{"name":"Mein Profil äöü","type":"custom","created":"2025-01-01T00:00:00.000Z","lastVersionId":"latest-release","icon":"Grass"}},"settings":{"enableSnapshots":false,"locale":"de-de"},"version":3}'
+          $initial = '{"profiles":{"abc":{"name":"Mein Profil \u00e4\u00f6\u00fc","type":"custom","created":"2025-01-01T00:00:00.000Z","lastVersionId":"latest-release","icon":"Grass"}},"settings":{"enableSnapshots":false,"locale":"de-de"},"version":3}'
           [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), $initial, $utf8)
           [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles_microsoft_store.json'), '{"profiles":{}}', $utf8)
           [IO.File]::WriteAllText((Join-Path $mc 'options.txt'), "lang:de_de`n")
