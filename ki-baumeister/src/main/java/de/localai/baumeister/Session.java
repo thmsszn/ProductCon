@@ -39,7 +39,7 @@ public final class Session {
 
     private record Outcome(String text, PlanCompiler.Result compiled) {}
 
-    private record OllamaInfo(String version, List<String> models) {}
+    private record OllamaInfo(String version, List<OllamaClient.ModelInfo> models) {}
 
     public static String status() { return status; }
     public static Tone tone() { return tone; }
@@ -244,22 +244,50 @@ public final class Session {
                 }
                 ollamaOnline = true;
                 ollamaVersion = res.version();
-                models = List.copyOf(res.models());
+                models = res.models().stream().map(OllamaClient.ModelInfo::name).toList();
                 ModConfig cfg = ModConfig.get();
                 if (models.isEmpty()) {
-                    if (generation == null) setStatus(Tone.WARN, "Ollama läuft, aber es ist kein Modell installiert: ollama pull qwen2.5:14b");
+                    if (generation == null) setStatus(Tone.WARN, "Ollama läuft, aber es ist kein Modell installiert: ollama pull qwen2.5:7b");
                 } else if (!models.contains(cfg.model)) {
-                    cfg.model = pickModel(models);
+                    cfg.model = pickModel(res.models());
                     cfg.save();
                 }
             }));
     }
 
-    private static String pickModel(List<String> installed) {
+    /**
+     * Wählt ein passendes installiertes Modell: bevorzugte Familien zuerst, davon das größte,
+     * das noch gut in den Arbeitsspeicher passt (≥ 3 GB, ≤ 60 % RAM).
+     */
+    private static String pickModel(List<OllamaClient.ModelInfo> installed) {
+        long maxBytes = Math.max(4L << 30, (long) (totalMemoryBytes() * 0.6));
         for (String pref : PREFERRED_MODELS) {
-            for (String m : installed) if (m.toLowerCase(Locale.ROOT).startsWith(pref)) return m;
+            OllamaClient.ModelInfo best = null;
+            for (OllamaClient.ModelInfo m : installed) {
+                if (!m.name().toLowerCase(Locale.ROOT).startsWith(pref)) continue;
+                if (m.size() < (3L << 30) || m.size() > maxBytes) continue;
+                if (best == null || m.size() > best.size()) best = m;
+            }
+            if (best != null) return best.name();
         }
-        return installed.getFirst();
+        for (String pref : PREFERRED_MODELS) {
+            for (OllamaClient.ModelInfo m : installed) {
+                if (m.name().toLowerCase(Locale.ROOT).startsWith(pref)) return m.name();
+            }
+        }
+        return installed.getFirst().name();
+    }
+
+    private static long totalMemoryBytes() {
+        try {
+            if (java.lang.management.ManagementFactory.getOperatingSystemMXBean()
+                instanceof com.sun.management.OperatingSystemMXBean os) {
+                return os.getTotalMemorySize();
+            }
+        } catch (Throwable ignored) {
+            // Nicht jede Java-Laufzeit liefert den Gesamtspeicher.
+        }
+        return 16L << 30;
     }
 
     public static void reset() {

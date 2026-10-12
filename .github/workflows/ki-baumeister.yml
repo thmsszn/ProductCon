@@ -184,60 +184,75 @@ jobs:
           $installer = Join-Path $pkgDir 'Installieren.ps1'
           $pkg = [IO.File]::ReadAllText((Join-Path $pkgDir 'paket.json')) | ConvertFrom-Json
           $utf8 = New-Object Text.UTF8Encoding($false)
+          function Assert($cond, $msg) { if (-not $cond) { throw $msg } }
 
           # 1) Ohne Launcher-Daten muss das Skript mit Fehlercode 1 abbrechen.
           $empty = Join-Path $env:RUNNER_TEMP 'leer'
           New-Item -ItemType Directory -Force $empty | Out-Null
           & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $empty -SkipOllama -NonInteractive
-          if ($LASTEXITCODE -ne 1) { throw "Erwartet Exitcode 1 ohne Launcher, war $LASTEXITCODE" }
+          Assert ($LASTEXITCODE -eq 1) "Erwartet Exitcode 1 ohne Launcher, war $LASTEXITCODE"
 
-          # 2) Vorhandener Launcher mit Profil (Umlaute, Datum), alter Fabric API und fremdem Mod; Pfad mit Leerzeichen.
+          # 2) Beide Launcher-Dateien (klassisch + Microsoft Store), Pfad mit Leerzeichen,
+          #    alte KI-Baumeister-Version (Name mit [ ]) im normalen mods-Ordner, fremde Mods, Einstellungen, Welt.
           $mc = Join-Path $env:RUNNER_TEMP 'Mein Minecraft'
-          New-Item -ItemType Directory -Force (Join-Path $mc 'mods') | Out-Null
-          $initial = '{"profiles":{"abc":{"name":"Mein Profil \u00e4\u00f6\u00fc","type":"custom","created":"2025-01-01T00:00:00.000Z","lastVersionId":"latest-release","icon":"Grass"}},"settings":{"enableSnapshots":false,"locale":"de-de"},"version":3}'
+          $game = Join-Path $mc 'ki-baumeister'
+          New-Item -ItemType Directory -Force (Join-Path $mc 'mods'), (Join-Path $game 'mods'), (Join-Path $mc 'saves\Welt 1') | Out-Null
+          $initial = '{"profiles":{"abc":{"name":"Mein Profil äöü","type":"custom","created":"2025-01-01T00:00:00.000Z","lastVersionId":"latest-release","icon":"Grass"}},"settings":{"enableSnapshots":false,"locale":"de-de"},"version":3}'
           [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), $initial, $utf8)
-          [IO.File]::WriteAllText((Join-Path $mc 'mods\fabric-api-0.150.0+26.1.jar'), 'alt')
+          [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles_microsoft_store.json'), '{"profiles":{}}', $utf8)
+          [IO.File]::WriteAllText((Join-Path $mc 'options.txt'), "lang:de_de`n")
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\ki-baumeister-1.0.0+mc26.3 [alt].jar'), 'alt')
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\fabric-api-0.150.0+26.1.jar'), 'fremdes Profil')
           [IO.File]::WriteAllText((Join-Path $mc 'mods\anderer-mod.jar'), 'fremd')
+          [IO.File]::WriteAllText((Join-Path $game 'mods\fabric-api-0.150.0+26.1.jar'), 'alt')
+          [IO.File]::WriteAllText((Join-Path $game 'mods\[1.20.1] Fremd.jar'), 'fremd')
 
-          $profileLabel = "'KI-Baumeister (Fabric $($pkg.minecraft))'"
+          $label = "'KI-Baumeister (Fabric $($pkg.minecraft))'"
           foreach ($run in 1..2) {
             $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -SkipOllama -NonInteractive 2>&1 | Out-String
             $code = $LASTEXITCODE
             Write-Host $out
-            if ($code -ne 0) { throw "Installer-Lauf $run fehlgeschlagen (Exitcode $code)" }
-            foreach ($expected in @("Launcher-Profil $profileLabel", "das Profil $profileLabel w", 'Fertig!')) {
-              if (-not $out.Contains($expected)) { throw "Ausgabe von Lauf $run enthaelt nicht: $expected" }
+            Assert ($code -eq 0) "Installer-Lauf $run fehlgeschlagen (Exitcode $code)"
+            foreach ($expected in @("Profil $label in launcher_profiles.json", "Profil $label in launcher_profiles_microsoft_store.json", "das Profil $label w", 'Fertig!')) {
+              Assert $out.Contains($expected) "Ausgabe von Lauf $run enthaelt nicht: $expected"
             }
-            if ($out -match 'FEHLER|Exception|CommandNotFound|not recognized|nicht als Name') { throw "Fehlermeldung in Ausgabe von Lauf $run" }
+            Assert ($out -notmatch 'FEHLER|Exception|CommandNotFound|not recognized|nicht als Name') "Fehlermeldung in Ausgabe von Lauf $run"
           }
 
-          $lpPath = Join-Path $mc 'launcher_profiles.json'
-          $bytes = [IO.File]::ReadAllBytes($lpPath)
-          if ($bytes[0] -eq 0xEF) { throw 'launcher_profiles.json wurde mit BOM gespeichert' }
-          $lp = [IO.File]::ReadAllText($lpPath, $utf8) | ConvertFrom-Json
-          $p = $lp.profiles.'ki-baumeister-fabric'
-          if (-not $p) { throw 'KI-Baumeister-Profil fehlt' }
-          if ($p.lastVersionId -ne $pkg.profileId) { throw "lastVersionId falsch: $($p.lastVersionId)" }
-          if ($p.type -ne 'custom' -or -not $p.icon.StartsWith('data:image/png;base64,')) { throw 'Profil unvollständig' }
-          if (@($lp.profiles.PSObject.Properties).Count -ne 2) { throw 'Profil doppelt angelegt' }
-          $expectedName = 'Mein Profil ' + [char]0xE4 + [char]0xF6 + [char]0xFC
-          if ($lp.profiles.abc.name -ne $expectedName) { throw "Vorhandenes Profil beschädigt: $($lp.profiles.abc.name)" }
-          if ($lp.profiles.abc.created -ne '2025-01-01T00:00:00.000Z') { throw 'Datum im vorhandenen Profil verändert' }
-          if ($lp.settings.locale -ne 'de-de' -or $lp.version -ne 3 -or $lp.settings.enableSnapshots -ne $false) { throw 'Launcher-Einstellungen beschädigt' }
+          foreach ($file in 'launcher_profiles.json', 'launcher_profiles_microsoft_store.json') {
+            $path = Join-Path $mc $file
+            Assert ([IO.File]::ReadAllBytes($path)[0] -ne 0xEF) "$file wurde mit BOM gespeichert"
+            $lp = [IO.File]::ReadAllText($path, $utf8) | ConvertFrom-Json
+            $p = $lp.profiles.'ki-baumeister-fabric'
+            Assert $p "${file}: KI-Baumeister-Profil fehlt"
+            Assert ($p.lastVersionId -eq $pkg.profileId) "${file}: lastVersionId falsch"
+            Assert ($p.gameDir -eq $game) "${file}: gameDir falsch: $($p.gameDir)"
+            Assert ($p.type -eq 'custom' -and $p.icon.StartsWith('data:image/png;base64,')) "${file}: Profil unvollstaendig"
+          }
+          $lp = [IO.File]::ReadAllText((Join-Path $mc 'launcher_profiles.json'), $utf8) | ConvertFrom-Json
+          Assert (@($lp.profiles.PSObject.Properties).Count -eq 2) 'Profil doppelt angelegt'
+          Assert ($lp.profiles.abc.name -eq ('Mein Profil ' + [char]0xE4 + [char]0xF6 + [char]0xFC)) 'Vorhandenes Profil beschaedigt'
+          Assert ($lp.profiles.abc.created -eq '2025-01-01T00:00:00.000Z') 'Datum im vorhandenen Profil veraendert'
+          Assert ($lp.settings.locale -eq 'de-de' -and $lp.version -eq 3 -and $lp.settings.enableSnapshots -eq $false) 'Launcher-Einstellungen beschaedigt'
 
-          $versionJson = Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).json"
-          if (-not (Test-Path $versionJson)) { throw 'Versions-JSON fehlt' }
-          $v = [IO.File]::ReadAllText($versionJson) | ConvertFrom-Json
-          if ($v.id -ne $pkg.profileId -or $v.inheritsFrom -ne $pkg.minecraft) { throw 'Versions-JSON ungültig' }
-          if (-not (Test-Path (Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).jar"))) { throw 'Platzhalter-JAR fehlt' }
+          $v = [IO.File]::ReadAllText((Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).json")) | ConvertFrom-Json
+          Assert ($v.id -eq $pkg.profileId -and $v.inheritsFrom -eq $pkg.minecraft) 'Versions-JSON ungueltig'
+          Assert (Test-Path -LiteralPath (Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).jar")) 'Platzhalter-JAR fehlt'
 
-          $mods = Join-Path $mc 'mods'
-          if (-not (Test-Path -LiteralPath (Join-Path $mods $pkg.modJar))) { throw 'KI-Baumeister-JAR fehlt' }
-          if (-not (Test-Path -LiteralPath (Join-Path $mods "fabric-api-$($pkg.fabricApi).jar"))) { throw 'Fabric API fehlt' }
-          if (Test-Path -LiteralPath (Join-Path $mods 'fabric-api-0.150.0+26.1.jar')) { throw 'Alte Fabric API liegt noch im mods-Ordner' }
-          if (-not (Test-Path -LiteralPath (Join-Path $mods '_alte-versionen\fabric-api-0.150.0+26.1.jar'))) { throw 'Alte Fabric API nicht gesichert' }
-          if (-not (Test-Path -LiteralPath (Join-Path $mods 'anderer-mod.jar'))) { throw 'Fremder Mod wurde ohne Zustimmung verschoben' }
-          if (-not (Test-Path -LiteralPath "$lpPath.vor-ki-baumeister.bak")) { throw 'Sicherung der Launcher-Profile fehlt' }
+          $gm = Join-Path $game 'mods'
+          Assert (Test-Path -LiteralPath (Join-Path $gm $pkg.modJar)) 'KI-Baumeister-JAR fehlt im Profil-Ordner'
+          Assert (Test-Path -LiteralPath (Join-Path $gm "fabric-api-$($pkg.fabricApi).jar")) 'Fabric API fehlt im Profil-Ordner'
+          Assert (Test-Path -LiteralPath (Join-Path $gm '_alte-versionen\fabric-api-0.150.0+26.1.jar')) 'Alte Fabric API im Profil-Ordner nicht beiseitegelegt'
+          Assert (Test-Path -LiteralPath (Join-Path $gm '[1.20.1] Fremd.jar')) 'Fremder Mod ohne Zustimmung verschoben'
+          $sm = Join-Path $mc 'mods'
+          Assert (-not (Test-Path -LiteralPath (Join-Path $sm 'ki-baumeister-1.0.0+mc26.3 [alt].jar'))) 'Alte KI-Baumeister-Version liegt noch in .minecraft\mods'
+          Assert (Test-Path -LiteralPath (Join-Path $sm '_alte-versionen\ki-baumeister-1.0.0+mc26.3 [alt].jar')) 'Alte KI-Baumeister-Version nicht gesichert'
+          Assert (Test-Path -LiteralPath (Join-Path $sm 'fabric-api-0.150.0+26.1.jar')) 'Fabric API anderer Profile wurde angefasst'
+          Assert (Test-Path -LiteralPath (Join-Path $sm 'anderer-mod.jar')) 'Mods anderer Profile wurden angefasst'
+          Assert (Test-Path -LiteralPath (Join-Path $game 'options.txt')) 'Einstellungen nicht uebernommen'
+          Assert (-not (Test-Path -LiteralPath (Join-Path $game 'saves'))) 'Welten ohne Zustimmung kopiert'
+          Assert (Test-Path -LiteralPath (Join-Path $mc 'launcher_profiles.json.vor-ki-baumeister.bak')) 'Sicherung fehlt'
+          Assert (-not (Test-Path -LiteralPath (Join-Path $mc 'launcher_profiles.json.ki-baumeister.tmp'))) 'Temp-Datei liegen geblieben'
           Write-Host 'Installer-Test bestanden.' -ForegroundColor Green
 
       - name: Ollama-Schritt testen (Ollama schon installiert, Fake-Server)
@@ -246,53 +261,63 @@ jobs:
           $pkgDir = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket').Path
           $installer = Join-Path $pkgDir 'Installieren.ps1'
           $utf8 = New-Object Text.UTF8Encoding($false)
+          function Assert($cond, $msg) { if (-not $cond) { throw $msg } }
 
           # Fake-"ollama"-Befehl, der Aufrufe protokolliert
           $bin = Join-Path $env:RUNNER_TEMP 'fake-ollama'
           New-Item -ItemType Directory -Force $bin | Out-Null
           [IO.File]::WriteAllText((Join-Path $bin 'ollama.cmd'), "@echo off`r`necho %*>>`"%~dp0calls.txt`"`r`nexit /b 0`r`n")
 
-          # Fake-Ollama-Server auf Port 11434
-          $server = Start-Job -ScriptBlock {
-            $l = New-Object Net.HttpListener
-            $l.Prefixes.Add('http://localhost:11434/')
-            $l.Start()
-            while ($true) {
-              $ctx = $l.GetContext()
-              $body = switch ($ctx.Request.Url.AbsolutePath) {
-                '/api/version' { '{"version":"0.40.3"}' }
-                '/api/tags' { '{"models":[{"name":"llama3.1:8b","size":4900000000},{"name":"qwen2.5:14b","size":8900000000},{"name":"qwen2.5:72b","size":47000000000}]}' }
-                default { '{}' }
-              }
-              $bytes = [Text.Encoding]::UTF8.GetBytes($body)
-              $ctx.Response.ContentType = 'application/json'
-              $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
-              $ctx.Response.Close()
-            }
-          }
+          # Fake-Ollama-Server auf 127.0.0.1:11434 (eigener Prozess, damit er sich sofort beenden laesst)
+          $tags = '{"models":[{"name":"llama3.1:8b","size":4900000000},{"name":"qwen2.5:14b","size":8900000000},{"name":"qwen2.5:72b","size":47000000000},{"name":"nomic-embed-text:latest","size":274000000},{"name":"gpt-oss:120b-cloud","size":384,"remote_host":"https://ollama.com:443","remote_model":"gpt-oss:120b"}]}'
+          $serverLines = @(
+            '$l = New-Object Net.HttpListener',
+            '$l.Prefixes.Add(''http://127.0.0.1:11434/'')',
+            '$l.Prefixes.Add(''http://localhost:11434/'')',
+            '$l.Start()',
+            'while ($true) {',
+            '  $ctx = $l.GetContext()',
+            '  $path = $ctx.Request.Url.AbsolutePath',
+            '  if ($path -eq ''/api/version'') { $body = ''{"version":"0.40.3"}'' }',
+            "  elseif (`$path -eq '/api/tags') { `$body = '$tags' }",
+            '  else { $body = ''{}'' }',
+            '  $bytes = [Text.Encoding]::UTF8.GetBytes($body)',
+            '  $ctx.Response.ContentType = ''application/json''',
+            '  $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)',
+            '  $ctx.Response.Close()',
+            '}'
+          )
+          $serverScript = Join-Path $env:RUNNER_TEMP 'fake-ollama-server.ps1'
+          [IO.File]::WriteAllLines($serverScript, $serverLines)
+          $server = Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$serverScript`"" -PassThru -WindowStyle Hidden
           for ($i = 0; $i -lt 30; $i++) {
-            try { Invoke-RestMethod http://localhost:11434/api/version -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
+            try { Invoke-RestMethod http://127.0.0.1:11434/api/version -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
           }
 
           $mc = Join-Path $env:RUNNER_TEMP 'mc-ollama'
-          New-Item -ItemType Directory -Force (Join-Path $mc 'config') | Out-Null
+          $cfgPath = Join-Path $mc 'ki-baumeister\config\ki_baumeister.json'
+          New-Item -ItemType Directory -Force (Split-Path -Parent $cfgPath) | Out-Null
           [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), '{"profiles":{}}', $utf8)
-          [IO.File]::WriteAllText((Join-Path $mc 'config\ki_baumeister.json'), '{"blocksPerTick":123,"model":"gibtsnicht:1b"}', $utf8)
+          [IO.File]::WriteAllText($cfgPath, '{"blocksPerTick":123,"model":"gibtsnicht:1b"}', $utf8)
 
           $env:PATH = "$bin;$env:PATH"
-          $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -NonInteractive 2>&1 | Out-String
-          $code = $LASTEXITCODE
+          try {
+            $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -NonInteractive 2>&1 | Out-String
+            $code = $LASTEXITCODE
+          } finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
           Write-Host $out
-          Stop-Job $server; Remove-Job $server -Force
-          if ($code -ne 0) { throw "Installer mit Ollama fehlgeschlagen (Exitcode $code)" }
-          if ($out -match 'FEHLER|Exception|CommandNotFound') { throw 'Fehlermeldung in der Ausgabe' }
+          Assert ($code -eq 0) "Installer mit Ollama fehlgeschlagen (Exitcode $code)"
+          Assert ($out -notmatch 'FEHLER|Exception|CommandNotFound') 'Fehlermeldung in der Ausgabe'
+          Assert ($out -notmatch 'nomic-embed|gpt-oss') 'Embedding-/Cloud-Modelle wurden nicht ausgefiltert'
+          Assert $out.Contains('Ollama-Version 0.40.3') 'Ollama-Version nicht erkannt'
 
-          $cfg = [IO.File]::ReadAllText((Join-Path $mc 'config\ki_baumeister.json'), $utf8) | ConvertFrom-Json
-          if ($cfg.model -ne 'qwen2.5:14b') { throw "Erwartet vorhandenes Modell qwen2.5:14b, eingetragen: $($cfg.model)" }
-          if ($cfg.blocksPerTick -ne 123) { throw 'Vorhandene Einstellung blocksPerTick ging verloren' }
+          $cfg = [IO.File]::ReadAllText($cfgPath, $utf8) | ConvertFrom-Json
+          Assert ($cfg.model -eq 'qwen2.5:14b') "Erwartet vorhandenes Modell qwen2.5:14b, eingetragen: $($cfg.model)"
+          Assert ($cfg.blocksPerTick -eq 123) 'Vorhandene Einstellung blocksPerTick ging verloren'
           $calls = Join-Path $bin 'calls.txt'
-          if ((Test-Path $calls) -and ((Get-Content $calls -Raw) -match 'pull')) { throw 'Modell wurde unnötig heruntergeladen' }
-          if (-not $out.Contains('qwen2.5:14b ist installiert')) { throw 'Vorhandenes Modell nicht erkannt' }
+          Assert (-not ((Test-Path $calls) -and ((Get-Content $calls -Raw) -match 'pull'))) 'Modell wurde unnoetig heruntergeladen'
           Write-Host 'Ollama-Test bestanden.' -ForegroundColor Green
 
   release:

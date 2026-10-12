@@ -46,16 +46,27 @@ public final class OllamaClient {
             .thenApply(json -> json.get("version").getAsString());
     }
 
-    /** Namen aller lokal installierten Modelle, alphabetisch sortiert. */
-    public static CompletableFuture<List<String>> models(String baseUrl) {
+    /** Ein lokal installiertes Modell mit Dateigröße in Bytes. */
+    public record ModelInfo(String name, long size) {}
+
+    /** Lokale Text-Modelle (ohne Cloud- und Embedding-Modelle), alphabetisch sortiert. */
+    public static CompletableFuture<List<ModelInfo>> models(String baseUrl) {
         return get(baseUrl, "/api/tags", Duration.ofSeconds(6)).thenApply(json -> {
-            List<String> names = new ArrayList<>();
+            List<ModelInfo> list = new ArrayList<>();
             JsonArray arr = json.getAsJsonArray("models");
             if (arr != null) {
-                for (JsonElement el : arr) names.add(el.getAsJsonObject().get("name").getAsString());
+                for (JsonElement el : arr) {
+                    JsonObject o = el.getAsJsonObject();
+                    String name = o.get("name").getAsString();
+                    String lower = name.toLowerCase(java.util.Locale.ROOT);
+                    if (o.has("remote_host") || o.has("remote_model") || lower.contains("embed")
+                        || lower.endsWith("-cloud") || lower.endsWith(":cloud")) continue;
+                    long size = o.has("size") && o.get("size").isJsonPrimitive() ? o.get("size").getAsLong() : 0L;
+                    list.add(new ModelInfo(name, size));
+                }
             }
-            names.sort(String.CASE_INSENSITIVE_ORDER);
-            return names;
+            list.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.name(), b.name()));
+            return list;
         });
     }
 

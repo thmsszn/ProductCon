@@ -17,10 +17,14 @@ SO GEHT'S
   1. ZIP vollständig entpacken (nicht direkt im ZIP öffnen).
   2. Minecraft Launcher schließen.
   3. Doppelklick auf "Installieren.bat". Das Skript
-       - legt im Launcher das Profil "KI-Baumeister (Fabric __MC__)" an,
-       - kopiert die Mods nach %APPDATA%\.minecraft\mods (alte Versionen landen in mods\_alte-versionen),
-       - installiert auf Wunsch Ollama und lädt ein passendes KI-Modell
-         (qwen2.5:7b ab 8 GB RAM, qwen2.5:14b ab 24 GB RAM für schönere Bauwerke).
+       - legt im Launcher das Profil "KI-Baumeister (Fabric __MC__)" an – mit eigenem Spielordner
+         %APPDATA%\.minecraft\ki-baumeister, damit deine anderen Profile und Mods unberührt bleiben,
+       - übernimmt deine Einstellungen (Sprache, Tasten, Grafik) und kopiert auf Wunsch deine Welten
+         (die Originale bleiben unverändert),
+       - legt KI-Baumeister und Fabric API in den mods-Ordner des Profils,
+       - prüft Ollama: Ist es schon installiert, wird ein vorhandenes passendes Modell genutzt
+         oder eines vorgeschlagen (qwen2.5:7b ab 8 GB RAM, qwen2.5:14b ab 24 GB RAM).
+         Fehlt Ollama, wird es auf Wunsch heruntergeladen und installiert (ca. 1,6 GB).
      Falls Windows "Der Computer wurde durch Windows geschützt" meldet:
      "Weitere Informationen" -> "Trotzdem ausführen".
   4. Minecraft Launcher öffnen, unten links das Profil "KI-Baumeister (Fabric __MC__)" wählen, "Spielen".
@@ -35,13 +39,15 @@ IM SPIEL
 PROBLEME
   - "Ollama offline" im Menü: Ollama über das Startmenü starten (Symbol erscheint unten rechts).
   - "Modell nicht installiert": Eingabeaufforderung öffnen und  ollama pull qwen2.5:7b  eingeben.
-  - Spiel startet nicht: Im mods-Ordner liegen Mods für eine andere Minecraft-Version.
-    Diese in einen anderen Ordner verschieben (das Skript bietet das an).
+  - Spiel stürzt beim Start ab: Im Ordner %APPDATA%\.minecraft\ki-baumeister\mods liegen fremde Mods
+    für eine andere Minecraft-Version – diese entfernen (das Skript bietet das an).
+  - Welten aus dem normalen Minecraft nutzen: Ordner aus %APPDATA%\.minecraft\saves nach
+    %APPDATA%\.minecraft\ki-baumeister\saves kopieren.
   - Manuelle Installation statt Skript: fabric\fabric-installer-*.exe starten (benötigt Java),
     Minecraft __MC__ und Loader __LOADER__ wählen, dann die Dateien aus mods\ nach
     %APPDATA%\.minecraft\mods kopieren und Ollama von https://ollama.com/download installieren.
 
 ENTFERNEN
   - Im Launcher unter "Installationen" das Profil "KI-Baumeister" löschen.
-  - ki-baumeister-*.jar und fabric-api-*.jar aus %APPDATA%\.minecraft\mods löschen.
-  - Ollama über "Apps & Features" deinstallieren.
+  - Den Ordner %APPDATA%\.minecraft\ki-baumeister löschen (enthält auch die Welten dieses Profils!).
+  - Ollama bei Bedarf über "Apps & Features" deinstallieren.

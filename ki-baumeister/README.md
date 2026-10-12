@@ -31,10 +31,13 @@ es werden keine Daten ins Internet geschickt.
 `KI-Baumeister-Komplettpaket.zip` aus dem GitHub-Release herunterladen, entpacken und **`Installieren.bat`**
 doppelklicken. Das Skript
 
-- legt im offiziellen Minecraft Launcher das Profil „KI-Baumeister (Fabric 26.3)“ an (keine extra Java-Installation nötig),
-- kopiert KI-Baumeister und Fabric API nach `%APPDATA%\.minecraft\mods` (alte Versionen werden beiseitegelegt),
-- installiert bei Bedarf Ollama und lädt ein zum Arbeitsspeicher passendes Modell (`qwen2.5:7b` / `qwen2.5:14b`).
-  Ist Ollama schon installiert, wird nur das Modell geprüft.
+- legt im offiziellen Minecraft Launcher (klassisch und Microsoft-Store-Version) das Profil
+  „KI-Baumeister (Fabric 26.3)“ an – mit eigenem Spielordner `%APPDATA%\.minecraft\ki-baumeister`,
+  damit andere Profile und Mods unberührt bleiben (keine extra Java-Installation nötig),
+- übernimmt Sprache/Tasten/Grafik-Einstellungen und kopiert auf Wunsch vorhandene Welten,
+- legt KI-Baumeister und Fabric API in den mods-Ordner des Profils (alte Versionen werden beiseitegelegt),
+- prüft Ollama: Ist es schon installiert, wird ein vorhandenes passendes Modell genutzt oder eines vorgeschlagen
+  (`qwen2.5:7b` / `qwen2.5:14b` je nach Arbeitsspeicher); fehlt Ollama, wird es auf Wunsch installiert.
 
 Danach im Launcher das Profil wählen und „Spielen“.
 
