@@ -1,0 +1,9 @@
+# name|Breite|Hoehe|Tiefe|Entwurf (JSON)
+haus-mittelalter|17|20|17|{"summary":"Mittelalterliches Fachwerkhaus","type":"house","style":"medieval","floors":2,"roof":"gable","features":["chimney","porch","garden","path","shutters","flower_boxes","lanterns","fence","trees","interior"],"rooms":["living","kitchen","bedroom","library"]}
+huette-rustikal|11|12|11|{"summary":"Rustikale Holzhuette","type":"cottage","style":"rustic","floors":1,"roof":"gable","features":["chimney","porch","garden","path","interior"]}
+villa-modern|21|14|19|{"summary":"Moderne Villa","type":"modern_house","style":"modern","floors":2,"roof":"flat","features":["garden","path","pool","balcony","porch","interior","trees"]}
+taverne|19|22|17|{"summary":"Taverne","type":"tavern","style":"medieval","floors":3,"roof":"gable","features":["porch","balcony","lanterns","path","interior","chimney"]}
+japan|19|16|17|{"summary":"Japanisches Haus","type":"house","style":"japanese","floors":1,"roof":"hip","features":["garden","path","trees","lanterns","interior"]}
+nordisch|15|18|13|{"summary":"Nordisches Langhaus","type":"house","style":"nordic","floors":1,"roof":"gable","features":["chimney","path","interior"]}
+viktorianisch|17|24|15|{"summary":"Viktorianisches Haus","type":"mansion","style":"victorian","floors":3,"roof":"hip","features":["porch","balcony","chimney","garden","path","fence","interior"]}
+wueste|15|12|15|{"summary":"Wuestenhaus","type":"house","style":"desert","floors":2,"roof":"flat","features":["path","interior","garden"]}
