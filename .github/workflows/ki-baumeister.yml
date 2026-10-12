@@ -60,6 +60,13 @@ jobs:
           [ -f .ci-diagnose-classes ] && cat .ci-diagnose-classes >> "$RUNNER_TEMP/classes.txt"
           while read -r cls pat; do
             [ -z "$cls" ] && continue
+            if [ "$cls" = "@c" ]; then
+              # "@c Klasse methode": Bytecode einer Methode ausgeben
+              set -- $pat
+              echo "===== $1#$2 (bytecode)"
+              javap -c -p -cp "$CP" "$1" 2>&1 | sed -n "/ $2(/,/^\s*$/p" | head -80 || true
+              continue
+            fi
             echo "===== $cls"
             out=$(javap -cp "$CP" "$cls" 2>&1 || true)
             if [ -n "$pat" ]; then
