@@ -1,6 +1,0 @@
-@c net.minecraft.client.Minecraft collectPerTickGizmos
-@g net.minecraft.client.Minecraft perTickGizmos
-@g net.minecraft.client.renderer.LevelRenderer Gizmo
-net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
-net.minecraft.client.player.LocalPlayer sendOverlayMessage|displayClientMessage
-net.minecraft.world.item.ItemStack ItemStack\(net

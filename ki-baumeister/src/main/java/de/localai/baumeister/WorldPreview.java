@@ -26,7 +26,8 @@ public final class WorldPreview {
         ClientLevel level = mc.level;
         if (level == null || mc.player == null || !ModConfig.get().preview) return;
         BlockPos a = Session.cornerA, b = Session.cornerB;
-        if (a == null && b == null) return;
+        // Pro-Tick-Gizmos werden nur ohne Pause abgeholt; während der Pause bleibt der letzte Rahmen sichtbar.
+        if ((a == null && b == null) || mc.isPaused()) return;
 
         try (var ignored = mc.collectPerTickGizmos()) {
             if (a != null) Gizmos.cuboid(a, 0.02f, GizmoStyle.strokeAndFill(CORNER_COLOR, 3.0f, 0x30FBBF24));
@@ -40,7 +41,7 @@ public final class WorldPreview {
         }
 
         PlanCompiler.Result result = Session.result;
-        if (result == null || result == Session.built || mc.isPaused()) return;
+        if (result == null || result == Session.built) return;
         if (result != ghostSource) {
             ghostSource = result;
             ghost = result.placements().stream().filter(p -> !p.state().isAir()).map(PlanCompiler.Placement::pos).toList();

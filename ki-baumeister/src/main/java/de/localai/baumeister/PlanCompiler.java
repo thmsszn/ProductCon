@@ -118,8 +118,11 @@ public final class PlanCompiler {
 
     /** Block-String (z.B. {@code oak_stairs[facing=south]}) → Zustand; {@code null} wenn unbekannt/verboten. */
     static BlockState resolve(String raw) {
-        String s = raw.trim().toLowerCase(Locale.ROOT).replace(' ', '_');
+        String s = raw.trim().toLowerCase(Locale.ROOT);
         if (s.isEmpty()) return null;
+        // "oak planks" → "oak_planks", aber "[facing=south, half=top]" → "[facing=south,half=top]"
+        int open = s.indexOf('[');
+        s = open < 0 ? s.replace(' ', '_') : s.substring(0, open).trim().replace(' ', '_') + s.substring(open).replace(" ", "");
         BlockState state = parse(s);
         if (state == null) {
             int bracket = s.indexOf('[');

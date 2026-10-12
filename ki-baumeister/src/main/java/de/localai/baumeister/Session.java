@@ -155,9 +155,10 @@ public final class Session {
                     return;
                 }
                 result = compiled;
-                List<OllamaClient.Message> convo = new ArrayList<>(messages);
-                convo.add(new OllamaClient.Message("assistant", text));
-                conversation = convo;
+                // Nur System, (ergänzten) Auftrag und den neuesten Plan behalten, damit der Kontext klein bleibt.
+                OllamaClient.Message request = messages.get(1);
+                if (refining) request = new OllamaClient.Message("user", request.content() + "\nAlso: " + prompt.trim());
+                conversation = List.of(messages.get(0), request, new OllamaClient.Message("assistant", text));
                 StringBuilder msg = new StringBuilder(refining ? "Plan angepasst: " : "Plan fertig: ")
                     .append(fmtInt(compiled.solidBlocks())).append(" Blöcke aus ")
                     .append(compiled.plan().elements().size()).append(" Elementen. Prüfe die Vorschau und klicke „Bauen“.");
