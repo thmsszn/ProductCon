@@ -50,7 +50,7 @@ jobs:
           ./gradlew build --stacktrace --no-daemon
 
       - name: Diagnose (Classpath + Signaturen)
-        if: failure() || inputs.diagnose || contains(github.event.head_commit.message, '[diagnose]')
+        if: inputs.diagnose || contains(github.event.head_commit.message, '[diagnose]')
         run: |
           ./gradlew -q printClasspath --no-daemon | sed -n 's/^CP //p' > "$RUNNER_TEMP/cp.txt"
           CP=$(paste -sd: "$RUNNER_TEMP/cp.txt")
