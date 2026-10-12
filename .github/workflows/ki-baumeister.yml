@@ -231,7 +231,12 @@ jobs:
           }
           $lp = [IO.File]::ReadAllText((Join-Path $mc 'launcher_profiles.json'), $utf8) | ConvertFrom-Json
           Assert (@($lp.profiles.PSObject.Properties).Count -eq 2) 'Profil doppelt angelegt'
-          Assert ($lp.profiles.abc.name -eq ('Mein Profil ' + [char]0xE4 + [char]0xF6 + [char]0xFC)) 'Vorhandenes Profil beschaedigt'
+          $actualName = [string]$lp.profiles.abc.name
+          $expectedName = 'Mein Profil ' + [char]0xE4 + [char]0xF6 + [char]0xFC
+          if ($actualName -ne $expectedName) {
+            Write-Host ([IO.File]::ReadAllText((Join-Path $mc 'launcher_profiles.json'), $utf8))
+            throw ("Vorhandenes Profil beschaedigt: '$actualName' Zeichen: " + (($actualName.ToCharArray() | ForEach-Object { [int]$_ }) -join ','))
+          }
           Assert ($lp.profiles.abc.created -eq '2025-01-01T00:00:00.000Z') 'Datum im vorhandenen Profil veraendert'
           Assert ($lp.settings.locale -eq 'de-de' -and $lp.version -eq 3 -and $lp.settings.enableSnapshots -eq $false) 'Launcher-Einstellungen beschaedigt'
 
