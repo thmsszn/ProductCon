@@ -52,7 +52,8 @@ public final class WorldPreview {
                     Math.max(a.getX(), b.getX()) + 1, Math.max(a.getY(), b.getY()) + 1, Math.max(a.getZ(), b.getZ()) + 1);
                 Gizmos.cuboid(box, GizmoStyle.stroke(BOX_COLOR, 2.5f));
             }
-            if (showHologram && mc.player.distanceToSqr(result.region().min().getCenter()) < MAX_DISTANCE_SQ) {
+            BlockPos m = result == null ? null : result.region().min();
+            if (showHologram && mc.player.distanceToSqr(m.getX() + 0.5, m.getY() + 0.5, m.getZ() + 0.5) < MAX_DISTANCE_SQ) {
                 for (Cube c : hologram) Gizmos.cuboid(c.pos(), 0.0f, c.style());
             }
         }
