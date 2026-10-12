@@ -45,6 +45,7 @@ jobs:
           echo "Loom:";          curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-loom/maven-metadata.xml | grep -oE '<version>[^<]+</version>' | sed -E 's#</?version>##g' | tail -8 | sed 's/^/  /'
 
       - name: JAR bauen
+        timeout-minutes: 15
         run: |
           chmod +x gradlew
           ./gradlew build --stacktrace --no-daemon
