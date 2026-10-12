@@ -1,4 +1,6 @@
 {
+  "key.category.ki_baumeister.main": "KI-Baumeister",
   "key.ki_baumeister.open": "KI-Baumeister öffnen",
-  "key.category.ki_baumeister.main": "KI-Baumeister"
+  "key.ki_baumeister.corner1": "Ecke 1 setzen (Blickziel)",
+  "key.ki_baumeister.corner2": "Ecke 2 setzen (Blickziel)"
 }

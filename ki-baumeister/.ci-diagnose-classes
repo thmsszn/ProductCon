@@ -1,33 +1,6 @@
-net.minecraft.client.gui.GuiGraphicsExtractor
-net.minecraft.client.gui.ActiveTextCollector
-net.minecraft.client.gui.Gui screen|Screen|setOverlay|Overlay
-net.minecraft.client.input.InputWithModifiers
-net.minecraft.client.gui.components.Button$OnPress
-net.minecraft.client.gui.components.Button$Plain
-net.minecraft.client.gui.components.AbstractWidget$WithInactiveMessage
-net.minecraft.client.gui.components.Renderable
-net.minecraft.client.gui.components.AbstractTextAreaWidget
-net.minecraft.client.gui.components.MultiLineEditBox$Builder
-net.minecraft.client.gui.components.CycleButton$Builder
-net.minecraft.gizmos.Gizmos
-net.minecraft.gizmos.GizmoStyle
-net.minecraft.gizmos.GizmoProperties
-net.minecraft.gizmos.Gizmos$TemporaryCollection
-net.minecraft.world.phys.HitResult$Type
-net.minecraft.world.level.block.StairBlock FACING|class
-net.minecraft.world.level.LevelWriter
-net.minecraft.world.level.block.state.properties.DoubleBlockHalf
-net.minecraft.world.level.block.state.properties.BedPart
-net.minecraft.util.ARGB
-net.minecraft.util.Mth floor\(|clamp\(|lerp\(
-net.minecraft.core.Direction NORTH|getName|getOpposite|values
-net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents$EndTick
-net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents$EndTick
-net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents$ServerStopping
-net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents$Disconnect
-net.minecraft.client.gui.screens.Screen onClose|minecraft
-@c net.minecraft.client.gui.screens.Screen onClose
-@c net.minecraft.client.gui.screens.Screen extractRenderStateWithTooltipAndSubtitles
-@c net.minecraft.client.gui.components.Button$Builder build
-@c net.minecraft.client.gui.components.AbstractButton extractDefaultLabel
-@c net.minecraft.client.gui.components.AbstractButton extractWidgetRenderState
+@c net.minecraft.client.Minecraft collectPerTickGizmos
+@g net.minecraft.client.Minecraft perTickGizmos
+@g net.minecraft.client.renderer.LevelRenderer Gizmo
+net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
+net.minecraft.client.player.LocalPlayer sendOverlayMessage|displayClientMessage
+net.minecraft.world.item.ItemStack ItemStack\(net

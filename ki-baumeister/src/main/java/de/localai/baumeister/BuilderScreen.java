@@ -1,106 +1,395 @@
 package de.localai.baumeister;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
+import com.mojang.blaze3d.platform.InputConstants;
+import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 
-public final class BuilderScreen extends Screen {
-    private EditBox promptField;
-    private EditBox modelField;
-    private String message = "Setze beide Ecken an deiner Spielerposition.";
-    private boolean generating = false;
+/** Hauptfenster des KI-Baumeisters (Taste K). */
+public final class BuilderScreen extends net.minecraft.client.gui.screens.Screen {
+    private static final String[][] PRESETS = {
+        {"Haus", "Gemütliches Holzhaus mit Steinfundament, Spitzdach aus Fichtentreppen, großen Fenstern, Kamin und Laternen"},
+        {"Modern", "Modernes Haus aus weißem Beton und Glas mit Flachdach, großen Fensterfronten und Terrasse"},
+        {"Turm", "Runder mittelalterlicher Steinturm mit Zinnen, schmalen Fenstern, Holzböden und Fackeln"},
+        {"Burg", "Kleine Burg mit dicken Mauern, vier Ecktürmen, Tor an der Vorderseite und Innenhof"},
+        {"Tempel", "Antiker Tempel aus Quarz mit Säulenreihen, Treppenstufen und flachem Giebeldach"},
+        {"Brücke", "Steinbrücke mit Bögen, Mauer-Geländer und Laternen"},
+    };
 
-    public BuilderScreen() { super(Component.literal("KI-Baumeister")); }
+    private static final int PAD = 10;
 
-    @Override protected void init() {
-        int cx = width / 2;
-        promptField = new EditBox(font, cx-155, 44, 310, 22, Component.literal("Bauauftrag"));
-        promptField.setMaxLength(500);
-        promptField.setValue("Ein kleines modernes Haus aus Quarz und dunklem Holz");
-        addRenderableWidget(promptField);
-        modelField = new EditBox(font, cx-155, 72, 310, 22, Component.literal("Ollama-Modell"));
-        modelField.setValue("qwen2.5:14b");
-        modelField.setMaxLength(80);
-        addRenderableWidget(modelField);
-        addRenderableWidget(Button.builder(Component.literal("Ecke 1 hier setzen"), b -> {
-            BaumeisterClient.captureCorner(true); message = BaumeisterClient.status;
-        }).bounds(cx-155, 102, 150, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Ecke 2 hier setzen"), b -> {
-            BaumeisterClient.captureCorner(false); message = BaumeisterClient.status;
-        }).bounds(cx+5, 102, 150, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("KI-Bauplan erstellen"), b -> generate())
-            .bounds(cx-155, 132, 310, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Bestätigen und bauen"), b -> buildPlan())
-            .bounds(cx-155, 160, 310, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Schließen"), b -> onClose())
-            .bounds(cx-155, height-30, 310, 22).build());
+    private int px, py, pw, ph, colW, leftX, rightX, bodyY;
+    private MultiLineEditBox promptBox;
+    private FlatButton modelButton;
+    private FlatButton clearToggle;
+    private FlatButton previewToggle;
+    private FlatButton generateButton;
+    private FlatButton refineButton;
+    private FlatButton buildButton;
+    private FlatButton undoButton;
+
+    public BuilderScreen() {
+        super(Component.literal("KI-Baumeister"));
     }
 
-    private void generate() {
-        if (generating) return;
-        if (BaumeisterClient.cornerA == null || BaumeisterClient.cornerB == null) {
-            message = "Bitte zuerst beide Ecken setzen."; return;
+    @Override
+    protected void init() {
+        ModConfig cfg = ModConfig.get();
+        pw = Math.min(width - 16, 460);
+        ph = Math.min(height - 12, 282);
+        px = (width - pw) / 2;
+        py = (height - ph) / 2;
+        colW = (pw - PAD * 3) / 2;
+        leftX = px + PAD;
+        rightX = leftX + colW + PAD;
+        bodyY = py + 34;
+
+        String previous = promptBox != null ? promptBox.getValue() : cfg.lastPrompt;
+        int promptH = Math.max(36, Math.min(62, ph - 220));
+        promptBox = MultiLineEditBox.builder()
+            .setX(leftX)
+            .setY(bodyY + 11)
+            .setPlaceholder(Component.literal("Was soll gebaut werden? z.B. Leuchtturm mit Wendeltreppe …"))
+            .build(font, colW, promptH, Component.literal("Bauauftrag"));
+        promptBox.setCharacterLimit(800);
+        promptBox.setValue(previous);
+        addRenderableWidget(promptBox);
+
+        int chipY = bodyY + 11 + promptH + 4;
+        int cx = leftX;
+        for (String[] preset : PRESETS) {
+            int w = font.width(preset[0]) + 10;
+            if (cx + w > leftX + colW) break;
+            String text = preset[1];
+            FlatButton chip = new FlatButton(cx, chipY, w, 14, Component.literal(preset[0]), FlatButton.Style.CHIP,
+                in -> promptBox.setValue(text));
+            chip.setTooltip(Tooltip.create(Component.literal(text)));
+            addRenderableWidget(chip);
+            cx += w + 3;
         }
-        int w=Math.abs(BaumeisterClient.cornerB.x()-BaumeisterClient.cornerA.x())+1;
-        int h=Math.abs(BaumeisterClient.cornerB.y()-BaumeisterClient.cornerA.y())+1;
-        int d=Math.abs(BaumeisterClient.cornerB.z()-BaumeisterClient.cornerA.z())+1;
-        if ((long)w*h*d > 10000 || w>48 || h>32 || d>48) {
-            message = "Bereich zu groß: maximal 48×32×48 und 10.000 Raumblöcke."; return;
-        }
-        generating = true; message = "KI erstellt Bauplan …";
-        OllamaPlanner.create(promptField.getValue(), w, h, d, modelField.getValue().trim())
-            .whenComplete((plan, error) -> Minecraft.getInstance().execute(() -> {
-                generating = false;
-                if (error != null) {
-                    Throwable cause = error.getCause() != null ? error.getCause() : error;
-                    message = "Fehler: " + cause.getMessage() + " — läuft Ollama?";
-                } else {
-                    BaumeisterClient.pendingPlan = plan;
-                    message = plan.summary() + " | " + plan.blocks().size() + " Blöcke bereit.";
-                }
+
+        int modelY = chipY + 30;
+        modelButton = addRenderableWidget(new FlatButton(leftX, modelY, colW - 20, 18, Component.empty(),
+            FlatButton.Style.SECONDARY, in -> cycleModel(in.hasShiftDown() ? -1 : 1)));
+        modelButton.setTooltip(Tooltip.create(Component.literal("Klick: nächstes Modell · Shift+Klick: vorheriges")));
+        FlatButton refresh = addRenderableWidget(new FlatButton(leftX + colW - 18, modelY, 18, 18, Component.literal("↻"),
+            FlatButton.Style.SECONDARY, in -> Session.refreshOllama()));
+        refresh.setTooltip(Tooltip.create(Component.literal("Ollama-Verbindung und Modelle neu laden")));
+
+        int toggleY = modelY + 24;
+        int half = (colW - 4) / 2;
+        clearToggle = addRenderableWidget(new FlatButton(leftX, toggleY, half, 16, Component.empty(), FlatButton.Style.CHIP, in -> {
+            cfg.clearArea = !cfg.clearArea;
+            cfg.save();
+            Session.recompile();
+        }));
+        clearToggle.setTooltip(Tooltip.create(Component.literal(
+            "An: Alles im Bereich, was nicht zum Plan gehört (Erde, Bäume …), wird entfernt.")));
+        previewToggle = addRenderableWidget(new FlatButton(leftX + half + 4, toggleY, colW - half - 4, 16, Component.empty(),
+            FlatButton.Style.CHIP, in -> {
+                cfg.preview = !cfg.preview;
+                cfg.save();
             }));
-    }
+        previewToggle.setTooltip(Tooltip.create(Component.literal("Rahmen und Partikel-Vorschau des Plans in der Welt")));
 
-    private void buildPlan() {
-        Minecraft mc = Minecraft.getInstance();
-        if (BaumeisterClient.pendingPlan == null || BaumeisterClient.cornerA == null || BaumeisterClient.cornerB == null) {
-            message = "Erst einen Bauplan erstellen."; return;
+        int cornerY = bodyY + 11;
+        int cornerW = (colW - 26) / 2;
+        FlatButton c1 = addRenderableWidget(new FlatButton(rightX, cornerY, cornerW, 18, Component.literal("Ecke 1 setzen"),
+            FlatButton.Style.SECONDARY, in -> Session.captureCorner(true)));
+        FlatButton c2 = addRenderableWidget(new FlatButton(rightX + cornerW + 4, cornerY, cornerW, 18, Component.literal("Ecke 2 setzen"),
+            FlatButton.Style.SECONDARY, in -> Session.captureCorner(false)));
+        Tooltip cornerTip = Tooltip.create(Component.literal("Setzt die Ecke auf den Block im Fadenkreuz (bis 96 Blöcke), sonst auf deine Position."));
+        c1.setTooltip(cornerTip);
+        c2.setTooltip(cornerTip);
+        FlatButton clear = addRenderableWidget(new FlatButton(rightX + colW - 18, cornerY, 18, 18, Component.literal("✕"),
+            FlatButton.Style.SECONDARY, in -> Session.clearCorners()));
+        clear.setTooltip(Tooltip.create(Component.literal("Ecken und Plan verwerfen")));
+
+        int actionY = py + ph - 28;
+        int aw = pw - PAD * 2;
+        int gap = 4;
+        int[] weights = {26, 18, 20, 20, 16};
+        int total = 0;
+        for (int wgt : weights) total += wgt;
+        int[] widths = new int[weights.length];
+        int used = 0;
+        for (int i = 0; i < weights.length; i++) {
+            widths[i] = i == weights.length - 1 ? aw - gap * (weights.length - 1) - used
+                : (aw - gap * (weights.length - 1)) * weights[i] / total;
+            used += widths[i];
         }
-        MinecraftServer server = mc.getSingleplayerServer();
-        if (server == null) { message = "Nur in einer Einzelspielerwelt nutzbar."; return; }
-        BlockPlan plan = BaumeisterClient.pendingPlan;
-        BlockPos3 a=BaumeisterClient.cornerA, b=BaumeisterClient.cornerB;
-        int minX=Math.min(a.x(),b.x()), minY=Math.min(a.y(),b.y()), minZ=Math.min(a.z(),b.z());
-        ServerLevel level=server.overworld();
-        server.execute(() -> {
-            int done=0;
-            for (PlannedBlock pb : plan.blocks()) {
-                var id=ResourceLocation.tryParse(pb.block());
-                if (id == null) continue;
-                Block block=BuiltInRegistries.BLOCK.getOptional(id).orElse(null);
-                if (block == null) continue;
-                level.setBlock(new BlockPos(minX+pb.x(), minY+pb.y(), minZ+pb.z()), block.defaultBlockState(), 3);
-                done++;
-            }
-            BaumeisterClient.status = "Fertig: " + done + " Blöcke gesetzt.";
-        });
-        message = "Bauauftrag an die Einzelspielerwelt gesendet.";
+        int ax = px + PAD;
+        generateButton = addRenderableWidget(new FlatButton(ax, actionY, widths[0], 20, Component.empty(), FlatButton.Style.PRIMARY,
+            in -> onGenerate(false)));
+        generateButton.setTooltip(Tooltip.create(Component.literal("Neuen Bauplan von der lokalen KI erstellen lassen (Strg+Enter)")));
+        ax += widths[0] + gap;
+        refineButton = addRenderableWidget(new FlatButton(ax, actionY, widths[1], 20, Component.literal("Anpassen"),
+            FlatButton.Style.SECONDARY, in -> onGenerate(true)));
+        refineButton.setTooltip(Tooltip.create(Component.literal(
+            "Den aktuellen Plan mit dem Text im Eingabefeld ändern, z.B. „Dach aus Kupfer, zweites Stockwerk“")));
+        ax += widths[1] + gap;
+        buildButton = addRenderableWidget(new FlatButton(ax, actionY, widths[2], 20, Component.empty(), FlatButton.Style.SUCCESS,
+            in -> {
+                if (BuildManager.progress().running()) Session.stopBuild();
+                else Session.build();
+            }));
+        ax += widths[2] + gap;
+        undoButton = addRenderableWidget(new FlatButton(ax, actionY, widths[3], 20, Component.literal("Rückgängig"),
+            FlatButton.Style.SECONDARY, in -> Session.undo()));
+        undoButton.setTooltip(Tooltip.create(Component.literal("Den letzten Bau zurücksetzen (bis zu 5 Schritte)")));
+        ax += widths[3] + gap;
+        addRenderableWidget(new FlatButton(ax, actionY, widths[4], 20, Component.literal("Schließen"),
+            FlatButton.Style.SECONDARY, in -> onClose()));
+
+        setInitialFocus(promptBox);
+        if (Session.ollamaOnline == null || !Boolean.TRUE.equals(Session.ollamaOnline)) Session.refreshOllama();
+        updateWidgets();
     }
 
-    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width/2, 18, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.literal(message), width/2, 190, 0xDDDDDD);
-        graphics.drawCenteredString(font, Component.literal("Nur Einzelspieler. Vorher Welt sichern!"), width/2, 207, 0xAAAAAA);
-        super.render(graphics, mouseX, mouseY, partialTick);
+    private void onGenerate(boolean refine) {
+        if (Session.generation != null) {
+            Session.cancelGeneration();
+            return;
+        }
+        String prompt = promptBox.getValue();
+        ModConfig cfg = ModConfig.get();
+        if (!refine) {
+            cfg.lastPrompt = prompt;
+            cfg.save();
+        }
+        Session.generate(prompt, cfg.model, refine);
+        updateWidgets();
+    }
+
+    private void cycleModel(int dir) {
+        List<String> models = Session.models;
+        if (models.isEmpty()) {
+            Session.refreshOllama();
+            return;
+        }
+        ModConfig cfg = ModConfig.get();
+        int i = models.indexOf(cfg.model);
+        cfg.model = models.get(Math.floorMod(i + dir, models.size()));
+        cfg.save();
+        updateWidgets();
+    }
+
+    private void updateWidgets() {
+        ModConfig cfg = ModConfig.get();
+        boolean generating = Session.generation != null;
+        BuildManager.Progress progress = BuildManager.progress();
+        boolean singleplayer = minecraft.getSingleplayerServer() != null;
+
+        String model = cfg.model.isBlank() ? "kein Modell" : cfg.model;
+        modelButton.setMessage(Component.literal("◆ " + model + (Session.models.size() > 1 ? "  ▾" : "")));
+        clearToggle.setMessage(Component.literal("Bereich leeren: " + (cfg.clearArea ? "An" : "Aus")));
+        clearToggle.setSelected(cfg.clearArea);
+        previewToggle.setMessage(Component.literal("Vorschau: " + (cfg.preview ? "An" : "Aus")));
+        previewToggle.setSelected(cfg.preview);
+
+        generateButton.setMessage(Component.literal(generating ? "■ Abbrechen" : "✦ KI-Plan erstellen"));
+        generateButton.setStyle(generating ? FlatButton.Style.DANGER : FlatButton.Style.PRIMARY);
+        refineButton.active = !generating && Session.canRefine();
+        buildButton.setMessage(Component.literal(progress.running() ? "■ Stopp" : "▶ Bauen"));
+        buildButton.setStyle(progress.running() ? FlatButton.Style.DANGER : FlatButton.Style.SUCCESS);
+        buildButton.active = singleplayer && (progress.running() || (Session.result != null && !generating));
+        undoButton.active = singleplayer && !progress.running() && BuildManager.undoAvailable() > 0;
+        undoButton.setMessage(Component.literal(BuildManager.undoAvailable() > 1
+            ? "↶ Rückgängig (" + BuildManager.undoAvailable() + ")" : "↶ Rückgängig"));
+    }
+
+    @Override
+    public void tick() {
+        updateWidgets();
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if ((event.key() == InputConstants.KEY_RETURN || event.key() == InputConstants.KEY_NUMPADENTER) && event.hasControlDown()) {
+            onGenerate(event.hasShiftDown());
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        // Panel mit Schatten und Kopfzeile
+        g.fill(px - 3, py - 3, px + pw + 3, py + ph + 3, 0x40000000);
+        Ui.card(g, px, py, pw, ph, Ui.PANEL, Ui.PANEL_BORDER);
+        g.fillGradient(px + 1, py + 1, px + pw - 1, py + 26, Ui.HEADER_TOP, Ui.HEADER_BOTTOM);
+        Ui.hGradient(g, px + 1, py + 26, pw - 2, 1, Ui.ACCENT, Ui.VIOLET);
+
+        g.item(new ItemStack(Items.BRICKS), px + 7, py + 5);
+        g.text(font, Component.literal("KI-Baumeister").withStyle(ChatFormatting.BOLD), px + 28, py + 6, Ui.TEXT, true);
+        g.text(font, "lokale KI · Ollama", px + 28, py + 16, Ui.MUTED, false);
+        drawOllamaBadge(g);
+
+        drawLeftColumn(g);
+        drawRightColumn(g);
+        drawStatus(g);
+
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+    }
+
+    private void drawOllamaBadge(GuiGraphicsExtractor g) {
+        String label;
+        int color;
+        if (Session.ollamaChecking) {
+            label = "Verbinde …";
+            color = Ui.AMBER;
+        } else if (Boolean.TRUE.equals(Session.ollamaOnline)) {
+            label = "Ollama " + Session.ollamaVersion + " · " + Session.models.size() + " Modelle";
+            color = Ui.GREEN;
+        } else if (Boolean.FALSE.equals(Session.ollamaOnline)) {
+            label = "Ollama offline";
+            color = Ui.RED;
+        } else {
+            label = "Ollama …";
+            color = Ui.MUTED;
+        }
+        int w = font.width(label) + 16;
+        int x = px + pw - w - 8, y = py + 7;
+        Ui.card(g, x, y, w, 13, 0xFF0F1A26, Ui.withAlpha(color, 0x90));
+        Ui.dot(g, x + 5, y + 4, color);
+        g.text(font, label, x + 12, y + 3, Ui.TEXT, false);
+    }
+
+    private void sectionLabel(GuiGraphicsExtractor g, String text, int x, int y) {
+        g.text(font, text, x, y, Ui.MUTED, false);
+    }
+
+    private void drawLeftColumn(GuiGraphicsExtractor g) {
+        sectionLabel(g, "BAUAUFTRAG", leftX, bodyY);
+        g.text(font, "Strg+Enter", leftX + colW - font.width("Strg+Enter"), bodyY, Ui.FAINT, false);
+        sectionLabel(g, "MODELL", leftX, modelButton.getY() - 11);
+    }
+
+    private void drawRightColumn(GuiGraphicsExtractor g) {
+        sectionLabel(g, "BAUBEREICH", rightX, bodyY);
+        int y = bodyY + 34;
+        cornerLine(g, "①", Session.cornerA, rightX, y);
+        cornerLine(g, "②", Session.cornerB, rightX + colW / 2, y);
+        y += 12;
+        if (Session.cornerA != null && Session.cornerB != null && minecraft.player != null) {
+            BuildRegion r = BuildRegion.of(Session.cornerA, Session.cornerB, minecraft.player.position());
+            String err = Session.validateRegion();
+            String size = r.sizeX() + " × " + r.sizeY() + " × " + r.sizeZ() + "  ·  " + Session.fmtInt(r.volume()) + " Raumblöcke";
+            g.text(font, Ui.ellipsize(font, size, colW), rightX, y, err == null ? Ui.TEXT : Ui.RED, false);
+            y += 10;
+            g.text(font, Ui.ellipsize(font, err != null ? err : "Front zeigt nach " + r.frontName() + " (zu dir)", colW),
+                rightX, y, err == null ? Ui.MUTED : Ui.RED, false);
+        } else {
+            g.text(font, "Schau auf einen Block und setze", rightX, y, Ui.MUTED, false);
+            g.text(font, "zwei gegenüberliegende Ecken.", rightX, y + 10, Ui.MUTED, false);
+        }
+
+        int cardY = bodyY + 70;
+        sectionLabel(g, "BAUPLAN", rightX, cardY);
+        cardY += 11;
+        int cardH = clearToggle.getY() + clearToggle.getHeight() - cardY;
+        Ui.card(g, rightX, cardY, colW, cardH, Ui.CARD, Ui.CARD_BORDER);
+        PlanCompiler.Result result = Session.result;
+        int tx = rightX + 6, ty = cardY + 6, tw = colW - 12;
+        if (result == null) {
+            String hint = Session.generation != null ? "Die KI arbeitet …" : "Noch kein Plan. Beschreibe links dein Bauwerk und klicke „KI-Plan erstellen“.";
+            g.textWithWordWrap(font, Component.literal(hint), tx, ty, tw, Ui.MUTED);
+            return;
+        }
+        List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(result.plan().summary()), tw);
+        for (int i = 0; i < Math.min(2, lines.size()); i++) {
+            g.text(font, lines.get(i), tx, ty + i * 10, Ui.TEXT, false);
+        }
+        ty += Math.min(2, lines.size()) * 10 + 2;
+        String stats = Session.fmtInt(result.solidBlocks()) + " Blöcke · " + result.plan().elements().size() + " Elemente"
+            + (result.airBlocks() > 0 ? " · " + Session.fmtInt(result.airBlocks()) + " Luft" : "");
+        g.text(font, Ui.ellipsize(font, stats, tw), tx, ty, Ui.ACCENT, false);
+        ty += 12;
+
+        // Materialliste mit Item-Icons
+        int ix = tx;
+        for (PlanCompiler.Material m : result.materials()) {
+            if (ix + 18 > tx + tw || ty + 16 > cardY + cardH) break;
+            Block block = m.block();
+            if (block.asItem() == Items.AIR) continue;
+            ItemStack stack = new ItemStack(block);
+            g.item(stack, ix, ty);
+            g.itemDecorations(font, stack, ix, ty, Ui.compact(m.count()));
+            ix += 19;
+        }
+    }
+
+    private void cornerLine(GuiGraphicsExtractor g, String label, net.minecraft.core.BlockPos pos, int x, int y) {
+        g.text(font, label, x, y, pos != null ? Ui.AMBER : Ui.FAINT, false);
+        g.text(font, Ui.ellipsize(font, pos != null ? Session.fmt(pos) : "nicht gesetzt", colW / 2 - 14), x + 11, y,
+            pos != null ? Ui.TEXT : Ui.FAINT, false);
+    }
+
+    private void drawStatus(GuiGraphicsExtractor g) {
+        int y = py + ph - 52;
+        int x = px + PAD, w = pw - PAD * 2;
+        Ui.card(g, x, y, w, 20, 0xFF101A25, Ui.CARD_BORDER);
+
+        OllamaClient.Generation gen = Session.generation;
+        BuildManager.Progress progress = BuildManager.progress();
+        String text;
+        int color;
+        float fraction = 0f;
+        boolean bar = false;
+        if (gen != null) {
+            long secs = gen.elapsedMillis() / 1000;
+            text = gen.isThinking() ? "KI denkt nach … " + secs + " s"
+                : gen.contentChars() == 0 ? "Warte auf Ollama (Modell wird geladen) … " + secs + " s"
+                : "Empfange Bauplan … " + gen.elements() + " Elemente · " + Ui.compact(gen.contentChars()) + " Zeichen · " + secs + " s";
+            color = Ui.ACCENT;
+            fraction = -1f;
+            bar = true;
+        } else if (progress.running()) {
+            text = progress.message() + " " + Math.round(progress.fraction() * 100) + " %  (" + Session.fmtInt(progress.processed())
+                + " / " + Session.fmtInt(progress.total()) + ")";
+            color = progress.undo() ? Ui.AMBER : Ui.GREEN;
+            fraction = progress.fraction();
+            bar = true;
+        } else if (!progress.message().isEmpty() && Session.tone() == Session.Tone.BUSY) {
+            text = progress.message();
+            color = Ui.GREEN;
+        } else {
+            text = Session.status();
+            color = switch (Session.tone()) {
+                case OK -> Ui.GREEN;
+                case WARN -> Ui.AMBER;
+                case ERROR -> Ui.RED;
+                case BUSY -> Ui.ACCENT;
+                default -> Ui.MUTED;
+            };
+        }
+        Ui.dot(g, x + 6, y + 7, color);
+        g.text(font, Ui.ellipsize(font, text, w - 20), x + 15, y + 6, Ui.TEXT, false);
+        if (bar) Ui.progress(g, x + 1, y + 17, w - 2, 2, fraction, color);
+        else if (minecraft.getSingleplayerServer() == null) {
+            g.text(font, "Nur Einzelspieler", x + w - font.width("Nur Einzelspieler") - 6, y + 6, Ui.AMBER, false);
+        }
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
+    public void onClose() {
+        ModConfig cfg = ModConfig.get();
+        if (promptBox != null && !promptBox.getValue().isBlank()) {
+            cfg.lastPrompt = promptBox.getValue();
+            cfg.save();
+        }
+        super.onClose();
     }
 }

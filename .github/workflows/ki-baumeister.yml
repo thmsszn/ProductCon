@@ -27,14 +27,14 @@ jobs:
     permissions:
       contents: write  # nur für das Release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Neueste Fabric-Versionen (Info)
         continue-on-error: true
@@ -60,6 +60,13 @@ jobs:
           [ -f .ci-diagnose-classes ] && cat .ci-diagnose-classes >> "$RUNNER_TEMP/classes.txt"
           while read -r cls pat; do
             [ -z "$cls" ] && continue
+            if [ "$cls" = "@g" ]; then
+              # "@g Klasse regex": Bytecode nach Muster durchsuchen
+              set -- $pat
+              echo "===== $1 =~ $2 (bytecode grep)"
+              javap -c -p -cp "$CP" "$1" 2>&1 | grep -n -E -B3 -A3 "$2" | head -60 || true
+              continue
+            fi
             if [ "$cls" = "@c" ]; then
               # "@c Klasse methode": Bytecode einer Methode ausgeben
               set -- $pat

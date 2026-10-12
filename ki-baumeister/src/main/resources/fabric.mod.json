@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "id": "ki_baumeister",
   "version": "${version}",
-  "name": "KI-Baumeister (lokal)",
-  "description": "Bauwerke per lokaler Ollama-KI planen und bauen.",
+  "name": "KI-Baumeister",
+  "description": "Beschreibe ein Bauwerk – eine lokale KI (Ollama) entwirft den Bauplan, du prüfst die Vorschau in der Welt und baust mit einem Klick. Inklusive Rückgängig.",
+  "authors": ["thmsszn"],
+  "icon": "assets/ki_baumeister/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": [
-      "de.localai.baumeister.BaumeisterClient"
-    ]
+    "client": ["de.localai.baumeister.BaumeisterClient"]
   },
   "depends": {
-    "fabricloader": ">=0.19.5",
-    "minecraft": "=26.3",
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
     "java": ">=25",
     "fabric-api": "*"
   }
