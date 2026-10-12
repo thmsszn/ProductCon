@@ -6,22 +6,34 @@ es werden keine Daten ins Internet geschickt.
 
 ## Funktionen
 
-- **Taste `K`** öffnet das Menü (änderbar unter *Optionen → Steuerung → KI-Baumeister*).
-- **Baubereich** über zwei Ecken: Block anschauen und „Ecke 1/2 setzen“ (bis 96 Blöcke weit,
-  sonst die eigene Position). Optional eigene Tasten für die Ecken belegen.
-- **Vorschau in der Welt**: leuchtender Rahmen um den Bereich, der fertige Plan erscheint als
-  grüne Partikel-Wolke – so siehst du vor dem Bauen, was entsteht.
+- **Echte Gebäude statt Blockhaufen**: Die KI ist der *Architekt* – sie wählt Gebäudetyp, Stil,
+  Stockwerke, Dachform, Materialien, Räume und Extras. Eine eingebaute Architektur-Engine setzt den
+  Entwurf dann wie ein Schematic-Bauer um: Steinsockel, Fachwerk mit Eckpfosten und Balken,
+  Fenster mit Fensterbänken und Läden, Sattel-/Walm-/Flach-/Kegeldach mit Überstand und Giebel,
+  Kamin mit Rauch, Treppenhaus, eingerichtete Räume (Küche, Schlafzimmer, Bibliothek …),
+  Veranda, Balkon, Laternen, Zaun, Garten, Bäume und Pool.
+- **Gebäudetypen**: Haus, Hütte, Herrenhaus, Taverne, Scheune, moderne Villa, Turm, Leuchtturm, Burg,
+  Kirche, Tempel – in 10 Stilen (mittelalterlich, rustikal, modern, Stein, Wüste, japanisch, nordisch,
+  viktorianisch, antik, Fantasy).
+- **Baumeister-Axt** (Kreativ-Inventar *Werkzeuge* oder Knopf „⚒ Axt holen“):
+  **Linksklick** auf einen Block = Ecke 1, **Rechtsklick** auf einen Block = Ecke 2,
+  **Rechtsklick in die Luft** = Menü öffnen. Die Axt baut nichts ab.
+- **Taste `K`** öffnet das Menü (änderbar unter *Optionen → Steuerung → KI-Baumeister*). Für die Ecken
+  gibt es dort auch eigene, frei belegbare Tasten.
+- **Hologramm-Vorschau**: Rahmen um den Baubereich und das geplante Gebäude als farbiges,
+  halbtransparentes Hologramm in der Welt – so siehst du vor dem Bauen genau, was entsteht.
 - **Die Vorderseite zeigt automatisch zu dir** (Eingang, Treppen, Türen werden mitgedreht).
-- **Bauelemente statt Einzelblöcke**: Die KI plant mit Quadern, Räumen, Wänden, Walmdächern und
-  runden Türmen. Das ist viel schneller und ergibt deutlich schönere Gebäude.
-- **„Anpassen“**: Plan nachträglich ändern lassen, z.B. *„Dach aus Kupfer, zweites Stockwerk“*.
-- **Live-Fortschritt** beim Erzeugen (Elemente, Zeichen, Sekunden) mit Abbrechen-Knopf.
-- **Materialliste** mit Item-Symbolen und Mengen.
+- **„Variante“**: gleicher Entwurf, andere Details – sofort, ohne die KI erneut zu fragen.
+- **„Anpassen“**: Entwurf ändern lassen, z.B. *„drei Stockwerke, Dach aus Kupfer, mit Balkon“*.
+- **Schematic-Export**: „Schematic“ speichert das Gebäude als `.schem` (Sponge v2) im Ordner
+  `schematics` des Spielordners – nutzbar mit WorldEdit, FastAsyncWorldEdit und Litematica.
+- **Funktioniert auch ohne KI**: Ist Ollama nicht erreichbar, erkennt die Engine Stichworte wie
+  *Burg*, *Turm*, *Kirche* oder *modern* und baut trotzdem ein vollständiges Gebäude.
+- **Materialliste** mit Item-Symbolen und Mengen, **Live-Fortschritt** mit Abbrechen-Knopf.
 - **Flüssiges Bauen** über mehrere Ticks (keine Ruckler), Zäune/Scheiben/Treppen verbinden sich
-  korrekt, Türen und Betten werden vollständig gesetzt.
+  korrekt, Türen und Betten werden vollständig gesetzt. Gelände im Baubereich wird automatisch freigeräumt.
 - **Rückgängig** für die letzten 5 Bauten. Truhen und andere Blöcke mit Inhalt werden nie
   überschrieben; gefährliche Blöcke (TNT, Lava, Befehlsblöcke …) sind gesperrt.
-- **„Bereich leeren“**: entfernt auf Wunsch Erde, Bäume usw. im Baubereich.
 - Modellauswahl aus allen lokal installierten Ollama-Modellen, Verbindungsanzeige im Menü.
 
 ## Installation
@@ -58,14 +70,16 @@ Ollama ≥ 0.5.
 
 ## Bedienung
 
-1. Auf einen Bodenblock schauen → **Ecke 1 setzen**, zur gegenüberliegenden Ecke (auch höher) schauen → **Ecke 2 setzen**.
-2. Bauwerk beschreiben oder eine Vorlage (*Haus, Modern, Turm, Burg …*) anklicken.
-3. **✦ KI-Plan erstellen** (oder `Strg+Enter`). Die Vorschau erscheint in der Welt.
-4. Gefällt’s? **▶ Bauen**. Sonst Text ändern und **Anpassen** oder neu erstellen.
+1. Bereich festlegen: mit der **Baumeister-Axt** einen Bodenblock links anklicken (Ecke 1) und die
+   gegenüberliegende Ecke – gern auch höher – rechts anklicken (Ecke 2). Alternativ im Menü
+   „Ecke 1/2 setzen“ (Block im Fadenkreuz). Mindestgröße 5 × 5 × 5, für Häuser ideal ca. 20 × 20 × 20.
+2. Bauwerk beschreiben oder eine Vorlage (*Haus, Villa, Turm, Burg, Kirche, Tempel, Japan*) anklicken.
+3. **✦ KI-Entwurf** (oder `Strg+Enter`). Das Hologramm erscheint in der Welt.
+4. Gefällt's? **▶ Bauen**. Sonst **Variante**, Text ändern und **Anpassen** oder neu entwerfen.
 5. Danebengegangen? **↶ Rückgängig**.
 
 Tipp: Das Menü pausiert das Spiel nicht – du kannst es schließen und beim Bauen zusehen;
-der Fortschritt steht in der Aktionsleiste.
+der Fortschritt steht oben links.
 
 ## Einstellungen
 
@@ -76,12 +90,11 @@ der Fortschritt steht in der Aktionsleiste.
 | `ollamaUrl` | `http://localhost:11434` | Adresse des Ollama-Servers (auch im Netzwerk möglich) |
 | `model` | `qwen2.5:14b` | Modell (im Menü umschaltbar) |
 | `temperature` | `0.5` | Kreativität der KI (0 – 2) |
-| `contextSize` | `8192` | Mindest-Kontext; wird bei Bedarf automatisch vergrößert |
-| `maxOutputTokens` | `8192` | Maximale Antwortlänge |
+| `contextSize` | `4096` | Mindest-Kontext; wird bei Bedarf automatisch vergrößert |
+| `maxOutputTokens` | `2048` | Maximale Antwortlänge |
 | `timeoutMinutes` | `10` | Zeitlimit pro Anfrage |
 | `blocksPerTick` | `400` | Baugeschwindigkeit (20 Ticks = 1 Sekunde) |
 | `maxHorizontalSize` / `maxHeight` / `maxVolume` | `64` / `64` / `160000` | Grenzen für den Baubereich |
-| `clearArea` | `false` | Bereich vor dem Bauen leeren |
 | `preview` | `true` | Vorschau in der Welt |
 
 ## Selbst bauen
@@ -99,4 +112,5 @@ Die JAR liegt danach in `build/libs/`. Benötigt JDK 25. Auf GitHub baut der Wor
 - Funktioniert in **Einzelspielerwelten** (und als LAN-Host), nicht auf fremden Servern.
 - Vor großen Bauten eine **Sicherung der Welt** anlegen. Rückgängig stellt Blöcke wieder her,
   aber keine Inhalte von Behältern, die erst durch den Bau entstanden sind.
-- Die Qualität hängt vom Modell ab: größere Modelle planen deutlich schöner.
+- Die KI entscheidet über Typ, Stil und Ausstattung; größere Modelle treffen die Beschreibung genauer.
+  Die Bauqualität selbst kommt von der Engine und ist bei jedem Modell gleich.

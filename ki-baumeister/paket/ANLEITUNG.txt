@@ -31,10 +31,18 @@ SO GEHT'S
   5. Einzelspielerwelt öffnen (vorher eine Sicherung anlegen!) und K drücken.
 
 IM SPIEL
-  - Auf einen Block schauen -> "Ecke 1 setzen", zur anderen Ecke schauen -> "Ecke 2 setzen".
-  - Bauwerk beschreiben oder eine Vorlage anklicken -> "KI-Plan erstellen" (Strg+Enter).
-  - Vorschau in der Welt prüfen -> "Bauen". Danebengegangen? -> "Rückgängig".
-  - "Anpassen" ändert den aktuellen Plan, z.B. "Dach aus Kupfer, zweites Stockwerk".
+  - Baumeister-Axt holen: im Menü (K) auf "Axt holen" klicken oder im Kreativ-Inventar unter
+    "Werkzeuge & Hilfsmittel". Mit der Axt: Linksklick auf einen Block = Ecke 1,
+    Rechtsklick auf einen Block = Ecke 2, Rechtsklick in die Luft = Menü.
+    (Ohne Axt: im Menü auf einen Block schauen -> "Ecke 1 setzen" / "Ecke 2 setzen".)
+  - Bauwerk beschreiben oder eine Vorlage anklicken -> "KI-Entwurf" (Strg+Enter).
+    Die KI plant Typ, Stil, Stockwerke, Dach und Räume, die Engine baut daraus ein komplettes
+    Gebäude mit Einrichtung und Garten.
+  - Hologramm in der Welt prüfen -> "Bauen". Danebengegangen? -> "Rückgängig".
+  - "Variante" zeigt sofort eine andere Ausführung desselben Entwurfs.
+  - "Anpassen" ändert den Entwurf, z.B. "drei Stockwerke, Dach aus Kupfer, mit Balkon".
+  - "Schematic" speichert das Gebäude als .schem-Datei im Ordner
+    %APPDATA%\.minecraft\ki-baumeister\schematics (für WorldEdit / Litematica).
 
 PROBLEME
   - "Ollama offline" im Menü: Ollama über das Startmenü starten (Symbol erscheint unten rechts).
