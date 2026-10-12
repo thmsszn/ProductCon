@@ -648,7 +648,7 @@ final class HouseGenerator {
             }
         }
         // Laternen unter dem Vordach seitlich der Tür
-        String lantern = B.lantern(p.light().contains("lantern") ? p.light() : "lantern", true);
+        String lantern = B.lantern(p.light(), true);
         for (int x : new int[] {x0, x1}) {
             if (v.isEmpty(x, roofY - 1, z1)) v.set(x, roofY - 1, z1, lantern);
         }

@@ -57,8 +57,14 @@ public final class B {
         return with(trapdoor, "facing", facing.id(), "half", top ? "top" : "bottom", "open", String.valueOf(open));
     }
 
+    /** Laterne mit {@code hanging}-Eigenschaft (Laterne, Seelen- und Kupferlaternen; nicht Seelaterne/Kürbis). */
+    public static boolean isLantern(String block) {
+        String n = name(block);
+        return n.equals("lantern") || n.endsWith("_lantern") && !n.equals("sea_lantern") && !n.equals("jack_o_lantern");
+    }
+
     public static String lantern(String lantern, boolean hanging) {
-        return with(lantern, "hanging", String.valueOf(hanging));
+        return with(isLantern(lantern) ? lantern : "lantern", "hanging", String.valueOf(hanging));
     }
 
     public static String wallTorch(Dir facing) {
@@ -90,7 +96,7 @@ public final class B {
         String n = name(state);
         return n.endsWith("_pane") || n.endsWith("_fence") || n.endsWith("_fence_gate") || n.endsWith("_wall")
             || n.endsWith("_bars") || n.endsWith("_door") || n.endsWith("_trapdoor") || n.endsWith("torch")
-            || n.endsWith("lantern") || n.endsWith("_carpet") || n.endsWith("_pressure_plate") || n.equals("ladder")
+            || isLantern(n) || n.endsWith("_carpet") || n.endsWith("_pressure_plate") || n.equals("ladder")
             || n.endsWith("_bed") || n.startsWith("potted_") || n.equals("flower_pot") || n.endsWith("campfire")
             || n.endsWith("_sign") || n.endsWith("_banner") || n.equals("chain") || n.equals("iron_chain")
             || n.equals("lever") || n.endsWith("_button") || n.endsWith("candle") || n.equals("end_rod")

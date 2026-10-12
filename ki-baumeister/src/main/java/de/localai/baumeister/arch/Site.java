@@ -224,7 +224,7 @@ public final class Site {
     public void hangingLight(int x, int y, int z) {
         if (free(x, y, z) && v.isSolid(x, y + 1, z)) {
             String light = p.light();
-            if (B.name(light).endsWith("lantern")) v.set(x, y, z, B.lantern(light, true));
+            if (B.isLantern(light)) v.set(x, y, z, B.lantern(light, true));
             else v.set(x, y + 1, z, B.id(light)); // Leuchtblock in der Decke (modern)
         }
     }
@@ -293,7 +293,7 @@ public final class Site {
             String at = v.get(px, 1, z);
             if (at != null && !B.isAir(at) && !B.name(at).endsWith("_fence")) continue;
             v.set(px, 1, z, B.id(p.fence()));
-            v.set(px, 2, z, B.lantern(p.light().contains("lantern") ? p.light() : "lantern", false));
+            v.set(px, 2, z, B.lantern(p.light(), false));
         }
     }
 }
