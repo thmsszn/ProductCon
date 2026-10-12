@@ -7,3 +7,9 @@ japan|19|16|17|{"summary":"Japanisches Haus","type":"house","style":"japanese","
 nordisch|15|18|13|{"summary":"Nordisches Langhaus","type":"house","style":"nordic","floors":1,"roof":"gable","features":["chimney","path","interior"]}
 viktorianisch|17|24|15|{"summary":"Viktorianisches Haus","type":"mansion","style":"victorian","floors":3,"roof":"hip","features":["porch","balcony","chimney","garden","path","fence","interior"]}
 wueste|15|12|15|{"summary":"Wuestenhaus","type":"house","style":"desert","floors":2,"roof":"flat","features":["path","interior","garden"]}
+keep-stone-large|33|40|33|{"summary":"Wehrturm aus Stein mit Zinnen","type":"tower","style":"stone","floors":4,"roof":"flat","features":["lanterns","path","garden","interior"],"rooms":["storage","kitchen","library","bedroom"]}
+jetty-medieval|21|38|21|{"summary":"Mittelalterlicher Turm mit Fachwerkaufsatz","type":"tower","style":"medieval","floors":4,"roof":"cone","features":["path","garden","flower_boxes","interior","trees"],"rooms":[]}
+wizard-fantasy|13|42|13|{"summary":"Zauberturm","type":"tower","style":"fantasy","floors":5,"roof":"cone","features":["interior"],"rooms":["storage","library","workshop","bedroom","library"]}
+drum-stone|19|46|19|{"summary":"Burgturm mit Wehrgang und Kegeldach","type":"tower","style":"stone","floors":5,"roof":"cone","features":["interior","path"],"rooms":[]}
+small-rustic|7|14|7|{"summary":"Kleiner Wachturm","type":"tower","style":"rustic","floors":2,"roof":"gable","features":["interior"],"rooms":[]}
+lighthouse-coast|27|52|27|{"summary":"Leuchtturm mit Waerterhaus","type":"lighthouse","style":"medieval","floors":4,"features":["interior","path","lanterns","garden"],"rooms":[]}

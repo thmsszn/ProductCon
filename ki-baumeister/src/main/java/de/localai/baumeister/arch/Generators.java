@@ -5,7 +5,7 @@ final class Generators {
     private Generators() {}
 
     static Voxels tower(Site site) {
-        return new HouseGenerator(site).build();
+        return new TowerGenerator(site).build();
     }
 
     static Voxels castle(Site site) {
