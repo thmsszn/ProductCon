@@ -9,11 +9,30 @@ import java.util.List;
  * bekommt.
  */
 final class Layouts {
-    enum Kind { BLOCK, L_SHAPE, T_SHAPE, U_SHAPE, ANNEX_TOWER, CROSS, LONGHOUSE, STEPPED }
+    enum Kind {
+        BLOCK, L_SHAPE, T_SHAPE, U_SHAPE, ANNEX_TOWER, CROSS, LONGHOUSE, STEPPED,
+        /** Steinsockel + Holzobergeschoss mit Überhang, Pultdach-Anbau und aufgesetztem Quergiebel. */
+        SPLIT_HOUSE,
+        /** Winkelhaus auf Steinsockel: vorderer Flügel mit Überhang, Haupthaus quer, Pultdach-Anbau. */
+        SPLIT_L;
+
+        /** Gestaffelter Fachwerkbau (Steinsockel, Überhang, Außentreppe, Garten) in {@link FreeBuilder}. */
+        boolean split() {
+            return this == SPLIT_HOUSE || this == SPLIT_L;
+        }
+    }
 
     private Layouts() {}
 
     static Kind pick(BuildingSpec spec, Rng rng) {
+        String force = System.getProperty("baumeister.layout"); // nur für Vorschau/Tests
+        if (force != null) {
+            try {
+                return Kind.valueOf(force);
+            } catch (IllegalArgumentException ignored) {
+                // unbekannter Name: normale Wahl
+            }
+        }
         List<Kind> pool = new ArrayList<>();
         switch (spec.type()) {
             case COTTAGE -> pool.addAll(List.of(Kind.BLOCK, Kind.L_SHAPE, Kind.ANNEX_TOWER, Kind.LONGHOUSE));
@@ -24,6 +43,11 @@ final class Layouts {
             default -> pool.addAll(List.of(Kind.BLOCK, Kind.L_SHAPE, Kind.T_SHAPE, Kind.ANNEX_TOWER, Kind.CROSS,
                 Kind.STEPPED, Kind.LONGHOUSE, Kind.U_SHAPE));
         }
+        boolean timberStyle = spec.style() == Palette.Style.MEDIEVAL || spec.style() == Palette.Style.RUSTIC
+            || spec.style() == Palette.Style.NORDIC || spec.style() == Palette.Style.VIKING;
+        boolean big = spec.type() == BuildingSpec.Type.HOUSE || spec.type() == BuildingSpec.Type.TAVERN
+            || spec.type() == BuildingSpec.Type.MANSION;
+        if (timberStyle && big) pool.addAll(List.of(Kind.SPLIT_HOUSE, Kind.SPLIT_HOUSE, Kind.SPLIT_L, Kind.SPLIT_L));
         if (spec.style() == Palette.Style.NORDIC) pool.addAll(List.of(Kind.LONGHOUSE, Kind.LONGHOUSE, Kind.LONGHOUSE));
         if (spec.style() == Palette.Style.JAPANESE) pool.addAll(List.of(Kind.L_SHAPE, Kind.U_SHAPE, Kind.LONGHOUSE));
         if (spec.style() == Palette.Style.VIKING) pool.addAll(List.of(Kind.LONGHOUSE, Kind.LONGHOUSE, Kind.LONGHOUSE, Kind.T_SHAPE));
@@ -71,6 +95,18 @@ final class Layouts {
                 p.add(rect(0, 15, 100, 85, f, 0, roof));
                 p.add(rect(0, 0, 55, 45, lo, 0, roof));
                 p.add(rect(25, 30, 50, 60, 1, f, roof));
+            }
+            case SPLIT_HOUSE -> {
+                int fs = Math.max(2, Math.min(3, f));
+                p.add(rect(0, 18, 54, 72, fs, 0, roof));
+                p.add(rect(54, 36, 30, 52, 1, 0, "shed"));
+                if (fs == 2) p.add(rect(6, 18, 42, 30, 1, fs, roof));
+            }
+            case SPLIT_L -> {
+                int fs = Math.max(2, Math.min(3, f));
+                p.add(rect(0, 0, 42, 64, fs, 0, roof));
+                p.add(rect(0, 40, 100, 52, fs, 0, roof));
+                p.add(rect(42, 22, 34, 18, 1, 0, "shed"));
             }
         }
         if (rng.chance(0.5)) {
