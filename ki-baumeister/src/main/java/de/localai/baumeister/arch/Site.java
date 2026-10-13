@@ -260,26 +260,6 @@ public final class Site {
         new Garden(this).run(richness);
     }
 
-    /** Kleiner Laubbaum (Stamm + Krone), nur wenn genug Platz ist. */
-    private void treeClassic(int x, int z, int trunk) {
-        String log = B.name(p.leaves()).replace("_leaves", "_log");
-        if (log.startsWith("flowering_azalea") || log.startsWith("azalea")) log = "oak_log";
-        int top = 1 + trunk;
-        if (top + 2 >= h) return;
-        for (int y = 1; y <= trunk; y++) {
-            if (!free(x, y, z)) return;
-        }
-        for (int y = 1; y <= trunk; y++) v.set(x, y, z, B.axis(log, 'y'));
-        for (int y = top - 1; y <= top + 1; y++) {
-            int rad = y == top + 1 ? 1 : 2;
-            for (int dx = -rad; dx <= rad; dx++)
-                for (int dz = -rad; dz <= rad; dz++) {
-                    if (Math.abs(dx) == rad && Math.abs(dz) == rad && rng.chance(0.6)) continue;
-                    if (free(x + dx, y, z + dz)) v.set(x + dx, y, z + dz, B.leaves(p.leaves()));
-                }
-        }
-    }
-
     /** Zaun am Grundstücksrand mit Tor an {@code gateX} (Vorderseite). */
     public void fence(int gateX, int gateWidth) {
         for (int x = 0; x < w; x++) {

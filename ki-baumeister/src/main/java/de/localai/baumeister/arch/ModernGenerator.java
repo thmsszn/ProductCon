@@ -296,7 +296,7 @@ final class ModernGenerator {
             int tx = rightSide ? gx1 - 1 : gx0 + 1;
             if (Math.abs(tx - doorX) > 3) s.tree(tx, 1, 4);
         }
-        s.garden(0.7);
+        if (s.spec.has(BuildingSpec.Feature.GARDEN) || s.spec.has(BuildingSpec.Feature.TREES)) s.garden(s.spec.has(BuildingSpec.Feature.GARDEN) ? 0.7 : 0.4);
         s.flowersAndBushes(0, 0, s.w - 1, s.d - 1, 0.015, 0.025);
     }
 
