@@ -53,10 +53,8 @@ final class ModernGenerator {
 
     private void materials() {
         wallB = p.wall();
-        int wk = rng.nextInt(3);
-        woodB = wk == 0 ? "stripped_spruce_log" : wk == 1 ? "stripped_dark_oak_log" : "stripped_oak_log";
-        plankB = B.id(wk == 0 ? "spruce_planks" : wk == 1 ? "dark_oak_planks" : "oak_planks");
-        woodTrap = B.id(wk == 0 ? "spruce_trapdoor" : wk == 1 ? "dark_oak_trapdoor" : "oak_trapdoor");
+        woodB = rng.chance(0.5) ? "stripped_spruce_log" : "stripped_dark_oak_log"; // Zufallsstrom wie bisher (kompakte Villa, Pavillon)
+        woodKind(woodB.contains("spruce") ? 0 : 1);
         slabB = B.id(wallB);
         qz = Materials.family("smooth_quartz");
         frameB = p.frame();
@@ -65,6 +63,13 @@ final class ModernGenerator {
         floorF = p.floor();
         glassB = B.id("glass_pane");
         roofB = B.id(p.roof().block());
+    }
+
+    /** Holzsorte (0 Fichte, 1 Schwarzeiche, 2 Eiche) für Holzfelder, Deck und Falltüren. */
+    private void woodKind(int wk) {
+        woodB = wk == 0 ? "stripped_spruce_log" : wk == 1 ? "stripped_dark_oak_log" : "stripped_oak_log";
+        plankB = B.id(wk == 0 ? "spruce_planks" : wk == 1 ? "dark_oak_planks" : "oak_planks");
+        woodTrap = B.id(wk == 0 ? "spruce_trapdoor" : wk == 1 ? "dark_oak_trapdoor" : "oak_trapdoor");
     }
 
     private boolean layout() {
@@ -416,6 +421,7 @@ final class ModernGenerator {
     }
 
     private void villa() {
+        woodKind(rng.nextInt(3)); // erst nach villaLayout(), damit andere Varianten denselben Zufallsstrom behalten
         platform();
         for (int l = 0; l < nl; l++) shell(l);
         pillars();
@@ -507,30 +513,36 @@ final class ModernGenerator {
     private void interiorStairs() {
         for (int l = 0; l + 1 < nl; l++) {
             int fy = f0 + 4 * l;
-            List<int[]> cand = new ArrayList<>();
+            // 4 Stufen für 4 Blöcke Höhe: die vierte liegt in der Deckenebene und schließt bündig mit dem Obergeschoss ab
+            List<int[]> cand = new ArrayList<>(), relaxed = new ArrayList<>();
             for (int sx = 0; sx < s.w; sx++)
                 for (int z = 1; z < s.d; z++)
                     for (int side = -1; side <= 1; side += 2) {
                         int rx = sx + side;
-                        boolean ok = true;
-                        for (int i = -1; i <= 3 && ok; i++) {
+                        boolean ok = true, strict = true;
+                        for (int i = -1; i <= 4 && ok; i++) {
                             ok = interior(l + 1, sx, z + i) && interior(l + 1, rx, z + i);
-                            if (i <= 2) ok = ok && interior(l, sx, z + i) && interior(l, rx, z + i);
+                            if (i <= 3) {
+                                boolean low = interior(l, sx, z + i) && interior(l, rx, z + i);
+                                if (i <= 2) ok = ok && low;
+                                else strict = low;
+                            }
                         }
-                        if (ok) cand.add(new int[] {sx, z, rx});
+                        if (ok) (strict ? cand : relaxed).add(new int[] {sx, z, rx});
                     }
+            if (cand.isEmpty()) cand = relaxed;
             if (cand.isEmpty()) continue;
             int[] c = cand.get(rng.nextInt(cand.size()));
             int sx = c[0], z = c[1], rx = c[2];
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 4; i++) {
                 int y = fy + 1 + i;
+                if (i < 3) v.set(sx, fy + 4, z + i, B.AIR);
                 for (int yy = fy + 1; yy < y; yy++) v.set(sx, yy, z + i, B.id(floorF.block()));
                 v.set(sx, y, z + i, B.stairs(floorF, Dir.SOUTH, false));
-                v.set(sx, fy + 4, z + i, B.AIR);
                 v.set(rx, fy + 5, z + i, glassB);
             }
             v.set(sx, fy + 5, z - 1, glassB);
-            for (int i = -1; i <= 3; i++) {
+            for (int i = -1; i <= 4; i++) {
                 s.reserve(sx, fy + 1, z - 1);
                 s.reserve(sx, fy + 2, z - 1);
                 s.reserve(sx, fy + 5, z + i);
@@ -580,6 +592,9 @@ final class ModernGenerator {
             v.set(pick[0], fy + 3, pick[1], glassB);
             s.reserve(pick[0] + in.dx, fy + 1, pick[1] + in.dz);
             s.reserve(pick[0] + in.dx * 2, fy + 1, pick[1] + in.dz * 2);
+            // Vorplatz draußen freihalten (sonst setzt das Geländer dort eine Scheibe vor die Tür)
+            s.reserve(pick[0] + od.dx, fy + 1, pick[1] + od.dz);
+            s.reserve(pick[0] + od.dx, fy + 2, pick[1] + od.dz);
             if (l == 0) {
                 doorX0 = pick[0];
                 doorZ0 = pick[1];
@@ -598,7 +613,7 @@ final class ModernGenerator {
 
     private final java.util.Set<Long> noRail = new java.util.HashSet<>();
 
-    /** Außentreppe von einer Terrasse zur nächsthöheren (3 Stufen + Plattenkante), seitlich mit Glas. */
+    /** Außentreppe von einer Terrasse zur nächsthöheren (4 Stufen), seitlich mit Glas. */
     private void exteriorStairs() {
         for (int l = 0; l + 1 < nl; l++) {
             int sy = f0 + 4 * l + 4;
@@ -614,8 +629,10 @@ final class ModernGenerator {
                                 ok = slabAt(xi, sy, z + dz) && airColumn(xi, z + dz, sy + 1, sy + 5);
                             }
                         }
-                        int tx = x + dx * 3;
-                        ok = ok && slabAt(tx, sy + 4, z) && airColumn(tx, z, sy + 5, sy + 6);
+                        // 4 Stufen für 4 Blöcke Höhe: die vierte ersetzt die Dachplatte am Ziel, dahinter liegt der Austritt
+                        int tx = x + dx * 3, lx = x + dx * 4;
+                        ok = ok && slabAt(tx, sy + 4, z) && airColumn(tx, z, sy + 5, sy + 6)
+                            && slabAt(lx, sy + 4, z) && airColumn(lx, z, sy + 5, sy + 6);
                         if (ok) cand.add(new int[] {x, z, dx});
                     }
             if (cand.isEmpty()) continue;
@@ -628,7 +645,12 @@ final class ModernGenerator {
                     for (int yy = sy + 1; yy <= y + 1; yy++) v.set(xi, yy, c[1] + dz, glassB);
                 s.reserve(xi, y + 1, c[1]);
             }
-            noRail.add(key(c[0] + c[2] * 3, c[1]));
+            int tx = c[0] + c[2] * 3;
+            v.set(tx, sy + 4, c[1], B.stairs(qz, c[2] > 0 ? Dir.EAST : Dir.WEST, false));
+            for (int dz = -1; dz <= 1; dz += 2) v.setIfEmpty(tx, sy + 5, c[1] + dz, glassB);
+            s.reserve(tx, sy + 5, c[1]);
+            noRail.add(key(tx, c[1]));
+            noRail.add(key(tx + c[2], c[1]));
         }
     }
 
@@ -652,7 +674,7 @@ final class ModernGenerator {
                         || !slabAt(x, sy, z - 1);
                     if (!edge) continue;
                     if (l == nl - 1) { // oberstes Dach: flache Attika-Lippe
-                        v.set(x, sy + 1, z, B.slab(qz, false));
+                        if (sy + 1 < s.h && !s.isReserved(x, sy + 1, z)) v.set(x, sy + 1, z, B.slab(qz, false));
                     } else if (!s.isReserved(x, sy + 1, z) && !isStairTop(x, z, sy)) {
                         v.set(x, sy + 1, z, glassB);
                     }
@@ -687,6 +709,19 @@ final class ModernGenerator {
         for (int[] r : rects) {
             int l = r[0], fy = f0 + 4 * l;
             int x0 = r[1] + 1, x1 = r[2] - 1, z0 = r[3] + 1, z1 = r[4] - 1;
+            // Winkel-Variante: Rechtecke derselben Etage überlappen; nur den nicht überlappenden Teil einrichten
+            boolean skip = false;
+            for (int[] q : rects) {
+                if (q == r) break;
+                if (q[0] != l || r[1] > q[2] || q[1] > r[2] || r[3] > q[4] || q[3] > r[4]) continue;
+                if (r[3] < q[3]) z1 = Math.min(z1, q[3] - 2);
+                else if (r[1] < q[1]) x1 = Math.min(x1, q[1] - 2);
+                else if (r[2] > q[2]) x0 = Math.max(x0, q[2] + 2);
+                else if (r[4] > q[4]) z0 = Math.max(z0, q[4] + 2);
+                else skip = true;
+                if (x1 - x0 < 3 || z1 - z0 < 3) skip = true;
+            }
+            if (skip) continue;
             String a = l == 0 ? "living" : l == 1 ? "bedroom" : "bedroom";
             String b = l == 0 ? "kitchen" : l == 1 ? "office" : "library";
             if (z1 - z0 >= 8) {
@@ -735,7 +770,7 @@ final class ModernGenerator {
         v.setIfEmpty(x, y + 1, z, B.leaves(HEDGE));
         for (Dir d : Dir.values()) {
             int nx = x + d.dx, nz = z + d.dz;
-            if (v.isEmpty(nx, y, nz) && !s.isReserved(nx, y, nz)) v.set(nx, y, nz, B.trapdoor(woodTrap, d, false, true));
+            if (!fp(0, nx, nz) && v.isEmpty(nx, y, nz) && !s.isReserved(nx, y, nz)) v.set(nx, y, nz, B.trapdoor(woodTrap, d, false, true));
         }
     }
 
@@ -822,7 +857,7 @@ final class ModernGenerator {
             for (int z = rz0 + 1; z < rz1 - 2; z++) {
                 boolean nearPool = x >= fit[0] - 3 && x <= fit[1] + 3 && z >= fit[2] - 4 && z <= fit[3] + 3
                     && !(x >= fit[0] - 1 && x <= fit[1] + 1 && z + 2 >= fit[2] - 1 && z <= fit[3] + 1);
-                if (nearPool && loungerFree(x, f0 + 1, z)) spots.add(new int[] {x, z});
+                if (nearPool && !fp(0, x, z) && !fp(0, x, z + 1) && !fp(0, x, z + 2) && loungerFree(x, f0 + 1, z)) spots.add(new int[] {x, z});
             }
         spots.sort((a, b) -> Integer.compare(Math.abs(a[0] - c[0]) + Math.abs(a[1] - c[1]), Math.abs(b[0] - c[0]) + Math.abs(b[1] - c[1])));
         int placed = 0;
@@ -858,7 +893,7 @@ final class ModernGenerator {
         List<int[]> spots = new ArrayList<>();
         for (int x = rx0 + 1; x < rx1; x++)
             for (int z = rz0 + 1; z < rz1; z++) {
-                if (!v.isEmpty(x, y, z) || s.isReserved(x, y, z)) continue;
+                if (fp(0, x, z) || !v.isEmpty(x, y, z) || s.isReserved(x, y, z)) continue;
                 boolean wallNext = v.isSolid(x + 1, y, z) || v.isSolid(x - 1, y, z) || v.isSolid(x, y, z + 1) || v.isSolid(x, y, z - 1);
                 if (!wallNext || Math.abs(x - doorX0) <= 2 && z <= doorZ0 + 1 && z >= doorZ0 - 3) continue;
                 spots.add(new int[] {x, z});
@@ -874,7 +909,8 @@ final class ModernGenerator {
             if (got.size() % 2 == 1) trapPlanter(sp[0], y, sp[1]);
             else {
                 planter(sp[0], y, sp[1], 2);
-                planter(sp[0] + (v.isEmpty(sp[0] + 1, y, sp[1]) ? 1 : 0), y, sp[1] + (v.isEmpty(sp[0] + 1, y, sp[1]) ? 0 : 1), 2);
+                int sx2 = sp[0] + (v.isEmpty(sp[0] + 1, y, sp[1]) ? 1 : 0), sz2 = sp[1] + (v.isEmpty(sp[0] + 1, y, sp[1]) ? 0 : 1);
+                if (!fp(0, sx2, sz2)) planter(sx2, y, sz2, 2);
             }
         }
         // Liegen im überdachten Bereich, falls vorhanden
@@ -885,7 +921,7 @@ final class ModernGenerator {
                 if (Math.abs(x - doorX0) <= 2 && z <= doorZ0) continue;
                 if (!loungerFree(x, y, z) || Math.floorMod(x, 3) != 0) continue;
                 boolean free = true;
-                for (int i = 0; i < 3; i++) if (v.get(x, f0 + 4, z + i) == null || B.isAir(v.get(x, f0 + 4, z + i))) free = false;
+                for (int i = 0; i < 3; i++) if (fp(0, x, z + i) || v.get(x, f0 + 4, z + i) == null || B.isAir(v.get(x, f0 + 4, z + i))) free = false;
                 if (!free) continue;
                 loungerAt(x, y, z);
                 placed++;
@@ -901,7 +937,7 @@ final class ModernGenerator {
             for (int z = 0; z < s.d - 2 && placed < 3; z++)
                 for (int x = 0; x < s.w && placed < 3; x++) {
                     boolean ok = true;
-                    for (int i = 0; i < 3 && ok; i++) ok = exposed(x, sy, z + i) && v.isEmpty(x, y, z + i) && !s.isReserved(x, y, z + i);
+                    for (int i = 0; i < 3 && ok; i++) ok = exposed(x, sy, z + i) && !fp(l + 1, x, z + i) && v.isEmpty(x, y, z + i) && !s.isReserved(x, y, z + i);
                     String back = v.get(x, y, z - 1);
                     ok = ok && back != null && !B.isAir(back) && Math.floorMod(x + z, 2) == 0;
                     if (!ok) continue;
@@ -915,7 +951,7 @@ final class ModernGenerator {
             List<int[]> spots = new ArrayList<>();
             for (int x = 0; x < s.w; x++)
                 for (int z = 0; z < s.d; z++) {
-                    if (!exposed(x, sy, z) || !v.isEmpty(x, y, z) || s.isReserved(x, y, z)) continue;
+                    if (!exposed(x, sy, z) || fp(l + 1, x, z) || !v.isEmpty(x, y, z) || s.isReserved(x, y, z)) continue;
                     if (v.isSolid(x + 1, y, z) || v.isSolid(x - 1, y, z) || v.isSolid(x, y, z - 1) || v.isSolid(x, y, z + 1)) spots.add(new int[] {x, z});
                 }
             List<int[]> got = new ArrayList<>();
@@ -964,7 +1000,8 @@ final class ModernGenerator {
         // Palme auf dem Deck an der Terrassenseite
         int px = ps > 0 ? rx1 - 1 : rx0 + 1, pz = rz1 - 1;
         int trunk = Math.min(8, s.h - 4 - f0);
-        if (trunk >= 4 && v.isEmpty(px, f0 + 1, pz) && airColumn(px, pz, f0 + 1, f0 + trunk + 1)) {
+        if (trunk >= 4 && v.isEmpty(px, f0 + 1, pz) && !"minecraft:water".equals(v.get(px, f0, pz))
+            && !"minecraft:smooth_quartz".equals(v.get(px, f0, pz)) && airColumn(px, pz, f0 + 1, f0 + trunk + 1)) {
             for (int y = f0 + 1; y <= f0 + trunk; y++) v.set(px, y, pz, B.axis("dark_oak_log", 'y'));
             int ty = f0 + trunk + 1;
             for (Dir d : Dir.values()) {
