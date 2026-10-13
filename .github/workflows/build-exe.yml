@@ -4,6 +4,9 @@ on:
   push:
     branches: ["**"]
     tags: ["v*"]
+    paths-ignore:
+      - "crude-and-compute/**"
+      - ".github/workflows/build-mod.yml"
   workflow_dispatch:
     inputs:
       release_tag:

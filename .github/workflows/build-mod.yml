@@ -1,0 +1,37 @@
+name: Minecraft-Mod bauen (Crude & Compute)
+
+on:
+  push:
+    paths:
+      - "crude-and-compute/**"
+      - ".github/workflows/build-mod.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crude-and-compute
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Mod kompilieren
+        run: ./gradlew build --stacktrace --no-configuration-cache
+
+      - name: Game-Tests auf einem Headless-Server ausführen
+        if: hashFiles('crude-and-compute/src/main/java/com/crudecompute/gametest/**') != ''
+        run: ./gradlew runGameTestServer --no-configuration-cache
+
+      - name: Mod-JAR als Download bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: crude-and-compute-mod
+          path: crude-and-compute/build/libs/*.jar
