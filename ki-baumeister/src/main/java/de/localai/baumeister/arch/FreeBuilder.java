@@ -48,6 +48,8 @@ final class FreeBuilder {
     private byte[][][] stairMark;
     // Stein-/Festungsdetails (Zinnen, Strebepfeiler, Schießscharten, Spitzbogenfenster, Sockel, Banner)
     private boolean stone, fort, classic, noTimber;
+    /** Fassaden-/Vorbau-Details und Zweistoff-Dach für Holz- und Fachwerkhäuser (siehe {@link FacadeDetail}). */
+    private boolean rich;
 
     FreeBuilder(Site site) {
         this.s = site;
@@ -63,6 +65,7 @@ final class FreeBuilder {
     Voxels build() {
         s.clearSite(spec.style().sandy() ? "sand" : "grass_block");
         if (!plan()) return new HouseGenerator(s).build();
+        rich = !stone && FacadeDetail.applies(spec.style());
         shell();
         pickDoor();
         windows();
@@ -792,6 +795,7 @@ final class FreeBuilder {
         }
         if (spec.has(BuildingSpec.Feature.CHIMNEY)) chimney();
         for (Vol q : vols) if (gableVol(q)) dormers(q, q.top() * fh);
+        if (rich) roofBands();
     }
 
     /** Traufgesims: Platten unter dem Dachüberstand (Giebeldach nur an den Traufseiten, Walmdach ringsum). */
@@ -803,8 +807,29 @@ final class FreeBuilder {
                 if (!xe && !ze) continue;
                 if (gableOnly && (q.ridgeX ? xe : ze)) continue;
                 if (!v.in(x, yt + 1, z) || !nameAt(x, yt + 1, z).equals(stairName)) continue;
+                if (rich && !(xe && ze)) {
+                    rafter(q, x, z, yt, xe, ze);
+                    continue;
+                }
                 place(x, yt, z, B.slab(p.trim(), true));
             }
+    }
+
+    /** Sichtbare Sparrenreihe unter der Traufe (Balkenkopf/Klappe im Wechsel) und ein ausgestellter Traufkick. */
+    private void rafter(Vol q, int x, int z, int yt, boolean xe, boolean ze) {
+        Dir out = ze ? (z < q.z0 ? Dir.NORTH : Dir.SOUTH) : (x < q.x0 ? Dir.WEST : Dir.EAST);
+        int idx = ze ? x : z;
+        char depth = out.wallAxis() == 'x' ? 'z' : 'x';
+        place(x, yt, z, (idx & 1) == 0 ? B.axis(frameB, depth) : B.trapdoor(p.trapdoor(), out, true, false));
+        place(x + out.dx, yt, z + out.dz, B.stairs(p.roof(), out.opposite(), false));
+    }
+
+    /** Zweistoff-Dach: jede dritte Stufenreihe der Dachflächen aus einem zweiten Baustoff (Holz mit Sandsteinband). */
+    private void roofBands() {
+        for (Vol q : vols) {
+            if (q.round || !(gableVol(q) || q.roof.equals("hip"))) continue;
+            FacadeDetail.roofBands(v, p, q.x0 - 1, q.z0 - 1, q.x1 + 1, q.z1 + 1, q.top() * fh);
+        }
     }
 
     /** First-Abschluss: an beiden Giebelenden ein erhöhter Zierstein; bei langen Dächern zusätzlich eine Firstkrone. */
@@ -1130,6 +1155,17 @@ final class FreeBuilder {
         }
     }
 
+    /** Fassadendetails (siehe {@link FacadeDetail}): Vorbau mit Pfosten, Stufe, Fensterrahmen, Ranken, Sockelstreifen. */
+    private void facade() {
+        FacadeDetail fd = new FacadeDetail(s, lev, maxK, fh, frameB, groundWallB, doorX, doorZ, doorDir);
+        boolean deep = fd.porch();
+        if (!deep) porch();
+        fd.apron();
+        fd.windows(p.shutters() || spec.has(BuildingSpec.Feature.SHUTTERS));
+        fd.vines();
+        fd.plinthRing();
+    }
+
     private void exterior() {
         if (doorX >= 0) {
             int ax = doorDir.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
@@ -1141,7 +1177,8 @@ final class FreeBuilder {
                     if (v.in(px, 0, pz) && !inLev(0, px, pz)) v.set(px, 0, pz, B.id(p.path()));
                 }
             }
-            porch();
+            if (rich) facade();
+            else porch();
             if (spec.has(BuildingSpec.Feature.LANTERNS) && doorDir == Dir.NORTH && doorZ >= 4) s.lanternPosts(doorX - 1, doorZ - 3, 3);
         }
         if (spec.has(BuildingSpec.Feature.FENCE) && mf >= 2 && doorX >= 0) s.fence(Math.max(0, doorX - 1), 3);
