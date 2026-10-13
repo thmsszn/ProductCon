@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "crudecompute:block/cooling_unit"
+    },
+    "active=true": {
+      "model": "crudecompute:block/cooling_unit_active"
+    }
+  }
+}

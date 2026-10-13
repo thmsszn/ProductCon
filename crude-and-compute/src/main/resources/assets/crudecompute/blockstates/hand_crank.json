@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=up": {
+      "model": "crudecompute:block/hand_crank"
+    },
+    "facing=down": {
+      "model": "crudecompute:block/hand_crank",
+      "x": 180
+    },
+    "facing=north": {
+      "model": "crudecompute:block/hand_crank",
+      "x": 90
+    },
+    "facing=east": {
+      "model": "crudecompute:block/hand_crank",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south": {
+      "model": "crudecompute:block/hand_crank",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west": {
+      "model": "crudecompute:block/hand_crank",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

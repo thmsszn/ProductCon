@@ -1,0 +1,14 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": [
+    "minecraft:desert",
+    "minecraft:badlands",
+    "minecraft:eroded_badlands",
+    "minecraft:wooded_badlands",
+    "minecraft:savanna",
+    "minecraft:plains",
+    "minecraft:snowy_plains"
+  ],
+  "features": "crudecompute:oil_lake",
+  "step": "lakes"
+}

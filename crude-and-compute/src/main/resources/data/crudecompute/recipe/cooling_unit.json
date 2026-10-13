@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "PKP",
+    "ICI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "crudecompute:plastic"
+    },
+    "K": {
+      "item": "minecraft:packed_ice"
+    },
+    "C": {
+      "item": "crudecompute:circuit_board"
+    }
+  },
+  "result": {
+    "id": "crudecompute:cooling_unit",
+    "count": 1
+  }
+}

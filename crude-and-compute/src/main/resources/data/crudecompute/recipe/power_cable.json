@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PCP"
+  ],
+  "key": {
+    "P": {
+      "item": "crudecompute:plastic"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    }
+  },
+  "result": {
+    "id": "crudecompute:power_cable",
+    "count": 6
+  }
+}

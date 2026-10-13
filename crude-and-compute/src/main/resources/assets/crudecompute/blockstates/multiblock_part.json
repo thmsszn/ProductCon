@@ -1,0 +1,9 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "crudecompute:block/multiblock_part"
+      }
+    }
+  ]
+}

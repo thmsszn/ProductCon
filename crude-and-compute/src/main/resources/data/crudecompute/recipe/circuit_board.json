@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GRG",
+    "WWW",
+    "PPP"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_nugget"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "W": {
+      "item": "crudecompute:silicon_wafer"
+    },
+    "P": {
+      "item": "crudecompute:plastic"
+    }
+  },
+  "result": {
+    "id": "crudecompute:circuit_board",
+    "count": 2
+  }
+}

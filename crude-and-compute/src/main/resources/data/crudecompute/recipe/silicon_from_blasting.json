@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "ingredient": {
+    "item": "minecraft:quartz"
+  },
+  "result": {
+    "id": "crudecompute:silicon"
+  },
+  "experience": 0.3,
+  "cookingtime": 100
+}

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "crudecompute:block/windmill"
+    },
+    "facing=east": {
+      "model": "crudecompute:block/windmill",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "crudecompute:block/windmill",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "crudecompute:block/windmill",
+      "y": 270
+    }
+  }
+}

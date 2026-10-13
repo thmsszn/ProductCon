@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "crudecompute:block/shaft_particle"
+    },
+    "axis=y": {
+      "model": "crudecompute:block/shaft_particle"
+    },
+    "axis=z": {
+      "model": "crudecompute:block/shaft_particle"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "replace": false,
+  "values": [
+    "crudecompute:oil_shale",
+    "crudecompute:shaft",
+    "crudecompute:gearbox",
+    "crudecompute:windmill",
+    "crudecompute:diesel_engine",
+    "crudecompute:generator",
+    "crudecompute:pumpjack",
+    "crudecompute:refinery",
+    "crudecompute:fluid_pipe",
+    "crudecompute:oil_tank",
+    "crudecompute:power_cable",
+    "crudecompute:server_rack",
+    "crudecompute:cooling_unit",
+    "crudecompute:ai_terminal",
+    "crudecompute:multiblock_part"
+  ]
+}

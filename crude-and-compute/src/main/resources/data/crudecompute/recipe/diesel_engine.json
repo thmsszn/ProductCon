@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "CFC",
+    "ISI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "F": {
+      "item": "minecraft:blast_furnace"
+    },
+    "S": {
+      "item": "crudecompute:shaft"
+    }
+  },
+  "result": {
+    "id": "crudecompute:diesel_engine",
+    "count": 1
+  }
+}
