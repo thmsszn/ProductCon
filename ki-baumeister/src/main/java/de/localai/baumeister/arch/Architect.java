@@ -47,7 +47,7 @@ public final class Architect {
         if (has(t, "leuchtturm", "lighthouse")) type = BuildingSpec.Type.LIGHTHOUSE;
         else if (has(t, "turm", "tower")) type = BuildingSpec.Type.TOWER;
         else if (has(t, "burg", "schloss", "castle", "festung", "fort")) type = BuildingSpec.Type.CASTLE;
-        else if (has(t, "tempel", "temple")) type = BuildingSpec.Type.TEMPLE;
+        else if (has(t, "tempel", "temple", "schrein", "shrine")) type = BuildingSpec.Type.TEMPLE;
         else if (has(t, "kirche", "kapelle", "church", "chapel")) type = BuildingSpec.Type.CHURCH;
         else if (has(t, "villa", "modern")) type = BuildingSpec.Type.MODERN_HOUSE;
         else if (has(t, "taverne", "gasthaus", "wirtshaus", "tavern", "inn")) type = BuildingSpec.Type.TAVERN;
@@ -62,7 +62,7 @@ public final class Architect {
             case BARN, COTTAGE -> Palette.Style.RUSTIC;
             default -> Palette.Style.MEDIEVAL;
         };
-        if (has(t, "japan", "asiat", "pagode")) style = Palette.Style.JAPANESE;
+        if (has(t, "japan", "asiat", "pagode", "schrein", "shrine")) style = Palette.Style.JAPANESE;
         else if (has(t, "wüste", "wueste", "desert", "sand", "orient")) style = Palette.Style.DESERT;
         else if (has(t, "nordisch", "wikinger", "viking", "nordic", "skandinav")) style = Palette.Style.NORDIC;
         else if (has(t, "fantasy", "magisch", "elfen", "zauber")) style = Palette.Style.FANTASY;

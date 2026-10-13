@@ -12,9 +12,11 @@ es werden keine Daten ins Internet geschickt.
   Fenster mit Fensterbänken und Läden, Sattel-/Walm-/Flach-/Kegeldach mit Überstand und Giebel,
   Kamin mit Rauch, Treppenhaus, eingerichtete Räume (Küche, Schlafzimmer, Bibliothek …),
   Veranda, Balkon, Laternen, Zaun, Garten, Bäume und Pool.
-- **Gebäudetypen**: Haus, Hütte, Herrenhaus, Taverne, Scheune, moderne Villa, Turm, Leuchtturm, Burg,
-  Kirche, Tempel – in 10 Stilen (mittelalterlich, rustikal, modern, Stein, Wüste, japanisch, nordisch,
-  viktorianisch, antik, Fantasy).
+- **Gebäudetypen**: Haus, Hütte, Herrenhaus, Taverne, Scheune, moderne Villa (versetzte Kuben, Glasfronten,
+  Dachterrasse, Pool), Turm, Leuchtturm, Burg (Ringmauer, Ecktürme, Torhaus, Bergfried), Kirche (Glockenturm,
+  Chor, Buntglas, Kirchhof), antiker Tempel bzw. japanischer Schrein mit Torii – in 10 Stilen (mittelalterlich,
+  rustikal, modern, Stein, Wüste, japanisch, nordisch, viktorianisch, antik, Fantasy). Jeder Typ passt sich der
+  Größe des Bauplatzes an, von der Kapelle bis zur Kathedrale.
 - **Baumeister-Axt** (Kreativ-Inventar *Werkzeuge* oder Knopf „⚒ Axt holen“):
   **Linksklick** auf einen Block = Ecke 1, **Rechtsklick** auf einen Block = Ecke 2,
   **Rechtsklick in die Luft** = Menü öffnen. Die Axt baut nichts ab.
