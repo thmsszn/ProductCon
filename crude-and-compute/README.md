@@ -10,14 +10,24 @@ Balancier mit Pferdekopf, Pleuelstangen, Windrad-Rotor, Schwungrad, Lüfter, GPU
 
 ![Modelle](docs/modelle.png)
 
+## So sieht es im Spiel aus
+Echte Screenshots aus Minecraft (automatisch per CI aufgenommen, siehe unten):
+
+| | |
+|---|---|
+| ![Pferdekopfpumpe](docs/screenshots/showcase_2_pferdekopfpumpe.png) | ![Windrad](docs/screenshots/showcase_6_windrad.png) |
+| ![KI-Terminal](docs/screenshots/showcase_4_ki_terminal.png) | ![Raffinerie](docs/screenshots/showcase_5_raffinerie.png) |
+
 ## Installation
 
 1. **Minecraft 1.21.1** mit **NeoForge 21.1.x** installieren (Installer: https://neoforged.net).
-2. Die Datei `crudecompute-1.21.1-1.0.0.jar` in den Ordner `.minecraft/mods` legen.
+2. Die Datei [`download/crudecompute-1.21.1-1.0.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
 3. Spiel mit dem NeoForge-Profil starten – alles findet sich im Kreativ-Tab **Crude & Compute**.
 
-Die fertige JAR baut GitHub Actions bei jedem Push (Workflow „Minecraft-Mod bauen“ → Artefakt
-`crude-and-compute-mod`). Selbst bauen: `cd crude-and-compute && ./gradlew build` → `build/libs/`.
+Die JAR baut GitHub Actions bei jedem Push (Workflow „Minecraft-Mod bauen“, Artefakt
+`crude-and-compute-mod`). Enthält die Commit-Nachricht `[showcase]`, startet CI zusätzlich den echten
+Minecraft-Client, baut eine Demo-Szene, macht die Screenshots oben und legt sie zusammen mit der JAR in
+`docs/screenshots/` und `download/` ab. Selbst bauen: `cd crude-and-compute && ./gradlew build` → `build/libs/`.
 
 ## So funktioniert es
 
@@ -99,4 +109,5 @@ Alle Rezepte sind im Spiel per Rezeptbuch (oder JEI/EMI) sichtbar.
   `oil`, `datacenter`, `client` (animierte Block-Entity-Renderer).
 * `./gradlew runGameTestServer` führt die automatischen Spieltests aus (Kraftnetz, Überlast, Pumpe,
   Multiblock-Abbau, Rechenzentrum).
-* `./gradlew runClient` startet das Spiel mit der Mod zum Testen.
+* `./gradlew runClient` startet das Spiel mit der Mod zum Testen, `./gradlew runShowcaseClient` baut
+  automatisch die Demo-Szene und macht Screenshots.

@@ -64,7 +64,7 @@ public final class ClientSetup {
 
     @SubscribeEvent
     public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
-        event.registerFluidType(new FluidLook(0xFF15110E, new Vector3f(0.04f, 0.03f, 0.02f), 1.5f), ModFluids.CRUDE_OIL_TYPE.get());
+        event.registerFluidType(new FluidLook(0xFF2E2219, new Vector3f(0.04f, 0.03f, 0.02f), 1.5f), ModFluids.CRUDE_OIL_TYPE.get());
         event.registerFluidType(new FluidLook(0xD8E0A82A, new Vector3f(0.55f, 0.42f, 0.1f), 5f), ModFluids.DIESEL_TYPE.get());
     }
 

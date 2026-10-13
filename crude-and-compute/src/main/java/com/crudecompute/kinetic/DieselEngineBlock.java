@@ -79,8 +79,10 @@ public class DieselEngineBlock extends HorizontalMachineBlock {
         }
         // exhaust stack sits at model position (0.76, 1.0, 0.9) for a north-facing engine
         Vec3 stack = rotateLocal(state.getValue(FACING), 0.76, 1.0, 0.9);
-        level.addParticle(ParticleTypes.SMOKE, pos.getX() + stack.x, pos.getY() + stack.y, pos.getZ() + stack.z, 0, 0.05, 0);
-        if (random.nextInt(3) == 0) {
+        if (random.nextInt(2) == 0) {
+            level.addParticle(ParticleTypes.SMOKE, pos.getX() + stack.x, pos.getY() + stack.y, pos.getZ() + stack.z, 0, 0.05, 0);
+        }
+        if (random.nextInt(14) == 0) {
             level.addParticle(ParticleTypes.LARGE_SMOKE, pos.getX() + stack.x, pos.getY() + stack.y + 0.05, pos.getZ() + stack.z, 0, 0.03, 0);
         }
         if (random.nextInt(30) == 0) {

@@ -61,7 +61,7 @@ public final class ShowcaseAutomation {
 
     /** Camera shots: name, camera x/y/z (relative to the scene origin, eye height), look-at x/y/z. */
     private static final double[][] SHOTS = {
-            {-9.5, 8, -11.5, 3, 0.5, 1},
+            {-6.5, 6, -8, 3, 0.5, 1},
             {-3.6, 3.2, -6.4, 0, 1.6, -1},
             {4.6, 2.6, -1.6, 9, 1, 6},
             {9.2, 1.75, 1.75, 9.5, 0.8, 3.6},
