@@ -62,6 +62,7 @@ final class FreeBuilder {
         door();
         ladders();
         roofs();
+        roofDetails();
         furnish();
         exterior();
         return v;
@@ -494,6 +495,10 @@ final class FreeBuilder {
         for (int i = 0; ; i++) {
             int ax = xLo + i, bx = xHi - i, az = zLo + i, bz = zHi - i, y = yt + 1 + i;
             if (ax > bx || az > bz || y >= H) break;
+            if (i == maxLayers && bx - ax >= 3 && bz - az >= 3 && y + 1 < H) {
+                hipDeck(r, ax, bx, az, bz, y);
+                break;
+            }
             if (ax == bx || az == bz || i == maxLayers) {
                 for (int x = ax; x <= bx; x++)
                     for (int z = az; z <= bz; z++) {
@@ -511,6 +516,18 @@ final class FreeBuilder {
                 place(bx, y, z, B.stairs(r, Dir.WEST, false));
             }
         }
+    }
+
+    /** Gekappte Walmdach-Spitze: statt einer nackten Platte ein flaches Dach mit umlaufender Brüstung und Eckpfosten. */
+    private void hipDeck(Materials.Family r, int ax, int bx, int az, int bz, int y) {
+        for (int x = ax; x <= bx; x++)
+            for (int z = az; z <= bz; z++) {
+                place(x, y, z, B.id(r.block()));
+                boolean rim = x == ax || x == bx || z == az || z == bz;
+                boolean corner = (x == ax || x == bx) && (z == az || z == bz);
+                if (corner) place(x, y + 1, z, B.id(p.fence()));
+                else if (rim) place(x, y + 1, z, B.slab(r, false));
+            }
     }
 
     /** Kegel- oder Kuppeldach über einem runden Teil: abnehmende Kreisscheiben mit Spitze. */
@@ -537,6 +554,288 @@ final class FreeBuilder {
         int cxI = (int) Math.round(q.cx), czI = (int) Math.round(q.cz);
         place(cxI, yt + 1 + hgt, czI, B.id(p.fence()));
         place(cxI, yt + 2 + hgt, czI, B.with("end_rod", "facing", "up"));
+    }
+
+    // ------------------------------------------------------------------ Dachdetails (Traufe, First, Gauben, Schornstein)
+
+    private int chimX = -1, chimZ = -1;
+
+    /** Zelle auf einer Dachseite: u entlang des Firsts, d = Abstand von der Wandebene nach außen, side -1/+1. */
+    private int[] slopeCell(Vol q, int side, int u, int d) {
+        if (q.ridgeX) return new int[] {u, side < 0 ? q.z0 - d : q.z1 + d};
+        return new int[] {side < 0 ? q.x0 - d : q.x1 + d, u};
+    }
+
+    private Dir slopeOut(Vol q, int side) {
+        if (q.ridgeX) return side < 0 ? Dir.NORTH : Dir.SOUTH;
+        return side < 0 ? Dir.WEST : Dir.EAST;
+    }
+
+    private boolean gableVol(Vol q) {
+        return !q.round && !q.roof.equals("flat") && !q.roof.equals("hip") && !q.roof.equals("cone") && !q.roof.equals("dome");
+    }
+
+    /** Höchster belegter Dach-Block eines Giebeldachs (Firstplatte eingerechnet). */
+    private int gableTop(Vol q) {
+        int span = (q.ridgeX ? q.z1 - q.z0 : q.x1 - q.x0) + 1;
+        return q.top() * fh + 1 + (span + 1) / 2 + (span % 2 == 1 ? 1 : 0);
+    }
+
+    private void roofDetails() {
+        for (Vol q : vols) {
+            if (q.round) continue;
+            int yt = q.top() * fh;
+            if (gableVol(q)) {
+                eaves(q, yt, true);
+                ridgeCaps(q, yt);
+            } else if (q.roof.equals("hip")) {
+                eaves(q, yt, false);
+            }
+        }
+        if (spec.has(BuildingSpec.Feature.CHIMNEY)) chimney();
+        for (Vol q : vols) if (gableVol(q)) dormers(q, q.top() * fh);
+    }
+
+    /** Traufgesims: Platten unter dem Dachüberstand (Giebeldach nur an den Traufseiten, Walmdach ringsum). */
+    private void eaves(Vol q, int yt, boolean gableOnly) {
+        String stairName = B.name(p.roof().stairs());
+        for (int x = q.x0 - 1; x <= q.x1 + 1; x++)
+            for (int z = q.z0 - 1; z <= q.z1 + 1; z++) {
+                boolean xe = x < q.x0 || x > q.x1, ze = z < q.z0 || z > q.z1;
+                if (!xe && !ze) continue;
+                if (gableOnly && (q.ridgeX ? xe : ze)) continue;
+                if (!v.in(x, yt + 1, z) || !nameAt(x, yt + 1, z).equals(stairName)) continue;
+                place(x, yt, z, B.slab(p.trim(), true));
+            }
+    }
+
+    /** First-Abschluss: an beiden Giebelenden ein erhöhter Zierstein; bei langen Dächern zusätzlich eine Firstkrone. */
+    private void ridgeCaps(Vol q, int yt) {
+        Materials.Family r = p.roof();
+        int span = (q.ridgeX ? q.z1 - q.z0 : q.x1 - q.x0) + 1;
+        int len = (q.ridgeX ? q.x1 - q.x0 : q.z1 - q.z0) + 1;
+        if (span % 2 == 0 || span < 5 || len < 7) return;
+        int yr = yt + 1 + (span + 1) / 2;
+        if (yr + 2 >= H) return;
+        int mid = q.ridgeX ? (q.z0 + q.z1) / 2 : (q.x0 + q.x1) / 2;
+        int lo = (q.ridgeX ? q.x0 : q.z0) - 1, hi = (q.ridgeX ? q.x1 : q.z1) + 1;
+        String ridge = B.id(r.block());
+        for (int u : new int[] {lo, hi}) {
+            int x = q.ridgeX ? u : mid, z = q.ridgeX ? mid : u;
+            if (!ridge.equals(v.get(x, yr, z))) continue;
+            v.set(x, yr + 1, z, ridge);
+            if (v.isEmpty(x, yr + 2, z)) v.set(x, yr + 2, z, B.slab(r, false));
+        }
+        // Firstkrone: bei langen Dächern ragt jede vierte Zelle als voller Block aus der Firstplatte
+        if (len >= 13) {
+            for (int u = lo + 4; u < hi - 3; u += 4) {
+                int x = q.ridgeX ? u : mid, z = q.ridgeX ? mid : u;
+                if (ridge.equals(v.get(x, yr, z)) && B.slab(r, false).equals(v.get(x, yr + 1, z))) v.set(x, yr + 1, z, ridge);
+            }
+        }
+    }
+
+    /** Gauben: kleine Giebelfenster auf den beiden Dachflächen großer Giebeldächer. */
+    private void dormers(Vol q, int yt) {
+        Materials.Family r = p.roof();
+        int span = (q.ridgeX ? q.z1 - q.z0 : q.x1 - q.x0) + 1;
+        int len = (q.ridgeX ? q.x1 - q.x0 : q.z1 - q.z0) + 1;
+        if (span < 9 || len < 9) return;
+        int last = (span + 1) / 2;
+        int j = Math.max(1, last - 3);
+        if (j + 2 > last) return;
+        int uLo = q.ridgeX ? q.x0 : q.z0;
+        int n = Math.max(1, (len - 2) / 6);
+        Dir lat = q.ridgeX ? Dir.EAST : Dir.SOUTH;
+        for (int side = -1; side <= 1; side += 2) {
+            Dir out = slopeOut(q, side);
+            for (int k = 0; k < n; k++) {
+                int ud = uLo + Math.round((k + 1) * (len - 1) / (float) (n + 1));
+                if (!dormerFits(q, side, ud, j, yt, out)) continue;
+                int y = yt + 1 + j;
+                int[] c = slopeCell(q, side, ud, 1 - j), ci = slopeCell(q, side, ud, -j);
+                v.set(c[0], y + 1, c[1], B.id(p.window()));
+                v.set(ci[0], y + 1, ci[1], B.AIR);
+                v.set(c[0], y + 2, c[1], B.id(r.block()));
+                v.set(ci[0], y + 2, ci[1], B.id(r.block()));
+                for (int sg = -1; sg <= 1; sg += 2) {
+                    int[] cl = slopeCell(q, side, ud + sg, 1 - j), cil = slopeCell(q, side, ud + sg, -j);
+                    v.set(cl[0], y + 1, cl[1], s.vary(wallB));
+                    v.set(cil[0], y + 1, cil[1], s.vary(wallB));
+                    Dir face = sg < 0 ? lat : lat.opposite();
+                    v.set(cl[0], y + 2, cl[1], B.stairs(r, face, false));
+                    v.set(cil[0], y + 2, cil[1], B.stairs(r, face, false));
+                }
+            }
+        }
+    }
+
+    /** Prüft, ob an der Stelle wirklich unverbautes Dach dieses Baukörpers liegt (sonst keine Gaube). */
+    private boolean dormerFits(Vol q, int side, int ud, int j, int yt, Dir out) {
+        int y = yt + 1 + j;
+        if (y + 2 >= H) return false;
+        String s0 = B.stairs(p.roof(), out.opposite(), false);
+        for (int du = -1; du <= 1; du++) {
+            int[] a = slopeCell(q, side, ud + du, 1 - j), b = slopeCell(q, side, ud + du, -j), c = slopeCell(q, side, ud + du, -j - 1);
+            if (!v.in(a[0], y + 2, a[1]) || !v.in(c[0], y + 2, c[1])) return false;
+            if (chimX >= 0 && Math.abs(a[0] - chimX) <= 2 && Math.abs(a[1] - chimZ) <= 2) return false;
+            if (!s0.equals(v.get(a[0], y, a[1])) || !s0.equals(v.get(b[0], y + 1, b[1]))) return false;
+            if (B.isAir(v.get(c[0], y + 2, c[1]))) return false;
+            if (!B.isAir(v.get(a[0], y + 1, a[1])) || !B.isAir(v.get(a[0], y + 2, a[1]))) return false;
+            if (!B.isAir(v.get(b[0], y + 2, b[1]))) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Schornstein: Mauerwerksschacht vom Boden entlang der Giebelwand (außen) oder, wenn dort kein Platz ist,
+     * im Inneren durch das Dach, 2 Blöcke über den First, mit Rauch (Lagerfeuer) und Kamin im Raum darunter.
+     */
+    private void chimney() {
+        Vol best = null;
+        int bestScore = Integer.MIN_VALUE;
+        int[] pick = null;
+        for (Vol q : vols) {
+            if (q.round || q.b != 0 || !gableVol(q)) continue;
+            int span = (q.ridgeX ? q.z1 - q.z0 : q.x1 - q.x0) + 1;
+            int mid = q.ridgeX ? (q.z0 + q.z1) / 2 : (q.x0 + q.x1) / 2;
+            for (int e = -1; e <= 1; e += 2) {
+                Dir out = q.ridgeX ? (e < 0 ? Dir.WEST : Dir.EAST) : (e < 0 ? Dir.NORTH : Dir.SOUTH);
+                int wx = q.ridgeX ? (e < 0 ? q.x0 : q.x1) : mid, wz = q.ridgeX ? mid : (e < 0 ? q.z0 : q.z1);
+                int cx = wx + out.dx, cz = wz + out.dz;
+                if (cx < 0 || cz < 0 || cx >= W || cz >= D) continue;
+                if (!chimneyColumnFree(cx, cz, out)) continue;
+                if (openMask(0, wx, wz) != (1 << out.ordinal())) continue;
+                if (Math.abs(wx - doorX) + Math.abs(wz - doorZ) <= 3) continue;
+                int score = span * 2 + (out == Dir.NORTH ? -30 : 0) + (out == Dir.SOUTH ? 10 : 0);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = q;
+                    pick = new int[] {cx, cz, wx, wz, out.ordinal(), 1};
+                }
+            }
+        }
+        if (best == null) {
+            // Fallback: Schacht im Inneren, möglichst nah am höchsten Dachpunkt
+            int bestH = Integer.MIN_VALUE;
+            for (Vol q : vols) {
+                if (q.round || q.b != 0 || q.roof.equals("flat") || q.roof.equals("cone") || q.roof.equals("dome")) continue;
+                for (int x = q.x0 + 1; x <= q.x1 - 1; x++)
+                    for (int z = q.z0 + 1; z <= q.z1 - 1; z++) {
+                        if (!inLev(0, x, z) || openMask(0, x, z) != 0 || Math.abs(x - doorX) + Math.abs(z - doorZ) <= 2) continue;
+                        if (!innerColumnFree(x, z)) continue;
+                        int wallD = Math.min(Math.min(x - q.x0, q.x1 - x), Math.min(z - q.z0, q.z1 - z));
+                        int score = columnTop(x, z) * 10 - wallD;
+                        if (score > bestH) {
+                            bestH = score;
+                            best = q;
+                            pick = new int[] {x, z, x, z, 0, 0};
+                        }
+                    }
+            }
+        }
+        if (best == null) return;
+        int cx = pick[0], cz = pick[1], wx = pick[2], wz = pick[3];
+        boolean outside = pick[5] == 1;
+        Dir out = Dir.values()[pick[4]];
+        int roofTop = outside ? gableTop(best) : columnTop(cx, cz);
+        int top = Math.min(roofTop + 2, H - 2);
+        if (top < roofTop + 1) return;
+        String stone = p.chimney();
+        for (int y = 1; y <= top; y++) {
+            if (y == 1 && !outside) continue;
+            v.set(cx, y, cz, s.vary(stone));
+            s.reserve(cx, y, cz);
+        }
+        v.set(cx, top + 1, cz, B.campfire());
+        chimX = cx;
+        chimZ = cz;
+        if (outside) {
+            int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+            // Sockel: Stufen links, rechts und vor dem Schacht verankern ihn am Boden
+            for (int sg = -1; sg <= 1; sg += 2) {
+                int sx = cx + sg * ax, sz = cz + sg * az;
+                Dir toward = sg < 0 ? (ax == 1 ? Dir.EAST : Dir.SOUTH) : (ax == 1 ? Dir.WEST : Dir.NORTH);
+                if (v.in(sx, 1, sz) && B.isAir(v.get(sx, 1, sz))) v.set(sx, 1, sz, B.stairs(p.trim(), toward, false));
+            }
+            int fx0 = cx + out.dx, fz0 = cz + out.dz;
+            if (v.in(fx0, 1, fz0) && B.isAir(v.get(fx0, 1, fz0))) v.set(fx0, 1, fz0, B.stairs(p.trim(), out.opposite(), false));
+            // Fenster und Läden hinter dem Schacht zumauern
+            for (int k = 0; k < maxK; k++) {
+                if (!inLev(k, wx, wz)) continue;
+                for (int y = k * fh + 1; y <= k * fh + fh - 1; y++) {
+                    String nm = nameAt(wx, y, wz);
+                    if (nm.endsWith("_pane") || nm.endsWith("glass") || nm.endsWith("_stairs")) v.set(wx, y, wz, s.vary(wallB));
+                }
+            }
+            for (int sg = -1; sg <= 1; sg += 2) {
+                int sx = cx + sg * ax, sz = cz + sg * az;
+                for (int y = 2; y < maxK * fh; y++) {
+                    if (v.in(sx, y, sz) && nameAt(sx, y, sz).endsWith("_trapdoor")) v.set(sx, y, sz, B.AIR);
+                }
+            }
+            // Kamin im Raum: Feuerstelle in der Wandnische, Mauerwerk darüber, Stufen als Wangen, Sims
+            v.set(wx, 1, wz, B.campfire());
+            for (int y = 2; y <= Math.min(fh - 1, 4); y++) v.set(wx, y, wz, s.vary(stone));
+            int fx = wx - out.dx, fz = wz - out.dz;
+            s.reserve(wx, 1, wz);
+            if (inLev(0, fx, fz) && openMask(0, fx, fz) == 0) {
+                for (int y = 1; y <= 3; y++) s.reserve(fx, y, fz);
+                if (fh >= 5) v.set(fx, 3, fz, B.slab(p.trim(), true));
+                for (int sg = -1; sg <= 1; sg += 2) {
+                    int sx = fx + sg * ax, sz = fz + sg * az;
+                    if (inLev(0, sx, sz) && openMask(0, sx, sz) == 0 && B.isAir(v.get(sx, 1, sz))) {
+                        v.set(sx, 1, sz, B.stairs(p.trim(), out, false));
+                        s.reserve(sx, 1, sz);
+                    }
+                }
+            }
+        } else {
+            // Innenschacht: Ofen am Fuß, zum längsten freien Weg gewandt
+            Dir face = Dir.SOUTH;
+            int bestD = -1;
+            for (Dir d : Dir.values()) {
+                int dist = 0;
+                for (int i = 1; i < 30 && inLev(0, cx + d.dx * i, cz + d.dz * i) && openMask(0, cx + d.dx * i, cz + d.dz * i) == 0; i++) dist = i;
+                if (dist > bestD) { bestD = dist; face = d; }
+            }
+            v.set(cx, 1, cz, B.with("furnace", "facing", face.id(), "lit", "true"));
+            for (Dir d : Dir.values()) s.reserve(cx + d.dx, 1, cz + d.dz);
+        }
+    }
+
+    private boolean inLevAny(int x, int z) {
+        for (int k = 0; k < maxK; k++) if (inLev(k, x, z)) return true;
+        return false;
+    }
+
+    private boolean chimneyColumnFree(int cx, int cz, Dir out) {
+        int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+        for (int dd = -1; dd <= 1; dd++) {
+            if (inLevAny(cx + dd * ax, cz + dd * az) || inLevAny(cx + out.dx + dd * ax, cz + out.dz + dd * az)) return false;
+        }
+        return v.in(cx, 1, cz) && B.isAir(v.get(cx, 1, cz));
+    }
+
+    private boolean innerColumnFree(int x, int z) {
+        for (int k = 0; k < maxK; k++) {
+            if (!inLev(k, x, z)) break;
+            if (k > 0 && openMask(k, x, z) != 0) return false;
+        }
+        for (int y = 1; y < maxK * fh; y++) {
+            if (nameAt(x, y, z).equals("ladder") || s.isReserved(x, y, z)) return false;
+        }
+        return true;
+    }
+
+    private String nameAt(int x, int y, int z) {
+        String c = v.get(x, y, z);
+        return c == null ? "" : B.name(c);
+    }
+
+    private int columnTop(int x, int z) {
+        for (int y = H - 1; y > 0; y--) if (!v.isEmpty(x, y, z)) return y;
+        return 0;
     }
 
     // ------------------------------------------------------------------ Einrichtung
