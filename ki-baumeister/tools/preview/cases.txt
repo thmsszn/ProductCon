@@ -19,3 +19,24 @@ burg-nordisch|29|24|27|{"summary":"Nordische Festung","type":"castle","style":"n
 burg-klein|17|22|19|{"summary":"Kleine Burg, Wohnturm mit Rundturm","type":"castle","style":"stone","floors":2,"roof":"cone","features":["interior"],"rooms":["bedroom"]}
 burg-wueste|23|17|25|{"summary":"Wuestenfestung","type":"castle","style":"desert","floors":2,"features":["interior"],"rooms":[]}
 burg-mini|7|8|7|{"summary":"Mini-Wehrturm","type":"castle","style":"stone","floors":1,"features":[],"rooms":[]}
+kirche-stein|25|34|35|{"summary":"Steinkirche mit Glockenturm","type":"church","style":"stone","floors":1,"features":["garden","path","trees","interior"]}
+kirche-mittel|19|30|29|{"summary":"Dorfkirche","type":"church","style":"medieval","floors":1,"features":["garden","path","interior"]}
+kapelle|11|14|15|{"summary":"Kapelle","type":"church","style":"rustic","floors":1,"features":["interior"]}
+kirche-wueste|21|28|31|{"summary":"Missionskirche","type":"church","style":"desert","floors":1,"features":["interior","path"]}
+kirche-nordisch|17|26|25|{"summary":"Stabkirche","type":"church","style":"nordic","floors":1,"features":["interior"]}
+kirche-klassisch|23|30|33|{"summary":"Klassizistische Kirche","type":"church","style":"classical","floors":1,"features":["interior"]}
+bildstock|4|5|4|{"summary":"Bildstock","type":"church","style":"stone","floors":1,"features":[]}
+tempel-gross|25|20|35|{"summary":"Antiker Tempel","type":"temple","style":"classical","floors":1,"features":["interior","path","garden"]}
+tempel-mittel|17|16|23|{"summary":"Griechischer Tempel","type":"temple","style":"classical","floors":1,"features":["interior"]}
+tempel-klein|9|10|11|{"summary":"Kleiner Rundtempel","type":"temple","style":"classical","floors":1,"features":[]}
+tempel-wueste|21|18|29|{"summary":"Wuestentempel","type":"temple","style":"desert","floors":1,"features":["interior"]}
+tempel-stein|19|16|25|{"summary":"Steintempel","type":"temple","style":"stone","floors":1,"features":["interior"]}
+schrein|19|16|27|{"summary":"Japanischer Schrein","type":"temple","style":"japanese","floors":1,"features":["interior","path"]}
+schrein-klein|11|10|13|{"summary":"Kleiner Schrein","type":"temple","style":"japanese","floors":1,"features":[]}
+altar|3|4|3|{"summary":"Altar","type":"temple","style":"classical","floors":1,"features":[]}
+villa-gross|27|14|33|{"summary":"Moderne Villa mit Pool","type":"modern_house","style":"modern","floors":2,"roof":"flat","features":["garden","path","pool","balcony","interior","trees"]}
+villa-mittel|21|14|25|{"summary":"Moderne Villa","type":"modern_house","style":"modern","floors":2,"roof":"flat","features":["garden","path","pool","interior"]}
+villa-klein|13|11|15|{"summary":"Kleines modernes Haus","type":"modern_house","style":"modern","floors":2,"features":["interior"]}
+bungalow|17|7|17|{"summary":"Bungalow","type":"modern_house","style":"modern","floors":1,"features":["interior","garden"]}
+villa-holz|23|16|27|{"summary":"Villa","type":"modern_house","style":"modern","wall":"calcite","floors":2,"features":["interior","pool"]}
+kubus|5|4|5|{"summary":"Kubus","type":"modern_house","style":"modern","floors":1,"features":[]}

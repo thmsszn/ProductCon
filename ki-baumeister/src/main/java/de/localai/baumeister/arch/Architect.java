@@ -35,6 +35,7 @@ public final class Architect {
             case CASTLE -> Generators.castle(site);
             case TEMPLE -> Generators.temple(site);
             case CHURCH -> Generators.church(site);
+            case MODERN_HOUSE -> Generators.modern(site);
             default -> new HouseGenerator(site).build();
         };
     }

@@ -1,6 +1,6 @@
 package de.localai.baumeister.arch;
 
-/** Generatoren für Sonderbauten. Solange ein Typ keinen eigenen Generator hat, entsteht ein passendes Haus. */
+/** Generatoren für Sonderbauten (Turm/Leuchtturm, Burg, Tempel/Schrein, Kirche, moderne Villa). */
 final class Generators {
     private Generators() {}
 
@@ -13,10 +13,14 @@ final class Generators {
     }
 
     static Voxels temple(Site site) {
-        return new HouseGenerator(site).build();
+        return new TempleGenerator(site).build();
+    }
+
+    static Voxels modern(Site site) {
+        return new ModernGenerator(site).build();
     }
 
     static Voxels church(Site site) {
-        return new HouseGenerator(site).build();
+        return new ChurchGenerator(site).build();
     }
 }
