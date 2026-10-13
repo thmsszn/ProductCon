@@ -71,8 +71,12 @@ public final class Architect {
             case BARN, COTTAGE -> Palette.Style.RUSTIC;
             default -> Palette.Style.MEDIEVAL;
         };
-        if (has(t, "japan", "asiat", "pagode", "schrein", "shrine")) style = Palette.Style.JAPANESE;
-        else if (has(t, "wüste", "wueste", "desert", "sand", "orient")) style = Palette.Style.DESERT;
+        if (has(t, "steampunk", "dampf", "kupfer")) style = Palette.Style.STEAMPUNK;
+        else if (has(t, "gotisch", "gothic", "düster", "duester")) style = Palette.Style.GOTHIC;
+        else if (has(t, "orient", "palast", "palace", "arabisch", "maurisch")) style = Palette.Style.ORIENTAL;
+        else if (has(t, "wikinger", "viking")) style = Palette.Style.VIKING;
+        else if (has(t, "japan", "asiat", "pagode", "schrein", "shrine")) style = Palette.Style.JAPANESE;
+        else if (has(t, "wüste", "wueste", "desert", "sand")) style = Palette.Style.DESERT;
         else if (has(t, "nordisch", "wikinger", "viking", "nordic", "skandinav")) style = Palette.Style.NORDIC;
         else if (has(t, "fantasy", "magisch", "elfen", "zauber")) style = Palette.Style.FANTASY;
         else if (has(t, "viktorian", "victorian", "backstein")) style = Palette.Style.VICTORIAN;

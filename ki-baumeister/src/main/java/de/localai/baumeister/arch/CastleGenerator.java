@@ -41,7 +41,7 @@ final class CastleGenerator {
 
     Voxels build() {
         materials();
-        s.clearSite(spec.style() == Palette.Style.DESERT ? "sand" : "grass_block");
+        s.clearSite(spec.style().sandy() ? "sand" : "grass_block");
         if (W >= 25 && D >= 25 && H >= 14) fullCastle();
         else if (W >= 8 && D >= 8 && H >= 9) smallCastle();
         else tinyTower();
@@ -89,6 +89,28 @@ final class CastleGenerator {
             case VICTORIAN -> {
                 wallB = "bricks"; wallF = fam("brick"); baseB = "stone_bricks"; baseF = fam("stone_brick");
             }
+            case VIKING -> {
+                wallB = "mossy_stone_bricks"; wallF = fam("mossy_stone_brick"); baseB = "mossy_cobblestone";
+                baseF = fam("mossy_cobblestone"); woodF = fam("dark_oak"); logB = "spruce_log"; doorB = "spruce_door";
+                fenceB = "spruce_fence"; bannerColor = "red";
+            }
+            case GOTHIC -> {
+                wallB = "polished_blackstone_bricks"; wallF = fam("polished_blackstone_brick"); baseB = "blackstone";
+                baseF = fam("blackstone"); accentB = "chiseled_polished_blackstone"; pillarB = "polished_blackstone";
+                hallA = "polished_blackstone"; hallB = "polished_deepslate"; glass = "purple_stained_glass_pane";
+                bannerColor = "purple"; light = "soul_lantern";
+            }
+            case STEAMPUNK -> {
+                wallB = "bricks"; wallF = fam("brick"); baseB = "polished_andesite"; baseF = fam("polished_andesite");
+                accentB = "waxed_cut_copper"; pillarB = "polished_basalt"; hallA = "polished_andesite";
+                hallB = "smooth_stone"; glass = "orange_stained_glass_pane"; bannerColor = "orange";
+            }
+            case ORIENTAL -> {
+                wallB = "smooth_sandstone"; wallF = fam("smooth_sandstone"); baseB = "sandstone"; baseF = fam("sandstone");
+                accentB = "chiseled_sandstone"; pillarB = "cut_sandstone"; hallA = "smooth_sandstone"; hallB = "cut_sandstone";
+                woodF = fam("acacia"); throneF = fam("acacia"); logB = "stripped_acacia_log"; doorB = "acacia_door";
+                fenceB = "acacia_fence"; glass = "light_blue_stained_glass_pane"; bannerColor = "cyan";
+            }
             default -> { }
         }
         String chosen = spec.wall();
@@ -100,7 +122,7 @@ final class CastleGenerator {
         roofF = p.roof() != null ? p.roof() : fam("deepslate_tile");
         roofKind = spec.roof() != null ? spec.roof()
             : spec.style() == Palette.Style.DESERT ? Palette.Roof.FLAT
-            : spec.style() == Palette.Style.NORDIC ? Palette.Roof.HIP : Palette.Roof.CONE;
+            : spec.style() == Palette.Style.NORDIC || spec.style() == Palette.Style.VIKING ? Palette.Roof.HIP : Palette.Roof.CONE;
         round = roofKind == Palette.Roof.CONE || roofKind == Palette.Roof.FLAT;
     }
 
@@ -1409,7 +1431,7 @@ final class CastleGenerator {
             for (int z = z0; z < z0 + d; z++) {
                 boolean border = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + d - 1;
                 boolean gate = z == z0 && x == x0 + w / 2;
-                v.set(x, 0, z, B.id(spec.style() == Palette.Style.DESERT ? "sand" : "grass_block"));
+                v.set(x, 0, z, B.id(spec.style().sandy() ? "sand" : "grass_block"));
                 if (gate) continue;
                 if (border) v.set(x, 1, z, B.leaves(p.leaves()));
                 else v.set(x, 1, z, B.id(rng.pick(flowers)));

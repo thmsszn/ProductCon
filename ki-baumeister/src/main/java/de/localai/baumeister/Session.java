@@ -233,6 +233,10 @@ public final class Session {
             case MODERN -> "modern";
             case CLASSICAL -> "antik";
             case STONE -> "Stein";
+            case VIKING -> "Wikinger";
+            case GOTHIC -> "gotisch";
+            case STEAMPUNK -> "Steampunk";
+            case ORIENTAL -> "orientalisch";
         };
     }
 

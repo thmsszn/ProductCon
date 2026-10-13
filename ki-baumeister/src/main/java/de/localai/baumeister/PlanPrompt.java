@@ -12,7 +12,7 @@ public final class PlanPrompt {
         Fields:
         - summary: one short German sentence describing the building.
         - type: house, cottage, mansion, tavern, barn, modern_house, tower, lighthouse, castle, temple, church, custom (free shape via parts).
-        - style: medieval, rustic, nordic (also viking), fantasy, victorian, japanese, desert, modern, classical, stone (also gothic).
+        - style: medieval, rustic, nordic, viking, fantasy, victorian, japanese, desert, oriental (sandstone palace), modern, classical, stone, gothic (dark), steampunk (copper).
         - floors: number of storeys (each storey is about 4-5 blocks high; the roof needs extra height).
         - roof: gable (Satteldach), hip (Walmdach), flat, cone (towers).
         - wall, frame, roof_material: materials that fit the style and the player's wishes.

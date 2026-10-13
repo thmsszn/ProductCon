@@ -76,7 +76,7 @@ final class TowerGenerator {
     }
 
     Voxels build() {
-        s.clearSite(style == Palette.Style.DESERT ? "sand" : "grass_block");
+        s.clearSite(style.sandy() ? "sand" : "grass_block");
         materials();
         if (lighthouse) planLighthouse(); else planTower();
         if (mini) {

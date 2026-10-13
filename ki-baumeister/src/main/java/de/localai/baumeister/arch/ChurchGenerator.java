@@ -64,7 +64,7 @@ final class ChurchGenerator {
     // ------------------------------------------------------------------ Material und Grundriss
 
     private void materials() {
-        ground = style == Palette.Style.DESERT ? "sand" : "grass_block";
+        ground = style.sandy() ? "sand" : "grass_block";
         roof = style == Palette.Style.DESERT && spec.roofMaterial() == null ? Materials.family("red_sandstone") : p.roof();
         trim = Materials.family("stone_brick");
         wallB = p.groundWall();
@@ -125,6 +125,38 @@ final class ChurchGenerator {
                 floorA = "calcite";
                 floorB = "polished_deepslate";
                 altarB = "amethyst_block";
+            }
+            case VIKING -> {
+                quoin = "spruce_log";
+                trim = p.trim();
+                floorA = "spruce_planks";
+                floorB = "dark_oak_planks";
+                altarB = "dark_oak_planks";
+                graveWall = "mossy_cobblestone_wall";
+            }
+            case GOTHIC -> {
+                quoin = "polished_blackstone";
+                trim = p.trim();
+                floorA = "polished_blackstone";
+                floorB = "polished_deepslate";
+                altarB = "chiseled_polished_blackstone";
+                graveWall = "blackstone_wall";
+            }
+            case STEAMPUNK -> {
+                quoin = "polished_basalt";
+                trim = p.trim();
+                floorA = "polished_andesite";
+                floorB = "waxed_cut_copper";
+                altarB = "waxed_chiseled_copper";
+                graveWall = "andesite_wall";
+            }
+            case ORIENTAL -> {
+                quoin = "cut_sandstone";
+                trim = p.trim();
+                floorA = "smooth_sandstone";
+                floorB = "blue_terracotta";
+                altarB = "chiseled_sandstone";
+                graveWall = "sandstone_wall";
             }
             case VICTORIAN -> {
                 quoin = "smooth_quartz";

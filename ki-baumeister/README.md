@@ -14,8 +14,8 @@ es werden keine Daten ins Internet geschickt.
   Veranda, Balkon, Laternen, Zaun, Garten, Bäume und Pool.
 - **Gebäudetypen**: Haus, Hütte, Herrenhaus, Taverne, Scheune, moderne Villa (versetzte Kuben, Glasfronten,
   Dachterrasse, Pool), Turm, Leuchtturm, Burg (Ringmauer, Ecktürme, Torhaus, Bergfried), Kirche (Glockenturm,
-  Chor, Buntglas, Kirchhof), antiker Tempel bzw. japanischer Schrein mit Torii – in 10 Stilen (mittelalterlich,
-  rustikal, modern, Stein, Wüste, japanisch, nordisch, viktorianisch, antik, Fantasy). Jeder Typ passt sich der
+  Chor, Buntglas, Kirchhof), antiker Tempel bzw. japanischer Schrein mit Torii – in 14 Stilen (mittelalterlich,
+  rustikal, modern, Stein, Wüste, japanisch, nordisch, viktorianisch, antik, Fantasy, Wikinger, gotisch, Steampunk, orientalischer Palast). Jeder Typ passt sich der
   Größe des Bauplatzes an, von der Kapelle bis zur Kathedrale.
 - **Baumeister-Axt** (Kreativ-Inventar *Werkzeuge* oder Knopf „⚒ Axt holen“):
   **Linksklick** auf einen Block = Ecke 1, **Rechtsklick** auf einen Block = Ecke 2,

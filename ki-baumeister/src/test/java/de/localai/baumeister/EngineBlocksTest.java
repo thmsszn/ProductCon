@@ -32,7 +32,7 @@ class EngineBlocksTest {
     private static final String[] TYPES = {"house", "cottage", "mansion", "tavern", "barn", "modern_house", "tower",
         "lighthouse", "castle", "temple", "church", "custom"};
     private static final String[] STYLES = {"medieval", "rustic", "nordic", "fantasy", "victorian", "japanese", "desert",
-        "modern", "classical", "stone"};
+        "modern", "classical", "stone", "viking", "gothic", "steampunk", "oriental"};
     private static final String[] ROOFS = {"gable", "hip", "flat", "cone"};
     private static final String ALL_FEATURES = "[\"chimney\",\"porch\",\"balcony\",\"garden\",\"fence\",\"path\","
         + "\"shutters\",\"flower_boxes\",\"lanterns\",\"trees\",\"pool\",\"interior\"]";

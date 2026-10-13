@@ -52,7 +52,7 @@ final class TempleGenerator {
     // ------------------------------------------------------------------ Material
 
     private void materials() {
-        ground = style == Palette.Style.DESERT ? "sand" : "grass_block";
+        ground = style.sandy() ? "sand" : "grass_block";
         roof = p.roof();
         stepF = Materials.family("smooth_quartz");
         shaft = "quartz_pillar";
@@ -71,7 +71,34 @@ final class TempleGenerator {
                 floorA = "smooth_sandstone";
                 floorB = "cut_sandstone";
             }
-            case STONE, MEDIEVAL, RUSTIC, NORDIC -> {
+            case GOTHIC -> {
+                stepF = Materials.family("polished_blackstone_brick");
+                shaft = "polished_blackstone";
+                capB = "chiseled_polished_blackstone";
+                entB = "polished_blackstone_bricks";
+                friezeB = "gilded_blackstone";
+                floorA = "polished_blackstone";
+                floorB = "polished_deepslate";
+            }
+            case STEAMPUNK -> {
+                stepF = Materials.family("waxed_cut_copper");
+                shaft = "waxed_cut_copper";
+                capB = "waxed_chiseled_copper";
+                entB = "waxed_cut_copper";
+                friezeB = "waxed_oxidized_cut_copper";
+                floorA = "polished_andesite";
+                floorB = "waxed_cut_copper";
+            }
+            case ORIENTAL -> {
+                stepF = Materials.family("sandstone");
+                shaft = "cut_sandstone";
+                capB = "chiseled_sandstone";
+                entB = "smooth_sandstone";
+                friezeB = "blue_terracotta";
+                floorA = "smooth_sandstone";
+                floorB = "blue_terracotta";
+            }
+            case STONE, MEDIEVAL, RUSTIC, NORDIC, VIKING -> {
                 stepF = Materials.family("stone_brick");
                 shaft = "polished_andesite";
                 capB = "chiseled_stone_bricks";
