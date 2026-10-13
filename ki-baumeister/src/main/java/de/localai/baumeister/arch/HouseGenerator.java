@@ -615,6 +615,7 @@ final class HouseGenerator {
         if (fence) s.fence(doorX, doorW);
         if (spec.has(BuildingSpec.Feature.POOL)) pool();
         if (spec.has(BuildingSpec.Feature.TREES)) trees();
+        if (spec.has(BuildingSpec.Feature.GARDEN) || spec.has(BuildingSpec.Feature.TREES)) s.garden(spec.has(BuildingSpec.Feature.GARDEN) ? 1.0 : 0.5);
         if (spec.has(BuildingSpec.Feature.GARDEN) || fence) {
             s.flowersAndBushes(0, 0, s.w - 1, s.d - 1, 0.10, 0.04);
         }

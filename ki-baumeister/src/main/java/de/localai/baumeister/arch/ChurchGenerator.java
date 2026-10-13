@@ -618,6 +618,7 @@ final class ChurchGenerator {
             boolean clear = t[0] <= x0 - 4 || t[0] >= x1 + 4 || t[1] >= back + 4;
             if (clear && rng.chance(0.8)) s.tree(t[0], t[1], 3 + rng.nextInt(2));
         }
+        if (spec.has(BuildingSpec.Feature.GARDEN)) s.garden(0.5);
         s.flowersAndBushes(0, 0, s.w - 1, s.d - 1, 0.05, 0.015);
     }
 

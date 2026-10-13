@@ -250,8 +250,18 @@ public final class Site {
         return n.equals("grass_block") || n.equals("dirt") || n.equals("moss_block") || n.equals("podzol");
     }
 
-    /** Kleiner Laubbaum (Stamm + Krone), nur wenn genug Platz ist. */
+    /** Baum in einer zum Stil passenden Art (Eiche, Birke, Fichte, Kirsche, Palme ...), siehe {@link Garden}. */
     public void tree(int x, int z, int trunk) {
+        Garden.tree(this, x, z, trunk);
+    }
+
+    /** Gesamte Außenanlage (Beete, Teich, Brunnen, Sitzplätze, Wege, Bäume, Hecken ...); richness 0..1. */
+    public void garden(double richness) {
+        new Garden(this).run(richness);
+    }
+
+    /** Kleiner Laubbaum (Stamm + Krone), nur wenn genug Platz ist. */
+    private void treeClassic(int x, int z, int trunk) {
         String log = B.name(p.leaves()).replace("_leaves", "_log");
         if (log.startsWith("flowering_azalea") || log.startsWith("azalea")) log = "oak_log";
         int top = 1 + trunk;

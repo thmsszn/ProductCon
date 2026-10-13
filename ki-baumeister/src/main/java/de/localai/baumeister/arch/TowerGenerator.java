@@ -1629,6 +1629,7 @@ final class TowerGenerator {
         boolean fence = spec.has(BuildingSpec.Feature.FENCE) && fenceFits();
         if (fence) s.fence(xs[0] - widen, doorW + 2 * widen);
         boolean garden = spec.has(BuildingSpec.Feature.GARDEN) || fence;
+        if (spec.has(BuildingSpec.Feature.GARDEN)) s.garden(0.6);
         s.flowersAndBushes(0, 0, W - 1, D - 1, garden ? 0.08 : 0.04, garden ? 0.025 : 0.012);
     }
 

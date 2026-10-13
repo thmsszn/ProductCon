@@ -1203,6 +1203,7 @@ final class FreeBuilder {
             int[][] spots = {{2, mf + 2}, {W - 3, mf + 2}, {2, D - 3}, {W - 3, D - 3}, {W / 2, D - 2}};
             for (int[] t : spots) if (farFromBuilding(t[0], t[1], 4) && rng.chance(0.75)) s.tree(t[0], t[1], 3 + rng.nextInt(2));
         }
+        if (spec.has(BuildingSpec.Feature.GARDEN) || spec.has(BuildingSpec.Feature.TREES)) s.garden(spec.has(BuildingSpec.Feature.GARDEN) ? 1.0 : 0.5);
         if (spec.has(BuildingSpec.Feature.GARDEN)) s.flowersAndBushes(0, 0, W - 1, D - 1, 0.06, 0.02);
     }
 
