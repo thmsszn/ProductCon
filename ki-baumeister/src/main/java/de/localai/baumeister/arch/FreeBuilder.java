@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Freier Bauplan: beliebig viele rechteckige oder runde Baukörper, auch gestapelt, werden zu einer gemeinsamen
@@ -1766,7 +1767,7 @@ final class FreeBuilder {
                 int ix = x - out.dx, iz = z - out.dz;
                 if (stairMark[1][ix][iz] != 0 || !v.isSolid(ix, fh, iz) || !v.isEmpty(ix, fh + 1, iz)) continue;
                 for (int sg = -1; sg <= 1; sg += 2) {
-                    if (!upperBoxFree(x, z, out, sg)) continue;
+                    if (!upperBoxFree(x, z, out, sg) || coversMainDoor(x, z, out, sg)) continue;
                     int score = (out == doorDir ? 12 : out == doorDir.opposite() ? 0 : 10) + rng.nextInt(10);
                     if (score > bestScore) {
                         bestScore = score;
@@ -1815,7 +1816,8 @@ final class FreeBuilder {
         for (int j = 0; j < fh; j++) {
             int o = 2 + (fh - 1 - j);
             v.set(x + lx * o + out.dx, 1 + j, z + lz * o + out.dz, B.stairs(p.floor(), face, false));
-            v.set(x + lx * o + out.dx * 2, 2 + j, z + lz * o + out.dz * 2, fence);
+            // Geländerpfosten stehen auf dem Boden (nicht schwebend über der Treppe)
+            for (int y = 1; y <= 2 + j; y++) v.set(x + lx * o + out.dx * 2, y, z + lz * o + out.dz * 2, fence);
         }
         int fo = 1 + fh;
         int fx = x + lx * fo + out.dx * 2, fz = z + lz * fo + out.dz * 2;
@@ -1833,7 +1835,22 @@ final class FreeBuilder {
         String roofStair = B.stairs(shedFam(), out.opposite(), false);
         for (int dep = 3; dep >= 1; dep--)
             for (int o = -2; o <= 2; o++) place(x + lx * o + out.dx * dep, yF + 6 - dep, z + lz * o + out.dz * dep, roofStair);
+        // Dachstufe über der Laterne fest setzen, damit die hängende Laterne sicher Halt hat
+        v.set(x + out.dx * 2, yF + 4, z + out.dz * 2, roofStair);
         v.set(x + out.dx * 2, yF + 3, z + out.dz * 2, B.lantern(p.light(), true));
+    }
+
+    /** Liegt der Zugang zur Haupttür (Außenzelle und zwei Schritte davor) im Platzbedarf von Treppenlauf und Balkon? */
+    private boolean coversMainDoor(int x, int z, Dir out, int sg) {
+        if (doorX < 0) return false;
+        int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+        int lx = ax * sg, lz = az * sg;
+        for (int k = 1; k <= 3; k++) {
+            int dx = doorX + doorDir.dx * k - x, dz = doorZ + doorDir.dz * k - z;
+            int o = dx * lx + dz * lz, dep = dx * out.dx + dz * out.dz;
+            if (dep >= 0 && dep <= 4 && o >= -3 && o <= fh + 3) return true;
+        }
+        return false;
     }
 
     private boolean upperBoxFree(int x, int z, Dir out, int sg) {
@@ -1898,11 +1915,15 @@ final class FreeBuilder {
         return true;
     }
 
+    private static final Set<String> PLATE_WOODS = Set.of("oak", "spruce", "birch", "jungle", "acacia", "dark_oak",
+        "mangrove", "cherry", "pale_oak", "bamboo", "crimson", "warped");
+
     /** Tisch (Zaunpfosten + Druckplatte) mit zwei bis vier Stühlen (Treppen, Lehne außen). */
     private boolean gardenTable(int x, int z) {
         for (int dx = -1; dx <= 1; dx++)
             for (int dz = -1; dz <= 1; dz++) if (!gardenCell(x + dx, z + dz)) return false;
-        String plate = B.name(p.fence()).replace("_fence", "_pressure_plate");
+        String wood = B.name(p.fence()).replace("_fence", "");
+        String plate = PLATE_WOODS.contains(wood) ? wood + "_pressure_plate" : "oak_pressure_plate";
         v.set(x, 1, z, B.id(p.fence()));
         v.set(x, 2, z, B.id(plate));
         int chairs = 0;
@@ -1936,7 +1957,7 @@ final class FreeBuilder {
                 Dir out = Dir.values()[Integer.numberOfTrailingZeros(mask)];
                 int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
                 if (!straight(0, x - ax, z - az, mask) || !straight(0, x + ax, z + az, mask)) continue;
-                if (out == doorDir && doorX >= 0 && Math.abs((x - doorX) * ax + (z - doorZ) * az) < 4) continue;
+                if (out == doorDir && doorX >= 0 && Math.abs((x - doorX) * ax + (z - doorZ) * az) < 5) continue;
                 boolean ok = true;
                 for (int w = -1; w <= 1 && ok; w++) ok = gardenCell(x + w * ax + out.dx, z + w * az + out.dz);
                 if (ok) cands.add(new int[] {x, z, out.ordinal()});
