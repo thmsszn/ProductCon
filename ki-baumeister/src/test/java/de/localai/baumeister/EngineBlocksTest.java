@@ -77,7 +77,7 @@ class EngineBlocksTest {
                 cases += check(type, style, ROOFS[r.nextInt(ROOFS.length)], 1 + r.nextInt(4),
                     21 + r.nextInt(12), 24 + r.nextInt(16), 21 + r.nextInt(12), null, null, r.nextLong(), bad, firstCase);
             }
-        for (int i = 0; i < 400; i++) {
+        for (int i = 0; i < 1500; i++) {
             String wall = r.nextInt(3) == 0 ? Materials.WALLS.get(r.nextInt(Materials.WALLS.size())) : null;
             String frame = r.nextInt(3) == 0 ? Materials.FRAMES.get(r.nextInt(Materials.FRAMES.size())) : null;
             cases += check(TYPES[r.nextInt(TYPES.length)], STYLES[r.nextInt(STYLES.length)], ROOFS[r.nextInt(ROOFS.length)],

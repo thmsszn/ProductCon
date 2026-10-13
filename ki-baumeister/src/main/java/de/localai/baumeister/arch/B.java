@@ -67,6 +67,16 @@ public final class B {
         return with(isLantern(lantern) ? lantern : "lantern", "hanging", String.valueOf(hanging));
     }
 
+    /** Druckplatte, die zum Holz eines Zauns passt (Zaun-Tische); unbekannte Zäune fallen auf Eiche zurück. */
+    public static String pressurePlateFor(String fence) {
+        String wood = name(fence).replace("_fence", "");
+        return switch (wood) {
+            case "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "bamboo",
+                 "crimson", "warped" -> wood + "_pressure_plate";
+            default -> "oak_pressure_plate";
+        };
+    }
+
     public static String wallTorch(Dir facing) {
         return with("wall_torch", "facing", facing.id());
     }

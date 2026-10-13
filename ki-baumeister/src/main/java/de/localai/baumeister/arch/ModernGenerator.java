@@ -647,7 +647,10 @@ final class ModernGenerator {
             }
             int tx = c[0] + c[2] * 3;
             v.set(tx, sy + 4, c[1], B.stairs(qz, c[2] > 0 ? Dir.EAST : Dir.WEST, false));
-            for (int dz = -1; dz <= 1; dz += 2) v.setIfEmpty(tx, sy + 5, c[1] + dz, glassB);
+            for (int dz = -1; dz <= 1; dz += 2) {
+                String below = v.get(tx, sy + 4, c[1] + dz);
+                if (below != null && !B.isAir(below)) v.setIfEmpty(tx, sy + 5, c[1] + dz, glassB);
+            }
             s.reserve(tx, sy + 5, c[1]);
             noRail.add(key(tx, c[1]));
             noRail.add(key(tx + c[2], c[1]));

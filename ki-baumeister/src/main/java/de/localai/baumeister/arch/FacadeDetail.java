@@ -249,6 +249,7 @@ final class FacadeDetail {
         for (int w = -hw; w <= hw; w++) {
             int a = Math.abs(w), x = cx(pd, w), z = cz(pd, w);
             if (a == 2 && cy - 1 >= 2) continue; // Pfosten reicht bis unters Dach
+            if (a <= 1 && cy - 1 < 3) continue; // Eingang braucht 2 Blöcke Durchgangshöhe
             if (a == hw && hw >= 3) continue; // Eckpfeiler hat seinen eigenen Abschluss
             v.set(x, cy - 1, z, (w & 1) == 0 ? B.axis(frameB, latAxis) : B.trapdoor(p.trapdoor(), o, true, false));
         }

@@ -662,7 +662,7 @@ final class Garden {
         if (spot == null) return;
         int x0 = spot[0], z0 = spot[1];
         mark(x0, z0, 4, 3);
-        String plate = B.id(B.name(p.fence()).replace("_fence", "_pressure_plate"));
+        String plate = B.id(B.pressurePlateFor(p.fence()));
         int tz = z0 + 1;
         for (int x = x0 + 1; x <= x0 + 2; x++) {
             set(x, 0, tz, B.id(sandy() ? "sandstone" : "coarse_dirt"));
@@ -719,7 +719,7 @@ final class Garden {
             boolean ok = true;
             for (int i = -1; i <= 1; i++) {
                 int x = bx + i * ax, z = bz + i * az;
-                if (!avail(x, z) || dist[x][z] <= 0) ok = false;
+                if (!avail(x, z) || dist[x][z] <= 0 || !v.isEmpty(x, 1, z) || !v.isEmpty(x, 2, z) || s.isReserved(x, 1, z)) ok = false;
             }
             if (!ok) continue;
             for (int i = -1; i <= 1; i++) {
@@ -728,10 +728,10 @@ final class Garden {
                 s.reserve(x, 1, z);
                 occ[x][z] = true;
             }
-            if (rng.chance(0.5)) {
-                set(bx + 2 * ax, 1, bz + 2 * az, B.with("barrel", "facing", "up"));
-                if (avail(bx + 2 * ax, bz + 2 * az)) occ[bx + 2 * ax][bz + 2 * az] = true;
-                else set(bx + 2 * ax, 1, bz + 2 * az, B.AIR);
+            int kx = bx + 2 * ax, kz = bz + 2 * az;
+            if (rng.chance(0.5) && avail(kx, kz) && v.isEmpty(kx, 1, kz) && v.isEmpty(kx, 2, kz) && !s.isReserved(kx, 1, kz)) {
+                set(kx, 1, kz, B.with("barrel", "facing", "up"));
+                occ[kx][kz] = true;
             }
             recomputeDist();
             return;

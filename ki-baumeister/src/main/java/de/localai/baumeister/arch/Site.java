@@ -194,7 +194,7 @@ public final class Site {
             if (!free(x, r.y, z)) return;
         }
         String fence = p.fence();
-        String plate = B.name(fence).replace("_fence", "_pressure_plate");
+        String plate = B.pressurePlateFor(fence);
         for (int x = x0; x < x0 + length; x++) {
             v.set(x, r.y, z, B.id(fence));
             v.set(x, r.y + 1, z, B.id(plate));
