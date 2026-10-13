@@ -248,6 +248,7 @@ final class Garden {
 
     /** Kein erkennbarer Weg: vor der ersten Erdgeschosstür eine Wegzelle als Ausgangspunkt für geschwungene Wege setzen. */
     private void seedPathAtDoor() {
+        int[] best = null; // x, z, dx, dz der bevorzugten Außentür
         for (int z = 0; z < d; z++)
             for (int x = 0; x < w; x++) {
                 String b = null;
@@ -263,26 +264,32 @@ final class Garden {
                 String face = b.substring(i + 7, e);
                 for (Dir dir : Dir.values()) {
                     if (!dir.id().equals(face)) continue;
-                    for (int k = 1; k <= 8; k++) {
-                        int ox = x - dir.dx * k, oz = z - dir.dz * k; // Tür zeigt nach innen
-                        if (!avail(ox, oz)) continue;
-                        set(ox, 0, oz, pickPath());
-                        isPath[ox][oz] = true;
-                        pathCells.add(new int[] {ox, oz});
-                        return;
-                    }
-                    // Vorplatz ohne freie Bodenzelle (Vorbau/Terrasse): nächste freie Zelle im Umkreis
-                    for (int r = 1; r <= 8; r++)
-                        for (int dz = -r; dz <= r; dz++)
-                            for (int dx = -r; dx <= r; dx++) {
-                                if (Math.max(Math.abs(dx), Math.abs(dz)) != r || !avail(x + dx, z + dz)) continue;
-                                set(x + dx, 0, z + dz, pickPath());
-                                isPath[x + dx][z + dz] = true;
-                                pathCells.add(new int[] {x + dx, z + dz});
-                                return;
-                            }
-                    return;
+                    // Tür zeigt nach innen: Außenzelle direkt vor der Tür muss frei sein (sonst Innentür)
+                    if (!avail(x - dir.dx, z - dir.dz)) break;
+                    if (best == null || z > best[1] || (z == best[1] && dist[x][z] < dist[best[0]][best[1]])) best = new int[] {x, z, dir.dx, dir.dz};
                 }
+            }
+        if (best != null) {
+            set(best[0] - best[2], 0, best[1] - best[3], pickPath());
+            isPath[best[0] - best[2]][best[1] - best[3]] = true;
+            pathCells.add(new int[] {best[0] - best[2], best[1] - best[3]});
+            return;
+        }
+        // Vorplatz ohne freie Bodenzelle (Vorbau/Terrasse): erste Tür, nächste freie Zelle im Umkreis
+        for (int z = d - 1; z >= 0; z--)
+            for (int x = 0; x < w; x++) {
+                String c = v.get(x, 1, z);
+                if (c == null || !B.name(c).endsWith("_door") || !c.contains("half=lower")) continue;
+                for (int r = 1; r <= 8; r++)
+                    for (int dz = -r; dz <= r; dz++)
+                        for (int dx = -r; dx <= r; dx++) {
+                            if (Math.max(Math.abs(dx), Math.abs(dz)) != r || !avail(x + dx, z + dz)) continue;
+                            set(x + dx, 0, z + dz, pickPath());
+                            isPath[x + dx][z + dz] = true;
+                            pathCells.add(new int[] {x + dx, z + dz});
+                            return;
+                        }
+                return;
             }
     }
 
@@ -475,12 +482,12 @@ final class Garden {
         set(sx, 1, sz, fenceB());
         set(sx, 2, sz, B.axis("hay_block", 'y'));
         set(sx, 3, sz, B.with("carved_pumpkin", "facing", Dir.NORTH.id()));
-        if (along) {
-            set(sx - 1, 2, sz, fenceB());
-            set(sx + 1, 2, sz, fenceB());
-        } else {
-            set(sx, 2, sz - 1, fenceB());
-            set(sx, 2, sz + 1, fenceB());
+        int ax = along ? 1 : 0, az = 1 - ax;
+        for (int sgn = -1; sgn <= 1; sgn += 2) { // Arme mit Stütze darunter
+            int ex = sx + sgn * ax, ez = sz + sgn * az;
+            set(ex, 0, ez, B.id("dirt"));
+            set(ex, 1, ez, fenceB());
+            set(ex, 2, ez, fenceB());
         }
         int[] acc = accessCell(x0, z0, fw, fd);
         if (acc != null) targets.add(acc);
@@ -514,11 +521,16 @@ final class Garden {
         int n = 3 + rng.nextInt(3);
         for (int i = 0; i < n; i++) {
             int bx = x + (i == 0 ? 0 : rng.nextInt(3) - 1), bz = z + (i == 0 ? 0 : rng.nextInt(3) - 1);
-            if (bx < 1 || bz < 1 || bx >= w - 1 || bz >= d - 1 || !v.isEmpty(bx, 1, bz)) continue;
+            if (bx < 1 || bz < 1 || bx >= w - 1 || bz >= d - 1) continue;
             String g = nameOf(v.get(bx, 0, bz));
             if (!g.equals("grass_block") && !g.equals("gravel") && !g.equals("coarse_dirt") && !g.equals("dirt") && !g.equals("podzol")) continue;
             int h = 3 + rng.nextInt(3);
+            boolean ok = !isPath[bx][bz];
+            for (int y = 1; y <= h && ok; y++) if (!v.isEmpty(bx, y, bz) || s.isReserved(bx, y, bz)) ok = false;
+            if (!ok) continue;
             for (int y = 1; y <= h; y++) set(bx, y, bz, B.id("bamboo"));
+            occ[bx][bz] = true;
+            s.reserve(bx, 1, bz);
         }
     }
 
@@ -545,6 +557,10 @@ final class Garden {
                 double dx = (x0 + x - cx) / (rx + 0.35 + rng.nextDouble() * 0.45), dz = (z0 + z - cz) / (rz + 0.35 + rng.nextDouble() * 0.45);
                 water[x][z] = dx * dx + dz * dz <= 1.0 && x > 0 && z > 0 && x < fw - 1 && z < fd - 1;
             }
+        if (oasis) { // Palmen vor mark(): der Stamm braucht noch unreservierte Zellen
+            palm(x0 + 1, z0 + fd - 1, 5 + rng.nextInt(2));
+            palm(x0 + fw - 2, z0 + 1, 5 + rng.nextInt(2));
+        }
         mark(x0, z0, fw, fd);
         List<String> rimMix = oasis ? List.of("sand", "sand", "sandstone", "smooth_sandstone")
             : style == Palette.Style.JAPANESE ? List.of("stone", "andesite", "mossy_cobblestone", "gravel")
@@ -552,6 +568,7 @@ final class Garden {
         for (int x = 0; x < fw; x++)
             for (int z = 0; z < fd; z++) {
                 int ax = x0 + x, az = z0 + z;
+                if (!v.isEmpty(ax, 1, az)) continue; // Palmenstamm o. ä. nicht überschreiben
                 if (water[x][z]) {
                     set(ax, 0, az, B.id("water"));
                     if (rng.chance(0.3)) set(ax, 1, az, B.id("lily_pad"));
@@ -585,6 +602,7 @@ final class Garden {
             int bz = (int) Math.round(cz);
             for (int x = x0; x < x0 + fw; x++) {
                 set(x, 1, bz, B.slab(p.floor(), false));
+                for (int y = 2; y <= 4; y++) if (nameOf(v.get(x, y, bz)).equals("sugar_cane")) set(x, y, bz, B.AIR);
                 for (int dz : new int[] {-1, 1}) {
                     int rz2 = bz + dz;
                     if (water[x - x0][rz2 - z0] && (x - x0) % 2 == 0) set(x, 1, rz2, fenceB());
@@ -592,10 +610,7 @@ final class Garden {
             }
         }
         // Bank oder Palme am Ufer
-        if (oasis) {
-            palm(x0 + 1, z0 + fd - 1, 5 + rng.nextInt(2));
-            palm(x0 + fw - 2, z0 + 1, 5 + rng.nextInt(2));
-        } else {
+        if (!oasis) {
             int[] acc = accessCell(x0, z0, fw, fd);
             if (acc != null) targets.add(acc);
         }
@@ -700,7 +715,7 @@ final class Garden {
             int[] c = pathCells.get(rng.nextInt(pathCells.size()));
             Dir away = Dir.values()[rng.nextInt(4)];
             int bx = c[0] + away.dx, bz = c[1] + away.dz;
-            int ax = away.wallAxis() == 'x' ? 0 : 1, az = 1 - ax; // Bank verläuft quer zur Wegrichtung
+            int ax = away.wallAxis() == 'x' ? 1 : 0, az = 1 - ax; // Bank verläuft quer zur Wegrichtung
             boolean ok = true;
             for (int i = -1; i <= 1; i++) {
                 int x = bx + i * ax, z = bz + i * az;
@@ -829,7 +844,8 @@ final class Garden {
             int x = spot[0], z = spot[1];
             if (!nameOf(v.get(x, 0, z)).endsWith("sand")) continue;
             boolean clear = true;
-            for (Dir dir : Dir.values()) if (!v.isEmpty(x + dir.dx, 1, z + dir.dz)) clear = false;
+            for (Dir dir : Dir.values())
+                for (int y = 1; y <= 4; y++) if (!v.isEmpty(x + dir.dx, y, z + dir.dz)) clear = false;
             if (!clear) continue;
             if (rng.chance(0.35)) {
                 set(x, 1, z, B.id("dead_bush"));
@@ -878,7 +894,7 @@ final class Garden {
     private void trees(int count) {
         for (int i = 0; i < count; i++) {
             boolean big = rng.chance(0.55);
-            int[] spot = findSpot(1, 1, big ? 2 : 1, false);
+            int[] spot = findSpot(1, 1, big ? 3 : 2, false);
             if (spot == null) return;
             if (sandy() && !nameOf(v.get(spot[0], 0, spot[1])).endsWith("sand")) continue;
             tree(s, spot[0], spot[1], 3 + rng.nextInt(3));
