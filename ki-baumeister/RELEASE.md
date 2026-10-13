@@ -1,3 +1,10 @@
+**Neu in 1.2.0 – freie Grundrisse und viel mehr Details:**
+- **Freier Bauplan:** Die KI beschreibt die Form (runde/eckige Baukörper, gestapelt) – Burgen mit Ecktürmen, Langhäuser, Rundbauten mit Flügeln entstehen wie beschrieben. Ohne Angabe wechselt der Grundriss (L, T, U, Kreuz, Langhaus, gestuft …), „Variante“ ändert die Grundstruktur.
+- **Details:** Veranda mit Pflanzkästen und Laternen, mehrfarbige Dächer, Gauben, Kamine, echte Treppen, Außentreppe/Balkon, auskragende Obergeschosse, Zinnen und Strebepfeiler bei Steinbauten.
+- **Moderne Villen** mit mehreren versetzten Ebenen, Terrassen, Glasgeländern, Außentreppe und Pool.
+- **Gärten** mit verschiedenen Bäumen, Beeten, Teich, Bänken, Wegen.
+- **Neue Stile:** Wikinger, Gotik, Steampunk, Orientalisch.
+
 **Neu in 1.1.0 – echte Gebäude statt Blockhaufen:**
 - Die KI ist jetzt der *Architekt*: Sie wählt Gebäudetyp, Stil, Stockwerke, Dach, Materialien und Räume, eine neue Architektur-Engine baut daraus ein komplettes Gebäude wie aus einem Schematic: Sockel, Fachwerk, Fenster mit Läden, Dach mit Überstand, Kamin, Treppenhaus, eingerichtete Räume, Veranda, Garten.
 - Haus, Hütte, Herrenhaus, Taverne, Scheune, moderne Villa, Turm, Leuchtturm, Burg, Kirche und Tempel in 10 Stilen.

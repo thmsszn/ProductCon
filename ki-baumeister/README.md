@@ -20,6 +20,14 @@ es werden keine Daten ins Internet geschickt.
 - **Baumeister-Axt** (Kreativ-Inventar *Werkzeuge* oder Knopf „⚒ Axt holen“):
   **Linksklick** auf einen Block = Ecke 1, **Rechtsklick** auf einen Block = Ecke 2,
   **Rechtsklick in die Luft** = Menü öffnen. Die Axt baut nichts ab.
+- **Freier Bauplan**: Die KI kann die Form selbst beschreiben (rechteckige und runde Baukörper, auch gestapelt,
+  mit Position, Größe, Stockwerken und Dach). „Burg mit vier Ecktürmen“, „Wikinger-Langhaus“ oder „Rundbau mit
+  zwei Flügeln“ entstehen so exakt wie beschrieben. Ohne Formangabe wählt die Engine pro Entwurf einen anderen
+  Grundriss (L, T, U, Kreuz, Langhaus, gestuft, mit Turm oder Anbau); **„Variante“ ändert damit auch die
+  Grundstruktur**.
+- **Details wie bei Profi-Bauten**: Veranda mit Pfosten, Pflanzkästen und Hängelaternen, mehrfarbige Dächer mit
+  Gauben und Kamin, Treppen statt Leitern, Außentreppe und Balkon, auskragende Obergeschosse, mehrstufige moderne
+  Villen mit Terrassen, Glasgeländern und Pool, Gärten mit verschiedenen Bäumen, Beeten, Teich und Bänken.
 - **Taste `K`** öffnet das Menü (änderbar unter *Optionen → Steuerung → KI-Baumeister*). Für die Ecken
   gibt es dort auch eigene, frei belegbare Tasten.
 - **Hologramm-Vorschau**: Rahmen um den Baubereich und das geplante Gebäude als farbiges,
