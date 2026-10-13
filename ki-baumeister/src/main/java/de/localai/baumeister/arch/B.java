@@ -108,7 +108,9 @@ public final class B {
             case "poppy", "dandelion", "cornflower", "allium", "oxeye_daisy", "azure_bluet", "red_tulip",
                  "orange_tulip", "white_tulip", "pink_tulip", "lily_of_the_valley", "blue_orchid",
                  "short_grass", "fern", "sweet_berry_bush", "rose_bush", "peony", "lilac", "sunflower",
-                 "pink_petals", "bush", "firefly_bush", "wildflowers", "leaf_litter" -> true;
+                 "pink_petals", "bush", "firefly_bush", "wildflowers", "leaf_litter", "tall_grass", "large_fern",
+                 "lily_pad", "sugar_cane", "dead_bush", "red_mushroom", "brown_mushroom", "wheat", "carrots",
+                 "potatoes", "beetroots", "bamboo", "cactus" -> true;
             default -> false;
         };
     }
