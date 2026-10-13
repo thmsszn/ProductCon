@@ -46,7 +46,7 @@ final class HouseGenerator {
         door();
         windows();
         roof();
-        if (FacadeDetail.applies(spec.style()) && roof != Palette.Roof.FLAT) {
+        if (FacadeDetail.applies(spec.style(), p.wall()) && roof != Palette.Roof.FLAT) {
             FacadeDetail.roofBands(v, p, bx0 - 1, bz0 - 1, bx1 + 1, bz1 + 1, ytop);
         }
         chimney();
@@ -609,7 +609,7 @@ final class HouseGenerator {
                 if (s.free(x, 2, bz0 - 1) && v.isSolid(x, 2, bz0)) v.set(x, 2, bz0 - 1, B.wallTorch(Dir.NORTH));
             }
         }
-        if (FacadeDetail.applies(spec.style())) FacadeDetail.houseExtras(s, bx0, bz0, bx1, bz1, doorX, doorW, porch);
+        if (FacadeDetail.applies(spec.style(), p.wall())) FacadeDetail.houseExtras(s, bx0, bz0, bx1, bz1, doorX, doorW, porch);
         if (spec.has(BuildingSpec.Feature.LANTERNS) && bz0 >= 3) s.lanternPosts(doorX, 0, doorW);
         boolean fence = spec.has(BuildingSpec.Feature.FENCE) && bx0 >= 1 && bz0 >= 2 && s.d - 1 - bz1 >= 1;
         if (fence) s.fence(doorX, doorW);

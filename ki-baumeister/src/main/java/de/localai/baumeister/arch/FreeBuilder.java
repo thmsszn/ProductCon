@@ -1130,7 +1130,7 @@ final class FreeBuilder {
     }
 
     /** Vorbau: kleine Plattform mit Stufenkante, zwei Pfosten und Plattendach vor der Tür, wenn Platz ist. */
-    private void porch() {
+    private boolean porch() {
         Dir o = doorDir;
         int ax = o.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
         int cy = Math.max(3, fh - 1);
@@ -1138,14 +1138,14 @@ final class FreeBuilder {
         for (int dist = 1; dist <= 3; dist++)
             for (int w = -2; w <= 2; w++) {
                 int x = doorX + o.dx * dist + w * ax, z = doorZ + o.dz * dist + w * az;
-                if (!v.in(x, cy, z)) return;
-                if (inLev(0, x, z)) return;
+                if (!v.in(x, cy, z)) return false;
+                if (inLev(0, x, z)) return false;
                 if (dist <= 2 && Math.abs(w) <= 1) {
                     String at = v.get(x, 1, z);
-                    if (at != null && !B.isAir(at)) return;
+                    if (at != null && !B.isAir(at)) return false;
                     for (int y = 2; y <= cy; y++) {
                         String up = v.get(x, y, z);
-                        if (up != null && !B.isAir(up)) return;
+                        if (up != null && !B.isAir(up)) return false;
                     }
                 }
             }
@@ -1170,14 +1170,16 @@ final class FreeBuilder {
             int x = doorX + o.dx * 2 + w * ax, z = doorZ + o.dz * 2 + w * az;
             for (int y = 1; y < cy; y++) v.set(x, y, z, fence);
         }
+        return true;
     }
 
     /** Fassadendetails (siehe {@link FacadeDetail}): Vorbau mit Pfosten, Stufe, Fensterrahmen, Ranken, Sockelstreifen. */
     private void facade() {
         FacadeDetail fd = new FacadeDetail(s, lev, maxK, fh, frameB, groundWallB, doorX, doorZ, doorDir);
         boolean deep = fd.porch();
-        if (!deep) porch();
-        fd.apron();
+        if (deep) fd.apron();
+        else if (porch()) fd.apronFrom(4); // alter Vorbau: Plattform reicht bis Abstand 3
+        else fd.apron();
         fd.windows(p.shutters() || spec.has(BuildingSpec.Feature.SHUTTERS));
         fd.vines();
         fd.plinthRing();
