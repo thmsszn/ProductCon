@@ -32,6 +32,7 @@ public class OilTankBlockEntity extends SyncedBlockEntity implements TickingBloc
         }
     };
     private int lastComparator;
+    private int lastSyncedAmount = -1;
 
     public OilTankBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.OIL_TANK.get(), pos, state);
@@ -54,8 +55,18 @@ public class OilTankBlockEntity extends SyncedBlockEntity implements TickingBloc
 
     @Override
     public void serverTick() {
-        if (level != null && !tank.isEmpty()) {
+        if (level == null) {
+            return;
+        }
+        if (!tank.isEmpty()) {
             Transfer.pushFluid(level, worldPosition, Direction.DOWN, tank, 200);
+        }
+        // keep the sight glass on the client roughly up to date
+        int amount = tank.getFluidAmount();
+        if (level.getGameTime() % 10 == 0
+                && (Math.abs(amount - lastSyncedAmount) >= CAPACITY / 100 || (amount == 0) != (lastSyncedAmount == 0))) {
+            lastSyncedAmount = amount;
+            sync();
         }
     }
 

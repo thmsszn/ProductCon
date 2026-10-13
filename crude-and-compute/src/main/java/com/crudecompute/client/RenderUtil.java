@@ -91,12 +91,16 @@ public final class RenderUtil {
 
     /** A full-bright coloured quad facing -Z (model space), e.g. an LED. */
     public static void glowQuad(PoseStack poseStack, MultiBufferSource buffers, float x0, float y0, float x1, float y1, float z, int argb) {
+        colorQuad(poseStack, buffers, x0, y0, x1, y1, z, argb, LightTexture.FULL_BRIGHT);
+    }
+
+    /** A flat coloured quad facing -Z (model space) with the given light. */
+    public static void colorQuad(PoseStack poseStack, MultiBufferSource buffers, float x0, float y0, float x1, float y1, float z, int argb, int light) {
         TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(CrudeCompute.id("block/led_white"));
         VertexConsumer vc = buffers.getBuffer(Sheets.cutoutBlockSheet());
         PoseStack.Pose pose = poseStack.last();
         int a = argb >>> 24, r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF;
         float u0 = sprite.getU0(), u1 = sprite.getU1(), v0 = sprite.getV0(), v1 = sprite.getV1();
-        int light = LightTexture.FULL_BRIGHT;
         int overlay = OverlayTexture.NO_OVERLAY;
         vc.addVertex(pose, x1, y1, z).setColor(r, g, b, a).setUv(u1, v0).setOverlay(overlay).setLight(light).setNormal(pose, 0, 0, -1);
         vc.addVertex(pose, x1, y0, z).setColor(r, g, b, a).setUv(u1, v1).setOverlay(overlay).setLight(light).setNormal(pose, 0, 0, -1);
