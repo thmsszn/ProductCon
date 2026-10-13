@@ -24,15 +24,16 @@ final class Layouts {
 
     private Layouts() {}
 
+    /** Nur für Tests im selben Paket: erzwingt eine Vorlage. In der Produktion immer null. */
+    static Kind testForce;
+
     static Kind pick(BuildingSpec spec, Rng rng) {
-        String force = System.getProperty("baumeister.layout"); // nur für Vorschau/Tests
-        if (force != null) {
-            try {
-                return Kind.valueOf(force);
-            } catch (IllegalArgumentException ignored) {
-                // unbekannter Name: normale Wahl
-            }
-        }
+        return pick(spec, rng, testForce);
+    }
+
+    /** Wie {@link #pick(BuildingSpec, Rng)}, aber mit optional erzwungener Vorlage (null = normale Wahl). */
+    static Kind pick(BuildingSpec spec, Rng rng, Kind forced) {
+        if (forced != null) return forced;
         List<Kind> pool = new ArrayList<>();
         switch (spec.type()) {
             case COTTAGE -> pool.addAll(List.of(Kind.BLOCK, Kind.L_SHAPE, Kind.ANNEX_TOWER, Kind.LONGHOUSE));
