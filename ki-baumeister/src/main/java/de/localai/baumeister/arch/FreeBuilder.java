@@ -46,6 +46,8 @@ final class FreeBuilder {
     /** Treppen: je Geschoss „Treppe statt Leiter“ und belegte Zellen je Ebene (1 = Lauf/Geländer, 2 = Zugang/Austritt). */
     private boolean[] stairLevel;
     private byte[][][] stairMark;
+    // Stein-/Festungsdetails (Zinnen, Strebepfeiler, Schießscharten, Spitzbogenfenster, Sockel, Banner)
+    private boolean stone, fort, classic, noTimber;
 
     FreeBuilder(Site site) {
         this.s = site;
@@ -62,6 +64,7 @@ final class FreeBuilder {
         s.clearSite(spec.style().sandy() ? "sand" : "grass_block");
         if (!plan()) return new HouseGenerator(s).build();
         shell();
+        pickDoor();
         windows();
         door();
         stairs();
@@ -70,6 +73,7 @@ final class FreeBuilder {
         roofDetails();
         furnish();
         exterior();
+        if (stone) stoneExterior();
         return v;
     }
 
@@ -215,6 +219,7 @@ final class FreeBuilder {
         wallB = p.wall();
         groundWallB = p.groundWall();
         frameB = p.frame();
+        detectStone();
         return true;
     }
 
@@ -263,11 +268,12 @@ final class FreeBuilder {
                     int mask = openMask(k, x, z);
                     boolean wall = mask != 0;
                     boolean corner = Integer.bitCount(mask) >= 2;
+                    boolean clean = stone && wall && roundCell(k, x, z); // glatte Turmwand ohne Pfosten/Ringe
                     char axis = (has(mask, Dir.NORTH) || has(mask, Dir.SOUTH)) ? 'x' : 'z';
                     if (k == 0) {
                         v.set(x, 0, z, wall ? B.id(p.foundation()) : floorTile(x, z));
                     } else {
-                        v.set(x, y0, z, wall ? B.axis(frameB, axis) : floorTile(x, z));
+                        v.set(x, y0, z, clean ? s.vary(wallB) : wall ? B.axis(frameB, axis) : floorTile(x, z));
                     }
                     int t = (axis == 'x') ? x : z;
                     for (int y = y0 + 1; y <= y0 + fh - 1; y++) {
@@ -275,14 +281,14 @@ final class FreeBuilder {
                             v.set(x, y, z, B.AIR);
                             continue;
                         }
-                        boolean post = corner || (p.timber() && Math.floorMod(t, 4) == 0);
+                        boolean post = !clean && (corner || (p.timber() && !noTimber && Math.floorMod(t, 4) == 0));
                         if (post) v.set(x, y, z, B.axis(frameB, 'y'));
                         else if (k == 0 && y == 1) v.set(x, y, z, s.vary(groundWallB));
                         else v.set(x, y, z, s.vary(wallB));
                     }
                     if (!inLev(k + 1, x, z)) {
                         int yt = (k + 1) * fh;
-                        if (wall) v.set(x, yt, z, p.timber() ? B.axis(frameB, axis) : B.id(p.trim().block()));
+                        if (wall) v.set(x, yt, z, clean ? s.vary(wallB) : p.timber() ? B.axis(frameB, axis) : B.id(p.trim().block()));
                         else v.set(x, yt, z, flatTop(x, z) ? B.id(p.roof().block()) : floorTile(x, z));
                     }
                 }
@@ -296,6 +302,10 @@ final class FreeBuilder {
     }
 
     private void windows() {
+        if (stone) {
+            stoneWindows();
+            return;
+        }
         boolean big = p.bigWindows();
         boolean shutters = p.shutters() || spec.has(BuildingSpec.Feature.SHUTTERS);
         for (int k = 0; k < maxK; k++) {
@@ -335,7 +345,8 @@ final class FreeBuilder {
 
     // ------------------------------------------------------------------ Tür
 
-    private void door() {
+    /** Wählt die Haustür-Zelle (nur lesend), damit Fenster und Details Abstand zur Tür halten können. */
+    private void pickDoor() {
         int bestScore = Integer.MAX_VALUE;
         int cxm = W / 2;
         for (int x = 0; x < W; x++)
@@ -357,6 +368,9 @@ final class FreeBuilder {
                     doorDir = out;
                 }
             }
+    }
+
+    private void door() {
         if (doorX < 0) return;
         v.set(doorX, 1, doorZ, B.door(p.door(), doorDir.opposite(), false));
         v.set(doorX, 2, doorZ, B.AIR);
@@ -373,6 +387,7 @@ final class FreeBuilder {
             String at = v.get(doorX + doorDir.dx, y, doorZ + doorDir.dz);
             if (at != null && B.name(at).endsWith("_trapdoor")) v.set(doorX + doorDir.dx, y, doorZ + doorDir.dz, B.AIR);
         }
+        if (stone) stoneDoor();
         s.reserve(doorX - doorDir.dx, 1, doorZ - doorDir.dz);
         s.reserve(doorX - 2 * doorDir.dx, 1, doorZ - 2 * doorDir.dz);
     }
@@ -420,7 +435,7 @@ final class FreeBuilder {
             v.set(cx, base + 1 + i, cz, B.stairs(fam, d, false));
             if (i == fh - 1) {
                 // die letzte Stufe ersetzt die Decke und liegt schon auf dem oberen Boden
-                for (int y = ySlab + 1; y <= ySlab + 3; y++) v.set(cx, y, cz, B.AIR);
+                for (int y = ySlab + 1; y <= ySlab + Math.min(2, fh - 1); y++) v.set(cx, y, cz, B.AIR);
             } else {
                 for (int y = base + 2 + i; y <= ySlab; y++) v.set(cx, y, cz, B.AIR);
                 // Geländer an den offenen Seiten des Ausschnitts (nicht an Wänden)
@@ -428,13 +443,13 @@ final class FreeBuilder {
                     int sx = cx + sd.dx, sz = cz + sd.dz;
                     if (inLev(k, sx, sz) && openMask(k, sx, sz) == 0) {
                         v.set(sx, ySlab + 1, sz, fence);
-                        stairMark[k][sx][sz] = 1;
+                        if (stairMark[k][sx][sz] == 0) stairMark[k][sx][sz] = 1;
                     }
                 }
             }
             stairMark[k - 1][cx][cz] = 1;
             stairMark[k][cx][cz] = 1;
-            for (int y = base + 1; y <= ySlab + 3; y++) s.reserve(cx, y, cz);
+            for (int y = base + 1; y <= ySlab + 2; y++) s.reserve(cx, y, cz);
         }
         // Absturzsicherung am unteren Ende des Ausschnitts
         int bx = best[0] - d.dx, bz = best[1] - d.dz;
@@ -446,11 +461,11 @@ final class FreeBuilder {
         int ex = best[0] + fh * d.dx, ez = best[1] + fh * d.dz;
         if (stairMark[k - 1][bx][bz] == 0) stairMark[k - 1][bx][bz] = 2;
         if (stairMark[k][ex][ez] == 0) stairMark[k][ex][ez] = 2;
-        for (int y = base + 1; y <= ySlab + 3; y++) {
+        for (int y = base + 1; y <= ySlab + 2; y++) {
             s.reserve(bx, y, bz);
             s.reserve(ex, y, ez);
         }
-        for (int y = ySlab + 1; y <= ySlab + 3; y++) {
+        for (int y = ySlab + 1; y <= ySlab + 2; y++) {
             for (int i = 0; i < fh; i++)
                 for (Dir sd : new Dir[] {sideA, sideB}) s.reserve(best[0] + i * d.dx + sd.dx, y, best[1] + i * d.dz + sd.dz);
         }
@@ -528,7 +543,7 @@ final class FreeBuilder {
                     if (wallLow != wallUp) return Integer.MIN_VALUE;
                     if (wallLow) wallSides++;
                     // Geländerzellen dürfen nicht schon belegt sein
-                    else if (i < fh - 1 && stairMark[k][sx][sz] == 1) return Integer.MIN_VALUE;
+                    else if (i < fh - 1 && stairMark[k][sx][sz] != 0) return Integer.MIN_VALUE;
                 }
             }
             if (k == 1 && entry && cx == doorX - doorDir.dx && cz == doorZ - doorDir.dz) return Integer.MIN_VALUE;
@@ -592,6 +607,10 @@ final class FreeBuilder {
     }
 
     private void parapet(Vol q, int yt) {
+        if (crenelled(q)) {
+            crenels(q, yt);
+            return;
+        }
         boolean modern = spec.style() == Palette.Style.MODERN;
         for (int x = q.x0; x <= q.x1; x++)
             for (int z = q.z0; z <= q.z1; z++) {
@@ -645,6 +664,7 @@ final class FreeBuilder {
         }
         // Giebelfüllung: die Dreiecke an den Stirnseiten über der Wand
         gableInfill(q, yt);
+        if (stone) roseWindows(q, yt);
     }
 
     private void gableInfill(Vol q, int yt) {
@@ -869,6 +889,15 @@ final class FreeBuilder {
      * Schornstein: Mauerwerksschacht vom Boden entlang der Giebelwand (außen) oder, wenn dort kein Platz ist,
      * im Inneren durch das Dach, 2 Blöcke über den First, mit Rauch (Lagerfeuer) und Kamin im Raum darunter.
      */
+    private boolean shaftColumn(int x, int z) {
+        for (int y = 1; y <= maxK * fh + 1; y++) {
+            if (s.isReserved(x, y, z)) return true;
+            String at = v.get(x, y, z);
+            if (at != null && B.name(at).equals("ladder")) return true;
+        }
+        return false;
+    }
+
     private void chimney() {
         Vol best = null;
         int bestScore = Integer.MIN_VALUE;
@@ -885,6 +914,8 @@ final class FreeBuilder {
                 if (!chimneyColumnFree(cx, cz, out)) continue;
                 if (openMask(0, wx, wz) != (1 << out.ordinal())) continue;
                 if (Math.abs(wx - doorX) + Math.abs(wz - doorZ) <= 3) continue;
+                // Feuerstelle nicht vor/in Treppen- oder Leiterschächten
+                if (shaftColumn(wx - out.dx, wz - out.dz) || shaftColumn(wx, wz)) continue;
                 int score = span * 2 + (out == Dir.NORTH ? -30 : 0) + (out == Dir.SOUTH ? 10 : 0);
                 if (score > bestScore) {
                     bestScore = score;
@@ -1070,6 +1101,10 @@ final class FreeBuilder {
                 if (dist <= 2 && Math.abs(w) <= 1) {
                     String at = v.get(x, 1, z);
                     if (at != null && !B.isAir(at)) return;
+                    for (int y = 2; y <= cy; y++) {
+                        String up = v.get(x, y, z);
+                        if (up != null && !B.isAir(up)) return;
+                    }
                 }
             }
         String slabRoof = B.slab(p.roof(), false);
@@ -1082,10 +1117,10 @@ final class FreeBuilder {
                 for (int y = 1; y < cy; y++) s.reserve(x, y, z);
             }
         }
-        // Stufenkante: Treppe mit der hohen Seite zur Tür
+        // bündige Kante der Plattform (Boden und Weg liegen auf gleicher Höhe)
         for (int w = -1; w <= 1; w++) {
             int x = doorX + o.dx * 3 + w * ax, z = doorZ + o.dz * 3 + w * az;
-            v.set(x, 0, z, B.stairs(p.floor(), o.opposite(), false));
+            v.set(x, 0, z, B.id(p.floor().block()));
             s.reserve(x, 1, z);
         }
         // Pfosten an den vorderen Ecken des Dachs
@@ -1115,5 +1150,338 @@ final class FreeBuilder {
             for (int[] t : spots) if (farFromBuilding(t[0], t[1], 4) && rng.chance(0.75)) s.tree(t[0], t[1], 3 + rng.nextInt(2));
         }
         if (spec.has(BuildingSpec.Feature.GARDEN)) s.flowersAndBushes(0, 0, W - 1, D - 1, 0.06, 0.02);
+    }
+
+    // ------------------------------------------------------------------ Stein-, Gotik- und Festungsdetails
+
+    /** Steinoptik erkennen: Steinstile oder Wände aus Stein/Ziegel/Kalkstein usw. */
+    private void detectStone() {
+        Palette.Style st = spec.style();
+        classic = st == Palette.Style.CLASSICAL;
+        boolean plain = st == Palette.Style.MODERN || st == Palette.Style.DESERT || st == Palette.Style.JAPANESE;
+        stone = st == Palette.Style.STONE || classic || st == Palette.Style.FANTASY || (!plain && stoneLike(wallB));
+        fort = stone && !classic;
+        // Steinwand in Fachwerk-Palette: Holzgerüst durch Stein-Eckquader ersetzen
+        if (fort && p.timber() && stoneLike(wallB) && !stoneLike(frameB)) {
+            frameB = keystone();
+            noTimber = true;
+        }
+    }
+
+    private static boolean stoneLike(String block) {
+        String n = B.name(block);
+        return n.contains("stone") || n.contains("cobble") || n.contains("deepslate") || n.contains("andesite")
+            || n.contains("diorite") || n.contains("granite") || n.contains("calcite") || n.contains("quartz")
+            || n.contains("sandstone") || n.contains("blackstone") || n.contains("tuff") || n.equals("stone_bricks");
+    }
+
+    /** Steinfamilie für Sockel, Fensterbögen und Pfeilerkappen (Holz-Zierleisten werden durch Stein ersetzt). */
+    private Materials.Family stoneFam() {
+        if (stoneLike(p.trim().block())) return p.trim();
+        return Materials.family(wallB, Materials.family("stone_brick"));
+    }
+
+    private String keystone() {
+        String n = B.name(wallB);
+        if (n.contains("quartz")) return B.id("chiseled_quartz_block");
+        if (n.contains("sandstone")) return B.id("chiseled_sandstone");
+        if (n.contains("deepslate")) return B.id("chiseled_deepslate");
+        if (n.contains("blackstone")) return B.id("chiseled_polished_blackstone");
+        return B.id("chiseled_stone_bricks");
+    }
+
+    private static Dir dirOf(int dx, int dz) {
+        for (Dir d : Dir.values()) if (d.dx == dx && d.dz == dz) return d;
+        return Dir.NORTH;
+    }
+
+    /** Zelle gehört auf dieser Ebene nur zu runden Teilen (Turmwand). */
+    private boolean roundCell(int k, int x, int z) {
+        boolean r = false;
+        for (Vol q : vols) {
+            if (k < q.b || k >= q.top() || !q.contains(x, z)) continue;
+            if (!q.round) return false;
+            r = true;
+        }
+        return r;
+    }
+
+    private Dir singleOut(int k, int x, int z) {
+        if (!inLev(k, x, z)) return null;
+        int mask = openMask(k, x, z);
+        if (Integer.bitCount(mask) != 1) return null;
+        return Dir.values()[Integer.numberOfTrailingZeros(mask)];
+    }
+
+    private boolean nearDoor(int x, int z, int dist) {
+        return doorX >= 0 && Math.abs(x - doorX) + Math.abs(z - doorZ) <= dist;
+    }
+
+    private boolean crenelled(Vol q) {
+        if (fort) return true;
+        if (!q.round || stone) return false;
+        Palette.Style st = spec.style();
+        return st == Palette.Style.MEDIEVAL || st == Palette.Style.RUSTIC || st == Palette.Style.NORDIC;
+    }
+
+    /** Zinnenkranz: Zinnen (Merlons) im Wechsel mit Lücken, an Ecken immer Zinne; Türme nach Winkel gezählt. */
+    private void crenels(Vol q, int yt) {
+        String cap = B.id(stoneFam().block());
+        for (int x = q.x0; x <= q.x1; x++)
+            for (int z = q.z0; z <= q.z1; z++) {
+                if (!q.contains(x, z) || !inLev(q.top() - 1, x, z) || openMask(q.top() - 1, x, z) == 0) continue;
+                if (inLev(q.top(), x, z)) continue;
+                int mask = openMask(q.top() - 1, x, z);
+                boolean merlon;
+                if (q.round) {
+                    double a = Math.atan2(z - q.cz, x - q.cx);
+                    int n = Math.max(6, (int) Math.round(Math.PI * q.r));
+                    int idx = (int) Math.floor((a + Math.PI) / (2 * Math.PI) * n);
+                    merlon = idx % 2 == 0;
+                } else {
+                    merlon = Integer.bitCount(mask) >= 2 || ((x + z) & 1) == 0;
+                }
+                v.set(x, yt, z, cap);
+                if (!merlon) continue;
+                place(x, yt + 1, z, s.vary(wallB));
+                // Eckzinnen der Rechteckteile sind doppelt hoch
+                if (!q.round && Integer.bitCount(mask) >= 2) place(x, yt + 2, z, s.vary(wallB));
+            }
+    }
+
+    /** Spitzbogenfenster (Gotik) bzw. Rundbogenfenster mit Sims; Türme bekommen Schießscharten. */
+    private void stoneWindows() {
+        Materials.Family sf = stoneFam();
+        String pane = B.id(p.window());
+        for (int k = 0; k < maxK; k++) {
+            int y0 = k * fh;
+            int hi = fh >= 6 ? y0 + 4 : fh == 5 ? y0 + 3 : y0 + 2;
+            for (int x = 0; x < W; x++)
+                for (int z = 0; z < D; z++) {
+                    if (!lev[k][x][z]) continue;
+                    int mask = openMask(k, x, z);
+                    if (Integer.bitCount(mask) != 1) continue;
+                    if (roundCell(k, x, z)) continue;
+                    Dir out = Dir.values()[Integer.numberOfTrailingZeros(mask)];
+                    int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+                    if (!straight(k, x - ax, z - az, mask) || !straight(k, x + ax, z + az, mask)) continue;
+                    int t = ax == 1 ? x : z;
+                    if (Math.floorMod(t, 4) != 2) continue;
+                    if (k == 0 && nearDoor(x, z, 2)) continue;
+                    for (int y = y0 + 2; y <= hi; y++) v.set(x, y, z, pane);
+                    if (fh >= 5) {
+                        // Bogenschultern: umgedrehte Treppen links und rechts der obersten Scheibe
+                        for (int sgn : new int[] {-1, 1}) {
+                            v.set(x + sgn * ax, hi, z + sgn * az, B.stairs(sf, dirOf(sgn * ax, sgn * az), true));
+                        }
+                        // Sohlbank
+                        v.set(x, y0 + 1, z, B.stairs(sf, out, true));
+                    }
+                }
+        }
+        roundSlits(classic);
+    }
+
+    /** Schießscharten (bei klassischem Stil Fensterscheiben) an Rundtürmen: pro Geschoss versetzt auf 8 Achsen. */
+    private void roundSlits(boolean glass) {
+        String pane = B.id(p.window());
+        for (Vol q : vols) {
+            if (!q.round) continue;
+            int slots = q.r >= 7 ? 8 : 4;
+            for (int k = q.b; k < q.top(); k++) {
+                int y0 = k * fh;
+                int hi = fh >= 5 ? y0 + 3 : y0 + 2;
+                for (int j = 0; j < slots; j++) {
+                    double a = (j + (k % 2 == 0 ? 0.0 : 0.5)) * 2 * Math.PI / slots;
+                    double tx = q.cx + q.r * Math.cos(a), tz = q.cz + q.r * Math.sin(a);
+                    int bx = -1, bz = -1;
+                    double best = 1e9;
+                    for (int x = (int) Math.round(tx) - 1; x <= (int) Math.round(tx) + 1; x++)
+                        for (int z = (int) Math.round(tz) - 1; z <= (int) Math.round(tz) + 1; z++) {
+                            if (singleOut(k, x, z) == null || !roundCell(k, x, z)) continue;
+                            double dd = (x - tx) * (x - tx) + (z - tz) * (z - tz);
+                            if (dd < best) {
+                                best = dd;
+                                bx = x;
+                                bz = z;
+                            }
+                        }
+                    if (bx < 0 || (k == 0 && nearDoor(bx, bz, 2))) continue;
+                    for (int y = y0 + 2; y <= hi; y++) v.set(bx, y, bz, glass ? pane : B.AIR);
+                }
+            }
+        }
+    }
+
+    /** Rosenfenster: kreuzförmige Scheiben in der Giebelfüllung der Stirnwände, wenn der Giebel hoch genug ist. */
+    private void roseWindows(Vol q, int yt) {
+        int span = q.ridgeX ? q.z1 - q.z0 : q.x1 - q.x0;
+        if (span / 2 < 4) return;
+        String pane = B.id(p.window());
+        String ring = B.id(stoneFam().block());
+        for (int end = 0; end < 2; end++) {
+            int fx = q.ridgeX ? (end == 0 ? q.x0 : q.x1) : (q.x0 + q.x1) / 2;
+            int fz = q.ridgeX ? (q.z0 + q.z1) / 2 : (end == 0 ? q.z0 : q.z1);
+            // nur freie Außenseite (kein Anbau davor)
+            int ox = q.ridgeX ? fx + (end == 0 ? -1 : 1) : fx, oz = q.ridgeX ? fz : fz + (end == 0 ? -1 : 1);
+            if (inLev(q.top() - 1, ox, oz)) continue;
+            int half = span / 2;
+            int yc = yt + Math.min(half - 2, 5);
+            int[][] cross = half >= 6
+                ? new int[][] {{0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-2, 0}, {2, 0}, {0, -2}, {0, 2}}
+                : new int[][] {{0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            for (int[] c : cross) {
+                int x = q.ridgeX ? fx : fx + c[0], z = q.ridgeX ? fz + c[0] : fz, y = yc + c[1];
+                String cur = v.get(x, y, z);
+                if (cur == null || B.isAir(cur)) continue;
+                v.set(x, y, z, pane);
+            }
+            if (q.ridgeX) {
+                for (int dz : new int[] {-1, 1}) for (int dy : new int[] {-1, 1}) {
+                    String cur = v.get(fx, yc + dy, fz + dz);
+                    if (cur != null && !B.isAir(cur)) v.set(fx, yc + dy, fz + dz, ring);
+                }
+            } else {
+                for (int dx : new int[] {-1, 1}) for (int dy : new int[] {-1, 1}) {
+                    String cur = v.get(fx + dx, yc + dy, fz);
+                    if (cur != null && !B.isAir(cur)) v.set(fx + dx, yc + dy, fz, ring);
+                }
+            }
+        }
+    }
+
+    /** Spitzbogen-Portal: Oberlicht, Schlussstein, Bogenschultern, vorspringende Pfeiler (Nische) und Fackeln. */
+    private void stoneDoor() {
+        Materials.Family sf = stoneFam();
+        Dir o = doorDir;
+        int ax = o.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+        int mask = 1 << o.ordinal();
+        String key = keystone();
+        boolean tall = fh >= 5;
+        // Fackeln des Standardbaus entfernen (sie wandern an die Pfeiler)
+        for (int sgn : new int[] {-1, 1}) {
+            int tx = doorX + sgn * ax + o.dx, tz = doorZ + sgn * az + o.dz;
+            String cur = v.get(tx, 2, tz);
+            if (cur != null && B.name(cur).equals("wall_torch")) v.set(tx, 2, tz, B.AIR);
+        }
+        if (tall) {
+            v.set(doorX, 3, doorZ, B.id(p.window()));
+            v.set(doorX, 4, doorZ, key);
+        } else {
+            v.set(doorX, 3, doorZ, key);
+        }
+        for (int sgn : new int[] {-1, 1}) {
+            int wx = doorX + sgn * ax, wz = doorZ + sgn * az;
+            if (!straight(0, wx, wz, mask)) continue;
+            if (tall) v.set(wx, 3, wz, B.stairs(sf, dirOf(sgn * ax, sgn * az), true));
+            // Pfeiler vor der Wand: die Tür liegt dadurch in einer Nische
+            int jx = wx + o.dx, jz = wz + o.dz;
+            int top = tall ? 4 : 3;
+            if (!v.isEmpty(jx, 1, jz)) continue;
+            for (int y = 1; y < top; y++) place(jx, y, jz, B.id(stoneFam().block()));
+            place(jx, top, jz, B.stairs(sf, o.opposite(), false));
+            place(jx + o.dx, 2, jz + o.dz, B.wallTorch(o));
+        }
+    }
+
+    // ------------------------------------------------------------------ Außen: Sockel, Strebepfeiler, Fackeln, Banner
+
+    private void stoneExterior() {
+        if (fh < 4) return;
+        if (fort) buttresses();
+        plinth();
+        accents();
+    }
+
+    /** Strebepfeiler an langen, geraden Außenwänden (rechteckige Teile). */
+    private void buttresses() {
+        Materials.Family sf = stoneFam();
+        for (int x = 0; x < W; x++)
+            for (int z = 0; z < D; z++) {
+                Dir out = singleOut(0, x, z);
+                if (out == null || roundCell(0, x, z)) continue;
+                int mask = 1 << out.ordinal();
+                int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+                int t = ax == 1 ? x : z;
+                int period = flatTop(x, z) ? 8 : 4;
+                if (Math.floorMod(t, period) != 0) continue;
+                // Lauflänge der geraden Wand: mindestens 9 Zellen
+                int run = 1;
+                for (int sgn : new int[] {-1, 1})
+                    for (int i = 1; i < 12 && straight(0, x + sgn * i * ax, z + sgn * i * az, mask); i++) run++;
+                if (run < 9 || nearDoor(x, z, 3)) continue;
+                int levels = 1;
+                while (levels < 2 && straight(levels, x, z, mask)) levels++;
+                int top = levels * fh - 1;
+                int ox = x + out.dx, oz = z + out.dz;
+                if (!v.isEmpty(ox, 1, oz) || !v.isEmpty(ox + out.dx, 1, oz + out.dz)) continue;
+                for (int y = 1; y < top; y++) place(ox, y, oz, s.vary(wallB));
+                place(ox, top, oz, B.stairs(sf, out.opposite(), false));
+                place(ox + out.dx, 1, oz + out.dz, B.stairs(sf, out.opposite(), false));
+            }
+    }
+
+    /** Geböschter Sockel: Treppenreihe rings um das Erdgeschoss (tall side zur Wand). */
+    private void plinth() {
+        Materials.Family sf = stoneFam();
+        for (int x = 0; x < W; x++)
+            for (int z = 0; z < D; z++) {
+                if (!lev[0][x][z]) continue;
+                int mask = openMask(0, x, z);
+                if (mask == 0) continue;
+                for (Dir d : Dir.values()) {
+                    if (!has(mask, d)) continue;
+                    int ox = x + d.dx, oz = z + d.dz;
+                    if (doorX >= 0 && ox == doorX + doorDir.dx && oz == doorZ + doorDir.dz) continue;
+                    if (!v.in(ox, 1, oz) || !v.isEmpty(ox, 1, oz) || inLev(0, ox, oz)) continue;
+                    v.set(ox, 1, oz, B.stairs(sf, d.opposite(), false));
+                }
+            }
+    }
+
+    /** Wandfackeln im Erdgeschoss und Wandbanner an den Obergeschossen. */
+    private void accents() {
+        String banner = B.id(p.bed() + "_wall_banner");
+        for (int k = 0; k < maxK; k++) {
+            int y0 = k * fh;
+            int yy = fh >= 5 ? y0 + 3 : y0 + 2;
+            for (int x = 0; x < W; x++)
+                for (int z = 0; z < D; z++) {
+                    Dir out = singleOut(k, x, z);
+                    if (out == null || roundCell(k, x, z)) continue;
+                    int mask = 1 << out.ordinal();
+                    int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+                    if (!straight(k, x - ax, z - az, mask) || !straight(k, x + ax, z + az, mask)) continue;
+                    int t = ax == 1 ? x : z;
+                    String wall = v.get(x, yy, z);
+                    if (wall == null || B.isAir(wall) || B.isThin(wall) || B.name(wall).endsWith("_stairs")) continue;
+                    int ox = x + out.dx, oz = z + out.dz;
+                    if (!v.isEmpty(ox, yy, oz)) continue;
+                    if (Math.floorMod(t, 8) == 1 && k == 0 && !nearDoor(x, z, 3)) {
+                        v.set(ox, yy, oz, B.wallTorch(out));
+                    } else if (Math.floorMod(t, 8) == 4 && !classic) {
+                        v.set(ox, yy, oz, B.with(banner, "facing", out.id()));
+                    }
+                }
+        }
+        // Rundtürme: je eine Fackel an den vier Himmelsrichtungen des Erdgeschosses
+        for (Vol q : vols) {
+            if (!q.round || q.b != 0) continue;
+            int yy = fh >= 5 ? 3 : 2;
+            for (Dir d : Dir.values()) {
+                int tx = (int) Math.round(q.cx + d.dx * q.r), tz = (int) Math.round(q.cz + d.dz * q.r);
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dz = -1; dz <= 1; dz++) {
+                        int x = tx + dx, z = tz + dz;
+                        if (singleOut(0, x, z) != d || !roundCell(0, x, z) || nearDoor(x, z, 3)) continue;
+                        int ox = x + d.dx, oz = z + d.dz;
+                        String wall = v.get(x, yy, z);
+                        if (wall == null || B.isAir(wall) || B.isThin(wall) || !v.isEmpty(ox, yy, oz)) continue;
+                        v.set(ox, yy, oz, B.wallTorch(d));
+                        dx = 2;
+                        break;
+                    }
+            }
+        }
     }
 }

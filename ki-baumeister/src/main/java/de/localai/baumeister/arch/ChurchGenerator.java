@@ -65,7 +65,7 @@ final class ChurchGenerator {
 
     private void materials() {
         ground = style.sandy() ? "sand" : "grass_block";
-        roof = style == Palette.Style.DESERT && spec.roofMaterial() == null ? Materials.family("red_sandstone") : p.roof();
+        roof = style.sandy() && spec.roofMaterial() == null ? Materials.family("red_sandstone") : p.roof();
         trim = Materials.family("stone_brick");
         wallB = p.groundWall();
         quoin = "polished_andesite";

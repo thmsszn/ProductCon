@@ -329,7 +329,7 @@ final class TempleGenerator {
 
     /** Schmale Säulenzypresse aus Laub. */
     private void cypress(int x, int z) {
-        if (style == Palette.Style.DESERT || !v.isEmpty(x, 1, z)) return;
+        if (style.sandy() || !v.isEmpty(x, 1, z)) return;
         int hgt = Math.min(3 + rng.nextInt(3), s.h - 2);
         String leaves = B.leaves(style == Palette.Style.FANTASY ? "flowering_azalea_leaves" : "spruce_leaves");
         for (int y = 1; y <= hgt; y++) v.set(x, y, z, leaves);

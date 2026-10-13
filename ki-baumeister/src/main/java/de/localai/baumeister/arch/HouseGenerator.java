@@ -455,7 +455,7 @@ final class HouseGenerator {
         Materials.Family r = p.roof();
         v.fill(ix0, ytop, iz0, ix1, ytop, iz1, B.id(r.block()));
         if (ytop + 1 >= s.h) return;
-        boolean desert = spec.style() == Palette.Style.DESERT;
+        boolean desert = spec.style().sandy();
         boolean modern = spec.style() == Palette.Style.MODERN;
         for (int x = bx0; x <= bx1; x++)
             for (int z = bz0; z <= bz1; z++) {

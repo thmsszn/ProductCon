@@ -1561,7 +1561,7 @@ final class TowerGenerator {
     // ------------------------------------------------------------------- Außenanlagen
 
     private void groundTexture() {
-        if (style == Palette.Style.DESERT) return;
+        if (style.sandy()) return;
         double rmax = (lighthouse ? Math.max(R + 1, rTop + 2) : R) + 3;
         for (int x = lo(cx, rmax); x <= hi(cx, rmax); x++)
             for (int z = lo(cz, rmax); z <= hi(cz, rmax); z++) {
@@ -1846,7 +1846,7 @@ final class TowerGenerator {
 
     private void rocks() {
         double ph1 = rng.nextDouble() * 6.283, ph2 = rng.nextDouble() * 6.283;
-        boolean desert = style == Palette.Style.DESERT;
+        boolean desert = style.sandy();
         double border = Math.min(Math.min(cx, s.w - 1 - cx), Math.min(cz, s.d - 1 - cz));
         double reach = Math.min(R + 4.5, border + 0.4);
         for (int x = lo(cx, reach); x <= hi(cx, reach); x++)
