@@ -53,6 +53,15 @@ final class FacadeDetail {
         };
     }
 
+    /** Wie {@link #applies(Palette.Style)}, aber ohne Steinwände (gleiche Regel wie in {@link FreeBuilder}). */
+    static boolean applies(Palette.Style st, String wallBlock) {
+        if (!applies(st)) return false;
+        String n = B.name(wallBlock);
+        return !(n.contains("stone") || n.contains("cobble") || n.contains("deepslate") || n.contains("andesite")
+            || n.contains("diorite") || n.contains("granite") || n.contains("calcite") || n.contains("quartz")
+            || n.contains("sandstone") || n.contains("blackstone") || n.contains("tuff"));
+    }
+
     /** Zweiter Dachbaustoff für Zierstreifen (Holzdach: Sandstein, Steindach: Steinziegel); null = keiner. */
     static Materials.Family bandFor(Materials.Family roof) {
         String k = roof.key();
@@ -170,7 +179,7 @@ final class FacadeDetail {
     /** Baut den Vorbau vor der Tür; false, wenn nirgends Platz ist. */
     boolean porch() {
         if (doorX < 0) return false;
-        int cy = Math.max(3, fh);
+        int cy = Math.max(3, fh - 1); // eine Ebene unter der Traufe (Sparren liegen auf y = fh)
         int[][] tries = {{4, 3}, {3, 3}, {3, 2}, {2, 2}};
         for (int[] t : tries) {
             if (fits(t[0], t[1], cy)) {
@@ -192,6 +201,8 @@ final class FacadeDetail {
             for (int w = -hw; w <= hw; w++) {
                 int x = cx(dist, w), z = cz(dist, w);
                 if (!v.in(x, cy, z) || inLevAny(x, z) || s.isReserved(x, 1, z)) return false;
+                String deck = v.get(x, cy, z);
+                if (deck != null && !B.isAir(deck) && !removable(B.name(deck))) return false; // Dach/Traufe nicht überbauen
                 for (int y = 1; y < cy; y++) {
                     String at = v.get(x, y, z);
                     if (at == null || B.isAir(at) || removable(B.name(at))) continue;
@@ -238,7 +249,7 @@ final class FacadeDetail {
         for (int w = -hw; w <= hw; w++) {
             int a = Math.abs(w), x = cx(pd, w), z = cz(pd, w);
             if (a == 2 && cy - 1 >= 2) continue; // Pfosten reicht bis unters Dach
-            if (a == hw && hw >= 3 && cy - 1 <= 2) continue;
+            if (a == hw && hw >= 3) continue; // Eckpfeiler hat seinen eigenen Abschluss
             v.set(x, cy - 1, z, (w & 1) == 0 ? B.axis(frameB, latAxis) : B.trapdoor(p.trapdoor(), o, true, false));
         }
         for (int dist = 1; dist < pd; dist++)
@@ -342,8 +353,12 @@ final class FacadeDetail {
 
     /** Breite Eingangsstufe: Pflaster in Wegbreite vor dem Vorbau (bzw. vor der Tür), nach außen schmaler. */
     void apron() {
+        apronFrom(built + 1);
+    }
+
+    /** Eingangsstufe ab Abstand {@code from} zur Tür (z. B. hinter dem alten, flachen Vorbau). */
+    void apronFrom(int from) {
         if (doorX < 0) return;
-        int from = built + 1;
         for (int dist = from; dist <= from + 1; dist++) {
             int hw = dist == from ? 2 : 1;
             for (int w = -hw; w <= hw; w++) {
@@ -391,8 +406,14 @@ final class FacadeDetail {
                     int lx = out.wallAxis() == 'x' ? 1 : 0, lz = 1 - lx;
                     // Blumenkasten: Klappe unter dem Fenster, Blumentopf davor
                     if (rng.chance(boxFeature ? 0.8 : 0.3) && v.isEmpty(ox, y0 + 1, oz) && v.isEmpty(ox, y0 + 2, oz)) {
-                        v.set(ox, y0 + 1, oz, B.trapdoor(p.trapdoor(), out, true, false));
-                        v.set(ox, y0 + 2, oz, B.id(rng.pick(POTS)));
+                        if (v.isSolid(ox, y0, oz)) {
+                            // Kasten steht auf festem Grund: Klappe als Boden, Topf darauf
+                            v.set(ox, y0 + 1, oz, B.trapdoor(p.trapdoor(), out, true, false));
+                            v.set(ox, y0 + 2, oz, B.id(rng.pick(POTS)));
+                        } else {
+                            // oberes Geschoss ohne Auflage: aufgeklappte Klappe als Fensterbrett an der Wand, kein Topf
+                            v.set(ox, y0 + 1, oz, B.trapdoor(p.trapdoor(), out, false, true));
+                        }
                     }
                     // Vordach über dem Fenster
                     if (k < maxK - 1 && rng.chance(0.5)) setFree(ox, yHi + 1, oz, B.trapdoor(p.trapdoor(), out, false, false));
@@ -432,7 +453,7 @@ final class FacadeDetail {
                 }
                 if (len < 2) continue;
                 for (int y = top; y > top - len; y--) v.set(ox, y, oz, B.with("vine", out.opposite().id(), "true"));
-                v.set(ox, 1, oz, B.leaves(B.id(rng.chance(0.5) ? p.leaves() : "flowering_azalea_leaves")));
+                if (top - len == 1) v.set(ox, 1, oz, B.leaves(B.id(rng.chance(0.5) ? p.leaves() : "flowering_azalea_leaves")));
                 count++;
             }
     }
