@@ -1,5 +1,5 @@
 MODEL CHECK: 0 problem(s)
-scene built at 9, -60, -4
+scene built at -7, -60, 6
 screenshot: Saved screenshot as showcase_1_uebersicht.png
 screenshot: Saved screenshot as showcase_2_pferdekopfpumpe.png
 screenshot: Saved screenshot as showcase_3_rechenzentrum.png
