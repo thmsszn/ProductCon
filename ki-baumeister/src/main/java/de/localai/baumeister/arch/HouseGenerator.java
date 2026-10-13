@@ -55,7 +55,7 @@ final class HouseGenerator {
     }
 
     private String groundBlock() {
-        return spec.style() == Palette.Style.DESERT ? "sand" : "grass_block";
+        return spec.style().sandy() ? "sand" : "grass_block";
     }
 
     // ------------------------------------------------------------------ Grundriss

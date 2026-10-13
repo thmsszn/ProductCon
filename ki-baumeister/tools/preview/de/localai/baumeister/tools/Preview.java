@@ -66,7 +66,7 @@ public final class Preview {
     private static void fuzz(int n) {
         Random r = new Random(42);
         String[] types = {"house", "cottage", "mansion", "tavern", "barn", "modern_house", "tower", "lighthouse", "castle", "temple", "church", "custom"};
-        String[] styles = {"medieval", "rustic", "nordic", "fantasy", "victorian", "japanese", "desert", "modern", "classical", "stone"};
+        String[] styles = {"medieval", "rustic", "nordic", "fantasy", "victorian", "japanese", "desert", "modern", "classical", "stone", "viking", "gothic", "steampunk", "oriental"};
         String[] roofs = {"gable", "hip", "flat", "cone"};
         int failures = 0;
         for (int i = 0; i < n; i++) {

@@ -55,7 +55,7 @@ final class FreeBuilder {
     }
 
     Voxels build() {
-        s.clearSite(spec.style() == Palette.Style.DESERT ? "sand" : "grass_block");
+        s.clearSite(spec.style().sandy() ? "sand" : "grass_block");
         if (!plan()) return new HouseGenerator(s).build();
         shell();
         windows();

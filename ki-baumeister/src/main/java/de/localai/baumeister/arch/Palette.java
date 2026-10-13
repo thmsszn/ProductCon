@@ -31,20 +31,30 @@ public record Palette(
     public enum Roof { GABLE, HIP, FLAT, CONE }
 
     public enum Style {
-        MEDIEVAL, RUSTIC, NORDIC, FANTASY, VICTORIAN, JAPANESE, DESERT, MODERN, CLASSICAL, STONE;
+        MEDIEVAL, RUSTIC, NORDIC, FANTASY, VICTORIAN, JAPANESE, DESERT, MODERN, CLASSICAL, STONE,
+        VIKING, GOTHIC, STEAMPUNK, ORIENTAL;
+
+        /** Sandiger Untergrund (Wüste und Palast) statt Gras. */
+        public boolean sandy() {
+            return this == DESERT || this == ORIENTAL;
+        }
 
         public static Style parse(String s) {
             if (s == null) return MEDIEVAL;
             return switch (s.trim().toLowerCase(Locale.ROOT)) {
                 case "rustic", "rustikal", "farm", "country" -> RUSTIC;
-                case "nordic", "viking", "scandinavian", "nordisch" -> NORDIC;
+                case "nordic", "scandinavian", "nordisch" -> NORDIC;
+                case "viking", "wikinger", "norse" -> VIKING;
+                case "gothic", "gotisch", "dark", "dark_fantasy" -> GOTHIC;
+                case "steampunk", "industrial", "dampf" -> STEAMPUNK;
+                case "oriental", "orientalisch", "palace", "palast", "arabian", "persian", "moorish", "middle_eastern", "arabic" -> ORIENTAL;
                 case "fantasy", "magic", "elven", "fairy" -> FANTASY;
                 case "victorian", "viktorianisch", "colonial" -> VICTORIAN;
-                case "japanese", "asian", "japanisch", "chinese", "oriental" -> JAPANESE;
-                case "desert", "wüste", "middle_eastern", "arabic", "mediterranean" -> DESERT;
+                case "japanese", "asian", "japanisch", "chinese" -> JAPANESE;
+                case "desert", "wüste", "mediterranean" -> DESERT;
                 case "modern", "contemporary", "minimal", "futuristic" -> MODERN;
                 case "classical", "greek", "roman", "antik", "ancient" -> CLASSICAL;
-                case "stone", "castle", "gothic", "fortress" -> STONE;
+                case "stone", "castle", "fortress" -> STONE;
                 default -> MEDIEVAL;
             };
         }
@@ -97,6 +107,25 @@ public record Palette(
                 spruce, Materials.family("deepslate_tile"), Materials.family("stone_brick"), "glass_pane",
                 "dark_oak_door", "dark_oak_trapdoor", "dark_oak_fence", "lantern", "cobblestone", "gravel",
                 "mossy_stone_bricks", "red_carpet", "red", "oak_leaves", false, false, false, 5, Roof.GABLE);
+            case VIKING -> new Palette("mossy_cobblestone", "cobblestone", "dark_oak_planks", "spruce_log",
+                spruce, spruce, darkOak, "glass_pane", "spruce_door", "spruce_trapdoor",
+                "spruce_fence", "lantern", "cobblestone", "coarse_dirt", "moss_block", "red_carpet", "red",
+                "spruce_leaves", true, false, false, 4, Roof.GABLE);
+            case GOTHIC -> new Palette("polished_blackstone", "deepslate_bricks", "deepslate_bricks", "polished_blackstone",
+                Materials.family("polished_deepslate"), Materials.family("blackstone"), Materials.family("polished_blackstone_brick"),
+                "purple_stained_glass_pane", "dark_oak_door", "dark_oak_trapdoor", "dark_oak_fence", "soul_lantern",
+                "polished_blackstone_bricks", "gravel", "cracked_deepslate_bricks", "black_carpet", "black",
+                "spruce_leaves", false, false, false, 5, Roof.GABLE);
+            case STEAMPUNK -> new Palette("polished_andesite", "waxed_exposed_cut_copper", "waxed_exposed_cut_copper", "polished_basalt",
+                Materials.family("dark_oak"), Materials.family("waxed_oxidized_cut_copper"), Materials.family("waxed_cut_copper"),
+                "orange_stained_glass_pane", "dark_oak_door", "iron_trapdoor", "dark_oak_fence", "lantern",
+                "bricks", "gravel", "copper_block", "gray_carpet", "orange", "oak_leaves",
+                false, false, false, 4, Roof.HIP);
+            case ORIENTAL -> new Palette("cut_sandstone", "white_terracotta", "white_terracotta", "cut_sandstone",
+                Materials.family("acacia"), Materials.family("waxed_oxidized_cut_copper"), Materials.family("smooth_red_sandstone"),
+                "light_blue_stained_glass_pane", "acacia_door", "acacia_trapdoor", "acacia_fence", "lantern",
+                "sandstone", "sand", "blue_terracotta", "blue_carpet", "cyan", "acacia_leaves",
+                false, false, false, 5, Roof.HIP);
         };
     }
 

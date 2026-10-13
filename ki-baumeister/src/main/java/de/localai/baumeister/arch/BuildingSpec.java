@@ -217,7 +217,7 @@ public record BuildingSpec(
         props.add("summary", prop("string", null));
         props.add("type", prop("string", enumValues(Type.values())));
         props.add("style", prop("string", List.of("medieval", "rustic", "nordic", "fantasy", "victorian", "japanese",
-            "desert", "modern", "classical", "stone", "viking", "gothic")));
+            "desert", "modern", "classical", "stone", "viking", "gothic", "steampunk", "oriental")));
         props.add("floors", prop("integer", null));
         props.add("roof", prop("string", List.of("gable", "hip", "flat", "cone")));
         props.add("wall", prop("string", Materials.WALLS));

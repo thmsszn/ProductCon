@@ -26,6 +26,10 @@ final class Layouts {
         }
         if (spec.style() == Palette.Style.NORDIC) pool.addAll(List.of(Kind.LONGHOUSE, Kind.LONGHOUSE, Kind.LONGHOUSE));
         if (spec.style() == Palette.Style.JAPANESE) pool.addAll(List.of(Kind.L_SHAPE, Kind.U_SHAPE, Kind.LONGHOUSE));
+        if (spec.style() == Palette.Style.VIKING) pool.addAll(List.of(Kind.LONGHOUSE, Kind.LONGHOUSE, Kind.LONGHOUSE, Kind.T_SHAPE));
+        if (spec.style() == Palette.Style.GOTHIC) pool.addAll(List.of(Kind.CROSS, Kind.CROSS, Kind.ANNEX_TOWER, Kind.ANNEX_TOWER));
+        if (spec.style() == Palette.Style.ORIENTAL) pool.addAll(List.of(Kind.U_SHAPE, Kind.ANNEX_TOWER, Kind.STEPPED, Kind.CROSS));
+        if (spec.style() == Palette.Style.STEAMPUNK) pool.addAll(List.of(Kind.ANNEX_TOWER, Kind.ANNEX_TOWER, Kind.STEPPED));
         return rng.pick(pool);
     }
 
