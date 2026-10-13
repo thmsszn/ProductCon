@@ -30,6 +30,13 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // Builds a demo scene with every machine, takes screenshots into run/screenshots and quits (used by CI).
+        showcaseClient {
+            client()
+            systemProperty 'crudecompute.showcase', 'true'
+            programArguments.addAll '--width', '1600', '--height', '900'
+        }
+
         server {
             server()
             programArgument '--nogui'

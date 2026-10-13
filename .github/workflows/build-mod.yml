@@ -27,7 +27,6 @@ jobs:
         run: ./gradlew build --stacktrace --no-configuration-cache
 
       - name: Game-Tests auf einem Headless-Server ausführen
-        if: hashFiles('crude-and-compute/src/main/java/com/crudecompute/gametest/**') != ''
         run: ./gradlew runGameTestServer --no-configuration-cache
 
       - name: Mod-JAR als Download bereitstellen
@@ -35,3 +34,57 @@ jobs:
         with:
           name: crude-and-compute-mod
           path: crude-and-compute/build/libs/*.jar
+
+  # Startet den echten Minecraft-Client (Software-OpenGL), baut eine Demo-Szene, macht Screenshots
+  # und legt Screenshots + JAR im Branch ab. Läuft nur, wenn die Commit-Nachricht [showcase] enthält.
+  showcase:
+    needs: build
+    if: contains(github.event.head_commit.message, '[showcase]') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: crude-and-compute
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Software-OpenGL und virtuellen Bildschirm installieren
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 mesa-utils
+
+      - name: Mod bauen
+        run: ./gradlew build --no-configuration-cache
+
+      - name: Minecraft-Client starten und Screenshots machen
+        timeout-minutes: 25
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          MESA_GL_VERSION_OVERRIDE: "4.5"
+        run: |
+          xvfb-run -a -s "-screen 0 1600x900x24" ./gradlew runShowcaseClient --no-configuration-cache 2>&1 | tee showcase.log | grep -E "showcase|ERROR|Exception|Missing|missing" | head -200 || true
+          echo "----- Bericht -----"
+          cat run/showcase-report.txt || echo "kein Bericht"
+          ls -la run/screenshots || true
+
+      - name: Screenshots und JAR im Branch ablegen
+        run: |
+          mkdir -p docs/screenshots dist
+          cp run/screenshots/showcase_*.png docs/screenshots/ || true
+          rm -f dist/*.jar
+          cp build/libs/*.jar dist/
+          cp run/showcase-report.txt docs/screenshots/bericht.txt || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots dist
+          git commit -m "Mod-Screenshots und JAR aktualisiert [skip ci]" || echo "nichts zu committen"
+          git pull --rebase origin ${{ github.ref_name }} || true
+          git push

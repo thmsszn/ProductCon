@@ -7,3 +7,4 @@ out/
 *.iml
 tools/__pycache__/
 tools/preview/
+showcase.log

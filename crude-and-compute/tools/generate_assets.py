@@ -551,6 +551,34 @@ def empty_structure(size):
         f.write(buf.getvalue())
 
 
+def showcase(names, imgs):
+    """docs/modelle.png: labelled overview of all machines for the README."""
+    from PIL import Image, ImageDraw, ImageFont
+    cell, cols = 240, 5
+    rows = math.ceil(len(imgs) / cols)
+    sheet = Image.new("RGBA", (cols * cell, rows * (cell + 34) + 70), (30, 33, 40, 255))
+    draw = ImageDraw.Draw(sheet)
+    def load(size, bold=False):
+        for path in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                     "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf"):
+            if os.path.exists(path):
+                return ImageFont.truetype(path, size)
+        return ImageFont.load_default(size=size)
+
+    title_font = load(32, bold=True)
+    font = load(17)
+    draw.text((20, 16), "Crude & Compute – frei geformte 3D-Modelle", font=title_font, fill=(255, 196, 60, 255))
+    for i, (name, img) in enumerate(zip(names, imgs)):
+        x, y = (i % cols) * cell, 70 + (i // cols) * (cell + 34)
+        sheet.alpha_composite(img.resize((cell, cell), Image.LANCZOS), (x, y))
+        label = BLOCK_NAMES[name][1]
+        w = draw.textlength(label, font=font)
+        draw.text((x + (cell - w) / 2, y + cell + 4), label, font=font, fill=(220, 226, 236, 255))
+    out = os.path.join(HERE, "..", "docs", "modelle.png")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    sheet.convert("RGB").save(out, optimize=True)
+
+
 # =============================================================================== main
 def main(preview=False):
     tex_block = T.block_textures()
@@ -620,6 +648,7 @@ def main(preview=False):
         for i, img in enumerate(imgs):
             sheet.alpha_composite(img, ((i % cols) * 256, (i // cols) * 256))
         sheet.save(os.path.join(out, "_all_models.png"))
+        showcase(names, imgs)
         icons = Image.new("RGBA", (len(tex_item) * 72, 72), (40, 44, 52, 255))
         for i, (name, img) in enumerate(tex_item.items()):
             icons.alpha_composite(img.resize((64, 64), Image.NEAREST), (i * 72 + 4, 4))
