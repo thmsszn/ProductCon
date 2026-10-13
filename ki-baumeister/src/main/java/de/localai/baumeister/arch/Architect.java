@@ -30,15 +30,24 @@ public final class Architect {
             palette = palette.withRoof(roofFamily);
         }
         Site site = new Site(spec, palette, w, h, d);
+        if (!spec.parts().isEmpty() && spec.type() != BuildingSpec.Type.MODERN_HOUSE) return new FreeBuilder(site).build();
         return switch (spec.type()) {
             case TOWER, LIGHTHOUSE -> Generators.tower(site);
             case CASTLE -> Generators.castle(site);
             case TEMPLE -> Generators.temple(site);
             case CHURCH -> Generators.church(site);
             case MODERN_HOUSE -> Generators.modern(site);
-            default -> new HouseGenerator(site).build();
+            default -> useFree(spec) ? new FreeBuilder(site).build() : new HouseGenerator(site).build();
         };
     }
+
+    /** Wohnhaus-Typen: meist freier Grundriss, gelegentlich der klassische Rechteckbau. */
+    private static boolean useFree(BuildingSpec spec) {
+        if (spec.type() == BuildingSpec.Type.CUSTOM) return true;
+        return new Rng(spec.seed() * 13 + 5).nextInt(100) < FREE_SHARE;
+    }
+
+    static int FREE_SHARE = 75;
 
     /** Entwurf ohne KI aus Schlüsselwörtern (Fallback, wenn Ollama nicht erreichbar ist). */
     public static BuildingSpec fromKeywords(String prompt) {
@@ -87,7 +96,7 @@ public final class Architect {
         if (has(t, "fensterläden", "shutter")) features.add(BuildingSpec.Feature.SHUTTERS);
 
         String summary = prompt == null || prompt.isBlank() ? "Gebäude" : prompt.trim();
-        return new BuildingSpec(summary, type, style, floors, null, null, null, null, features, List.of(), summary.hashCode());
+        return new BuildingSpec(summary, type, style, floors, null, null, null, null, features, List.of(), summary.hashCode(), List.of());
     }
 
     private static boolean has(String text, String... words) {

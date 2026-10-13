@@ -65,7 +65,7 @@ public final class Preview {
     /** Viele zufällige Größen/Entwürfe: darf nie abstürzen und muss im Bauplatz bleiben. */
     private static void fuzz(int n) {
         Random r = new Random(42);
-        String[] types = {"house", "cottage", "mansion", "tavern", "barn", "modern_house", "tower", "lighthouse", "castle", "temple", "church"};
+        String[] types = {"house", "cottage", "mansion", "tavern", "barn", "modern_house", "tower", "lighthouse", "castle", "temple", "church", "custom"};
         String[] styles = {"medieval", "rustic", "nordic", "fantasy", "victorian", "japanese", "desert", "modern", "classical", "stone"};
         String[] roofs = {"gable", "hip", "flat", "cone"};
         int failures = 0;

@@ -25,10 +25,23 @@ public record BuildingSpec(
     String frame,
     Set<Feature> features,
     List<String> rooms,
-    long seed) {
+    long seed,
+    List<Part> parts) {
+
+    /**
+     * Ein Baukörper des freien Bauplans. Koordinaten in Prozent der nutzbaren Grundfläche
+     * (x von links, z von der Vorderseite), Größe ebenfalls in Prozent.
+     */
+    public record Part(String shape, int x, int z, int w, int d, int floors, int base, String roof) {
+        public boolean round() {
+            return "round".equals(shape);
+        }
+    }
+
+    public static final List<String> PART_ROOFS = List.of("gable", "hip", "flat", "cone", "dome");
 
     public enum Type {
-        HOUSE, COTTAGE, MANSION, TAVERN, BARN, MODERN_HOUSE, TOWER, LIGHTHOUSE, CASTLE, TEMPLE, CHURCH;
+        HOUSE, COTTAGE, MANSION, TAVERN, BARN, MODERN_HOUSE, TOWER, LIGHTHOUSE, CASTLE, TEMPLE, CHURCH, CUSTOM;
 
         public String id() { return name().toLowerCase(Locale.ROOT); }
 
@@ -37,6 +50,7 @@ public record BuildingSpec(
             String k = s.trim().toLowerCase(Locale.ROOT).replace(' ', '_').replace('-', '_');
             for (Type t : values()) if (t.id().equals(k)) return t;
             if (k.contains("modern") || k.contains("villa")) return MODERN_HOUSE;
+            if (k.contains("custom") || k.contains("free")) return CUSTOM;
             if (k.contains("light")) return LIGHTHOUSE;
             if (k.contains("tower") || k.contains("turm")) return TOWER;
             if (k.contains("castle") || k.contains("burg") || k.contains("fort")) return CASTLE;
@@ -71,7 +85,7 @@ public record BuildingSpec(
     }
 
     public BuildingSpec withSeed(long newSeed) {
-        return new BuildingSpec(summary, type, style, floors, roof, wall, roofMaterial, frame, features, rooms, newSeed);
+        return new BuildingSpec(summary, type, style, floors, roof, wall, roofMaterial, frame, features, rooms, newSeed, parts);
     }
 
     /** Liest die KI-Antwort tolerant ein (fehlende/unbekannte Werte bekommen sinnvolle Standards). */
@@ -125,7 +139,36 @@ public record BuildingSpec(
         summary = summary.replaceAll("\\s+", " ").trim();
         if (summary.length() > 200) summary = summary.substring(0, 200) + "…";
         return new BuildingSpec(summary, type, style, floors, roof, str(o, "wall"), str(o, "roof_material"),
-            str(o, "frame"), features, List.copyOf(rooms), summary.hashCode());
+            str(o, "frame"), features, List.copyOf(rooms), summary.hashCode(), parseParts(o));
+    }
+
+    private static int num(JsonObject p, String key, int def, int min, int max) {
+        JsonElement e = p.get(key);
+        int v = def;
+        if (e != null && e.isJsonPrimitive()) {
+            try { v = (int) Math.round(e.getAsDouble()); } catch (NumberFormatException ignored) {}
+        }
+        return Math.max(min, Math.min(max, v));
+    }
+
+    /** Liest die freien Baukörper; unbrauchbare Einträge werden übersprungen, höchstens 12. */
+    private static List<Part> parseParts(JsonObject o) {
+        List<Part> out = new ArrayList<>();
+        if (!o.has("parts") || !o.get("parts").isJsonArray()) return List.of();
+        for (JsonElement e : o.getAsJsonArray("parts")) {
+            if (!e.isJsonObject() || out.size() >= 12) continue;
+            JsonObject p = e.getAsJsonObject();
+            String shape = "round".equals(str(p, "shape")) ? "round" : "rect";
+            String roof = str(p, "roof");
+            if (roof != null) {
+                roof = roof.trim().toLowerCase(Locale.ROOT);
+                if (roof.equals("pyramid")) roof = "hip";
+                if (!PART_ROOFS.contains(roof)) roof = null;
+            }
+            out.add(new Part(shape, num(p, "x", 0, 0, 95), num(p, "z", 0, 0, 95), num(p, "w", 50, 8, 100),
+                num(p, "d", 50, 8, 100), num(p, "floors", 1, 1, 6), num(p, "base", 0, 0, 5), roof));
+        }
+        return List.copyOf(out);
     }
 
     private static String str(JsonObject o, String key) {
@@ -149,6 +192,22 @@ public record BuildingSpec(
         JsonArray r = new JsonArray();
         for (String room : rooms) r.add(room);
         o.add("rooms", r);
+        if (!parts.isEmpty()) {
+            JsonArray pa = new JsonArray();
+            for (Part part : parts) {
+                JsonObject po = new JsonObject();
+                po.addProperty("shape", part.shape());
+                po.addProperty("x", part.x());
+                po.addProperty("z", part.z());
+                po.addProperty("w", part.w());
+                po.addProperty("d", part.d());
+                po.addProperty("floors", part.floors());
+                po.addProperty("base", part.base());
+                if (part.roof() != null) po.addProperty("roof", part.roof());
+                pa.add(po);
+            }
+            o.add("parts", pa);
+        }
         return o;
     }
 
@@ -158,7 +217,7 @@ public record BuildingSpec(
         props.add("summary", prop("string", null));
         props.add("type", prop("string", enumValues(Type.values())));
         props.add("style", prop("string", List.of("medieval", "rustic", "nordic", "fantasy", "victorian", "japanese",
-            "desert", "modern", "classical", "stone")));
+            "desert", "modern", "classical", "stone", "viking", "gothic")));
         props.add("floors", prop("integer", null));
         props.add("roof", prop("string", List.of("gable", "hip", "flat", "cone")));
         props.add("wall", prop("string", Materials.WALLS));
@@ -172,6 +231,7 @@ public record BuildingSpec(
         rooms.addProperty("type", "array");
         rooms.add("items", prop("string", ROOMS));
         props.add("rooms", rooms);
+        props.add("parts", partsSchema());
         JsonObject root = new JsonObject();
         root.addProperty("type", "object");
         root.add("properties", props);
@@ -181,6 +241,23 @@ public record BuildingSpec(
         }
         root.add("required", required);
         return root;
+    }
+
+    private static JsonObject partsSchema() {
+        JsonObject item = new JsonObject();
+        item.addProperty("type", "object");
+        JsonObject ip = new JsonObject();
+        ip.add("shape", prop("string", List.of("rect", "round")));
+        for (String k : List.of("x", "z", "w", "d", "floors", "base")) ip.add(k, prop("integer", null));
+        ip.add("roof", prop("string", PART_ROOFS));
+        item.add("properties", ip);
+        JsonArray req = new JsonArray();
+        for (String k : List.of("shape", "x", "z", "w", "d", "floors", "roof")) req.add(k);
+        item.add("required", req);
+        JsonObject arr = new JsonObject();
+        arr.addProperty("type", "array");
+        arr.add("items", item);
+        return arr;
     }
 
     private static List<String> enumValues(Enum<?>[] values) {

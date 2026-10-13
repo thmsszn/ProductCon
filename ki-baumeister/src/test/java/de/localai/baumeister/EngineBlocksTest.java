@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
  */
 class EngineBlocksTest {
     private static final String[] TYPES = {"house", "cottage", "mansion", "tavern", "barn", "modern_house", "tower",
-        "lighthouse", "castle", "temple", "church"};
+        "lighthouse", "castle", "temple", "church", "custom"};
     private static final String[] STYLES = {"medieval", "rustic", "nordic", "fantasy", "victorian", "japanese", "desert",
         "modern", "classical", "stone"};
     private static final String[] ROOFS = {"gable", "hip", "flat", "cone"};

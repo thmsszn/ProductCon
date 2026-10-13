@@ -217,6 +217,7 @@ public final class Session {
             case CASTLE -> "Burg";
             case TEMPLE -> "Tempel";
             case CHURCH -> "Kirche";
+            case CUSTOM -> "Gebäude";
         };
     }
 
