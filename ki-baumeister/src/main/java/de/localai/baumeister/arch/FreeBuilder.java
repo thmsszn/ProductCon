@@ -17,6 +17,7 @@ final class FreeBuilder {
         boolean round, ridgeX;
         double cx, cz, r;
         String roof;
+        Dir shedHigh;
 
         boolean contains(int x, int z) {
             if (!round) return x >= x0 && x <= x1 && z >= z0 && z <= z1;
@@ -71,8 +72,10 @@ final class FreeBuilder {
         ladders();
         roofs();
         roofDetails();
+        if (split) splitPre();
         furnish();
         exterior();
+        if (split) splitGarden();
         if (stone) stoneExterior();
         return v;
     }
@@ -83,6 +86,7 @@ final class FreeBuilder {
         if (!spec.parts().isEmpty()) return spec.parts();
         Rng r = new Rng(spec.seed() * 7 + 3);
         Layouts.Kind kind = Layouts.pick(spec, r);
+        split = kind.split();
         return Layouts.parts(spec, kind, r);
     }
 
@@ -101,6 +105,7 @@ final class FreeBuilder {
         return switch (roof) {
             case "flat" -> 2;
             case "hip" -> Math.min((span + 2) / 2 + 1, 6);
+            case "shed" -> 3;
             default -> ((q.ridgeX ? q.z1 - q.z0 : q.x1 - q.x0) + 3) / 2 + 2;
         };
     }
@@ -117,6 +122,10 @@ final class FreeBuilder {
 
         String defRoof = defaultRoof();
         List<BuildingSpec.Part> src = source();
+        if (split && (uw < 13 || ud < 13)) {
+            split = false;
+            src = Layouts.parts(spec, Layouts.Kind.L_SHAPE, new Rng(spec.seed() * 7 + 4));
+        }
         for (BuildingSpec.Part part : src) {
             Vol q = new Vol();
             int w = Math.min(uw, Math.max(5, Math.round(part.w() * uw / 100f)));
@@ -197,6 +206,7 @@ final class FreeBuilder {
             }
             placed.add(q);
         }
+        if (split) snapSheds();
         maxK = 0;
         for (Vol q : vols) maxK = Math.max(maxK, q.top());
         if (maxK * fh + 3 > H - 1) return false;
@@ -216,9 +226,14 @@ final class FreeBuilder {
                     }
                 }
         }
+        if (split) {
+            jetty();
+            sheds();
+        }
         wallB = p.wall();
         groundWallB = p.groundWall();
         frameB = p.frame();
+        if (split) splitMaterials();
         detectStone();
         return true;
     }
@@ -283,8 +298,8 @@ final class FreeBuilder {
                         }
                         boolean post = !clean && (corner || (p.timber() && !noTimber && Math.floorMod(t, 4) == 0));
                         if (post) v.set(x, y, z, B.axis(frameB, 'y'));
-                        else if (k == 0 && y == 1) v.set(x, y, z, s.vary(groundWallB));
-                        else v.set(x, y, z, s.vary(wallB));
+                        else if (k == 0 && (y == 1 || split)) v.set(x, y, z, s.vary(groundWallB));
+                        else v.set(x, y, z, s.vary(split ? wallOf(k) : wallB));
                     }
                     if (!inLev(k + 1, x, z)) {
                         int yt = (k + 1) * fh;
@@ -599,6 +614,7 @@ final class FreeBuilder {
             switch (q.roof) {
                 case "flat" -> parapet(q, yt);
                 case "hip" -> hip(q, yt);
+                case "shed" -> shed(q, yt);
                 case "cone" -> cone(q, yt, true);
                 case "dome" -> cone(q, yt, false);
                 default -> gable(q, yt);
@@ -639,8 +655,8 @@ final class FreeBuilder {
                     }
                 }
                 if (i >= 1) for (int z = za + 1; z < zb; z++) {
-                    place(q.x0, y - 1, z, s.vary(wallB));
-                    place(q.x1, y - 1, z, s.vary(wallB));
+                    place(q.x0, y - 1, z, s.vary(wallAt(q)));
+                    place(q.x1, y - 1, z, s.vary(wallAt(q)));
                 }
             }
         } else {
@@ -657,8 +673,8 @@ final class FreeBuilder {
                     }
                 }
                 if (i >= 1) for (int x = xa + 1; x < xb; x++) {
-                    place(x, y - 1, q.z0, s.vary(wallB));
-                    place(x, y - 1, q.z1, s.vary(wallB));
+                    place(x, y - 1, q.z0, s.vary(wallAt(q)));
+                    place(x, y - 1, q.z1, s.vary(wallAt(q)));
                 }
             }
         }
@@ -672,15 +688,15 @@ final class FreeBuilder {
             int half = (q.z1 - q.z0) / 2;
             for (int i = 1; i <= half; i++)
                 for (int z = q.z0 + i; z <= q.z1 - i; z++) {
-                    place(q.x0, yt + i, z, s.vary(wallB));
-                    place(q.x1, yt + i, z, s.vary(wallB));
+                    place(q.x0, yt + i, z, s.vary(wallAt(q)));
+                    place(q.x1, yt + i, z, s.vary(wallAt(q)));
                 }
         } else {
             int half = (q.x1 - q.x0) / 2;
             for (int i = 1; i <= half; i++)
                 for (int x = q.x0 + i; x <= q.x1 - i; x++) {
-                    place(x, yt + i, q.z0, s.vary(wallB));
-                    place(x, yt + i, q.z1, s.vary(wallB));
+                    place(x, yt + i, q.z0, s.vary(wallAt(q)));
+                    place(x, yt + i, q.z1, s.vary(wallAt(q)));
                 }
         }
     }
@@ -770,7 +786,8 @@ final class FreeBuilder {
     }
 
     private boolean gableVol(Vol q) {
-        return !q.round && !q.roof.equals("flat") && !q.roof.equals("hip") && !q.roof.equals("cone") && !q.roof.equals("dome");
+        return !q.round && !q.roof.equals("flat") && !q.roof.equals("hip") && !q.roof.equals("cone") && !q.roof.equals("dome")
+            && !q.roof.equals("shed");
     }
 
     /** Höchster belegter Dach-Block eines Giebeldachs (Firstplatte eingerechnet). */
@@ -1481,6 +1498,478 @@ final class FreeBuilder {
                         dx = 2;
                         break;
                     }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Gestaffeltes Fachwerkhaus
+    // Steinsockel, Holzobergeschosse mit Überhang, Pultdach-Anbau, Außentreppe mit Balkon und kleiner Garten.
+
+    /** Layout mit Steinsockel/Überhang/Außentreppe (siehe {@link Layouts.Kind#split()}). */
+    private boolean split;
+    private String upperB;
+
+    /** Stein im Erdgeschoss, Putz/Wand im ersten, Holz im obersten Geschoss. */
+    private void splitMaterials() {
+        String g = B.name(groundWallB);
+        if (g.endsWith("_planks") || g.endsWith("_log") || g.equals(B.name(wallB))) {
+            groundWallB = stoneLike(p.foundation()) ? B.id(p.foundation()) : B.id("stone_bricks");
+        }
+        String top = B.id(p.floor().block());
+        upperB = top.equals(B.id(wallB)) ? B.id(wallB) : top;
+    }
+
+    private String wallOf(int k) {
+        return k == 0 ? groundWallB : k >= 2 ? upperB : wallB;
+    }
+
+    /** Wandbaustoff für Giebelfüllungen: das Geschoss unter dem Dach. */
+    private String wallAt(Vol q) {
+        return split ? wallOf(q.top() - 1) : wallB;
+    }
+
+    /** Pultdach-Anbauten schließen bündig an den höheren Nachbarn an (Prozent-Rundung kann Lücken lassen). */
+    private void snapSheds() {
+        for (Vol q : vols) {
+            if (q.round || !q.roof.equals("shed")) continue;
+            int ox0 = q.x0, ox1 = q.x1, oz0 = q.z0, oz1 = q.z1;
+            for (Vol o : vols) {
+                if (o == q || o.round || o.b != 0 || o.top() <= q.top() || o.roof.equals("shed")) continue;
+                boolean zOv = q.z0 <= o.z1 && q.z1 >= o.z0, xOv = q.x0 <= o.x1 && q.x1 >= o.x0;
+                if (zOv && q.x0 < o.x0 && q.x1 >= o.x0 - 3) q.x1 = o.x0 - 1;
+                else if (zOv && q.x1 > o.x1 && q.x0 <= o.x1 + 3) q.x0 = o.x1 + 1;
+                else if (xOv && q.z0 < o.z0 && q.z1 >= o.z0 - 3) q.z1 = o.z0 - 1;
+                else if (xOv && q.z1 > o.z1 && q.z0 <= o.z1 + 3) q.z0 = o.z1 + 1;
+            }
+            if (q.x1 - q.x0 < 2 || q.z1 - q.z0 < 2) {
+                q.x0 = ox0;
+                q.x1 = ox1;
+                q.z0 = oz0;
+                q.z1 = oz1;
+            }
+        }
+    }
+
+    /** Überhang: das Erdgeschoss des ersten Baukörpers wird an einer oder zwei freien Seiten um 1 Block zurückgesetzt. */
+    private void jetty() {
+        Vol m = vols.get(0);
+        if (m.round || m.b != 0 || m.n < 2 || m.x1 - m.x0 < 6 || m.z1 - m.z0 < 6 || maxK < 2) return;
+        List<Dir> free = new ArrayList<>();
+        for (Dir d : Dir.values()) if (d != Dir.SOUTH && jettySide(m, d)) free.add(d);
+        if (free.isEmpty()) return;
+        List<Dir> use = new ArrayList<>();
+        use.add(free.contains(Dir.NORTH) ? Dir.NORTH : rng.pick(free));
+        List<Dir> rest = new ArrayList<>(free);
+        rest.removeAll(use);
+        if (!rest.isEmpty() && rng.chance(0.55)) use.add(rng.pick(rest));
+        for (Dir d : use) {
+            for (int x = m.x0; x <= m.x1; x++)
+                for (int z = m.z0; z <= m.z1; z++) {
+                    if (edgeOf(m, x, z, d)) lev[0][x][z] = false;
+                }
+        }
+    }
+
+    private static boolean edgeOf(Vol m, int x, int z, Dir d) {
+        return switch (d) {
+            case NORTH -> z == m.z0;
+            case SOUTH -> z == m.z1;
+            case WEST -> x == m.x0;
+            case EAST -> x == m.x1;
+        };
+    }
+
+    /** Eine Seite darf überhängen, wenn dort nichts anderes im Erdgeschoss anschließt und das Obergeschoss darüber steht. */
+    private boolean jettySide(Vol m, Dir d) {
+        for (int x = m.x0; x <= m.x1; x++)
+            for (int z = m.z0; z <= m.z1; z++) {
+                if (!edgeOf(m, x, z, d)) continue;
+                if (!inLev(0, x, z) || !inLev(1, x, z) || inLev(0, x + d.dx, z + d.dz)) return false;
+                for (Vol o : vols) if (o != m && o.b == 0 && o.contains(x, z)) return false;
+            }
+        return true;
+    }
+
+    /** Pultdächer: Hochseite = Seite mit höherer Nachbarwand; ohne Anschluss wird ein Giebeldach daraus. */
+    private void sheds() {
+        for (Vol q : vols) {
+            if (!q.roof.equals("shed")) continue;
+            int best = 0;
+            q.shedHigh = null;
+            for (Dir d : Dir.values()) {
+                int cnt = 0, len = 0;
+                for (int x = q.x0; x <= q.x1; x++)
+                    for (int z = q.z0; z <= q.z1; z++) {
+                        if (!edgeOf(q, x, z, d)) continue;
+                        len++;
+                        if (inLev(q.top(), x + d.dx, z + d.dz)) cnt++;
+                    }
+                if (cnt >= 3 && cnt * 2 >= len && cnt > best) {
+                    best = cnt;
+                    q.shedHigh = d;
+                }
+            }
+            if (q.shedHigh == null) q.roof = "gable";
+        }
+    }
+
+    /** Anbau-Dächer in Holz (Kontrast zum Hauptdach), sonst die Dachfamilie. */
+    private Materials.Family shedFam() {
+        return B.name(p.trim().block()).endsWith("_planks") ? p.trim() : p.roof();
+    }
+
+    /** Pultdach: Zeilen von der Traufe (außen, mit Überstand) bis zur Nachbarwand; flach auslaufend, wenn die Wand zu niedrig ist. */
+    private void shed(Vol q, int yt) {
+        Materials.Family r = shedFam();
+        Dir hi = q.shedHigh;
+        boolean alongX = hi.dx != 0, up = hi.dx > 0 || hi.dz > 0;
+        int d0 = alongX ? q.x0 : q.z0, d1 = alongX ? q.x1 : q.z1;
+        int l0 = alongX ? q.z0 : q.x0, l1 = alongX ? q.z1 : q.x1;
+        int nbTop = 0;
+        for (int l = l0; l <= l1; l++) {
+            int ex = alongX ? (up ? q.x1 : q.x0) : l, ez = alongX ? l : (up ? q.z1 : q.z0);
+            for (int k = maxK - 1; k >= 0; k--) {
+                if (inLev(k, ex + hi.dx, ez + hi.dz)) {
+                    nbTop = Math.max(nbTop, (k + 1) * fh);
+                    break;
+                }
+            }
+        }
+        int cap = Math.max(2, nbTop - 1 - yt);
+        int n = d1 - d0 + 2;
+        boolean steep = n <= cap;
+        String slab = B.slab(r, false), blk = B.id(r.block()), stair = B.stairs(r, hi, false);
+        for (int i = 0; i < n; i++) {
+            int c = up ? d0 - 1 + i : d1 + 1 - i;
+            int lvl = steep ? 1 + i : 1 + i / 2;
+            String st = steep || i % 2 == 1 ? stair : slab;
+            if (lvl > cap) {
+                lvl = cap;
+                st = blk;
+            }
+            int y = yt + lvl;
+            for (int l = l0 - 1; l <= l1 + 1; l++) place(alongX ? c : l, y, alongX ? l : c, st);
+            if (i == 0) continue;
+            for (int yy = yt + 1; yy < y; yy++)
+                for (int l : new int[] {l0, l1}) place(alongX ? c : l, yy, alongX ? l : c, s.vary(wallAt(q)));
+        }
+    }
+
+    private void splitPre() {
+        jettySupports();
+        upperDoor();
+    }
+
+    /** Konsolen (umgedrehte Treppen) unter dem Überhang, an den Enden Holzpfosten bis zum Boden. */
+    private void jettySupports() {
+        String post = B.axis(frameB, 'y');
+        for (int k = 1; k < maxK; k++) {
+            int y0 = k * fh;
+            for (int x = 0; x < W; x++)
+                for (int z = 0; z < D; z++) {
+                    if (!inLev(k, x, z) || inLev(k - 1, x, z)) continue;
+                    if (doorX >= 0 && Math.abs(x - doorX) + Math.abs(z - doorZ) <= 3) continue;
+                    Dir sup = null;
+                    int oh = 0;
+                    for (Dir d : Dir.values()) {
+                        if (inLev(k - 1, x + d.dx, z + d.dz)) {
+                            if (sup == null) sup = d;
+                        } else if (inLev(k, x + d.dx, z + d.dz)) {
+                            oh++;
+                        }
+                    }
+                    if (sup == null || oh <= 1) {
+                        for (int y = 1; y < y0; y++) v.setIfEmpty(x, y, z, post);
+                    } else if (((x + z) & 1) == 0) {
+                        v.setIfEmpty(x, y0 - 1, z, B.stairs(p.trim(), sup, true));
+                    }
+                }
+        }
+    }
+
+    /** Freie Zelle im Garten für Treppe/Balkon: Wiese, außerhalb des Hauses, bis yTop frei (Pflanzen zählen als frei). */
+    private boolean outsideFree(int x, int z, int yTop) {
+        if (!v.in(x, yTop, z) || inLevAny(x, z) || s.isReserved(x, 1, z)) return false;
+        String g = v.get(x, 0, z);
+        if (g == null || !B.name(g).equals("grass_block")) return false;
+        for (int y = 1; y <= yTop; y++) {
+            String at = v.get(x, y, z);
+            if (at != null && !B.isAir(at) && !B.isPlant(B.name(at)) && !B.name(at).endsWith("_trapdoor")) return false;
+        }
+        return true;
+    }
+
+    private static final List<String> POT_FLOWERS = List.of("poppy", "cornflower", "azure_bluet", "red_tulip", "allium",
+        "dandelion", "oxeye_daisy", "pink_tulip", "lily_of_the_valley");
+
+    private String pot() {
+        return B.id("potted_" + rng.pick(POT_FLOWERS));
+    }
+
+    /**
+     * Außentreppe an einer Wand des ersten Obergeschosses: Tür zum Balkon, Balkon mit Geländer und Pultdach auf zwei
+     * Pfosten, Treppenlauf entlang der Wand mit Geländer, Blumentöpfe und Pflanzkübel.
+     */
+    private void upperDoor() {
+        if (maxK < 2 || doorX < 0 || fh + 6 >= H) return;
+        int bestScore = Integer.MIN_VALUE;
+        int[] pick = null;
+        for (int x = 0; x < W; x++)
+            for (int z = 0; z < D; z++) {
+                if (!inLev(1, x, z) || !inLev(0, x, z)) continue;
+                int mask = openMask(1, x, z);
+                if (Integer.bitCount(mask) != 1 || openMask(0, x, z) != mask) continue;
+                Dir out = Dir.values()[Integer.numberOfTrailingZeros(mask)];
+                int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+                if (!straight(1, x - ax, z - az, mask) || !straight(1, x + ax, z + az, mask)) continue;
+                if (!straight(0, x - ax, z - az, mask) || !straight(0, x + ax, z + az, mask)) continue;
+                if (out == doorDir && Math.abs((x - doorX) * ax + (z - doorZ) * az) < 5) continue;
+                // hinter der Tür muss begehbarer Boden liegen (kein Treppenausschnitt)
+                int ix = x - out.dx, iz = z - out.dz;
+                if (stairMark[1][ix][iz] != 0 || !v.isSolid(ix, fh, iz) || !v.isEmpty(ix, fh + 1, iz)) continue;
+                for (int sg = -1; sg <= 1; sg += 2) {
+                    if (!upperBoxFree(x, z, out, sg)) continue;
+                    int score = (out == doorDir ? 12 : out == doorDir.opposite() ? 0 : 10) + rng.nextInt(10);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        pick = new int[] {x, z, out.ordinal(), sg};
+                    }
+                }
+            }
+        if (pick == null) return;
+        int x = pick[0], z = pick[1], sg = pick[3];
+        Dir out = Dir.values()[pick[2]];
+        int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+        int lx = ax * sg, lz = az * sg;
+        String fence = B.id(p.fence());
+        String post = B.axis(frameB, 'y');
+        int yF = fh;
+        // Platz räumen und reservieren
+        for (int o = -2; o <= 2 + fh; o++)
+            for (int dep = 1; dep <= 3; dep++) {
+                int cx = x + lx * o + out.dx * dep, cz = z + lz * o + out.dz * dep;
+                for (int y = 1; y <= yF + 5; y++) {
+                    if (dep <= 2) {
+                        String nm = nameAt(cx, y, cz);
+                        if (nm.endsWith("_trapdoor") || B.isPlant(nm)) v.set(cx, y, cz, B.AIR);
+                    }
+                    s.reserve(cx, y, cz);
+                }
+            }
+        // Tür, Sturz und freier Zugang dahinter
+        v.set(x, yF + 1, z, B.door(p.door(), out.opposite(), false));
+        v.set(x, yF + 2, z, B.AIR);
+        if (fh >= 4) v.set(x, yF + 3, z, B.id(p.trim().block()));
+        for (int y = yF + 1; y <= yF + 2; y++) s.reserve(x - out.dx, y, z - out.dz);
+        // Balkonboden auf zwei Pfosten
+        for (int o = -1; o <= 1; o++)
+            for (int dep = 1; dep <= 2; dep++) v.set(x + lx * o + out.dx * dep, yF, z + lz * o + out.dz * dep, B.id(p.floor().block()));
+        for (int o : new int[] {-1, 1}) {
+            int cx = x + lx * o + out.dx * 2, cz = z + lz * o + out.dz * 2;
+            for (int y = 1; y < yF; y++) v.set(cx, y, cz, post);
+            for (int y = yF + 1; y <= yF + 3; y++) v.set(cx, y, cz, fence);
+        }
+        v.set(x + out.dx * 2, yF + 1, z + out.dz * 2, fence);
+        v.set(x - lx + out.dx, yF + 1, z - lz + out.dz, fence);
+        v.set(x - lx + out.dx, yF + 2, z - lz + out.dz, pot());
+        // Treppenlauf entlang der Wand, Geländer außen
+        Dir face = dirOf(-lx, -lz);
+        for (int j = 0; j < fh; j++) {
+            int o = 2 + (fh - 1 - j);
+            v.set(x + lx * o + out.dx, 1 + j, z + lz * o + out.dz, B.stairs(p.floor(), face, false));
+            v.set(x + lx * o + out.dx * 2, 2 + j, z + lz * o + out.dz * 2, fence);
+        }
+        int fo = 1 + fh;
+        int fx = x + lx * fo + out.dx * 2, fz = z + lz * fo + out.dz * 2;
+        v.set(fx, 1, fz, fence);
+        v.set(fx, 3, fz, pot());
+        for (int y = 1; y <= yF; y++) v.set(x + lx * 2 + out.dx * 2, y, z + lz * 2 + out.dz * 2, fence);
+        // Pflanzkübel am Fuß der Treppe
+        int bx = x + lx * (fo + 1) + out.dx * 2, bz = z + lz * (fo + 1) + out.dz * 2;
+        String bg = v.get(bx, 0, bz);
+        if (v.isEmpty(bx, 1, bz) && v.isEmpty(bx, 2, bz) && bg != null && B.name(bg).equals("grass_block") && !inLevAny(bx, bz)) {
+            v.set(bx, 1, bz, B.with("barrel", "facing", "up", "open", "false"));
+            v.set(bx, 2, bz, pot());
+        }
+        // Pultdach über dem Balkon (Traufe außen, steigt zur Wand), Laterne darunter
+        String roofStair = B.stairs(shedFam(), out.opposite(), false);
+        for (int dep = 3; dep >= 1; dep--)
+            for (int o = -2; o <= 2; o++) place(x + lx * o + out.dx * dep, yF + 6 - dep, z + lz * o + out.dz * dep, roofStair);
+        v.set(x + out.dx * 2, yF + 3, z + out.dz * 2, B.lantern(p.light(), true));
+    }
+
+    private boolean upperBoxFree(int x, int z, Dir out, int sg) {
+        int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+        int lx = ax * sg, lz = az * sg;
+        for (int o = -2; o <= 2 + fh; o++)
+            for (int dep = 1; dep <= 3; dep++) {
+                int cx = x + lx * o + out.dx * dep, cz = z + lz * o + out.dz * dep;
+                if (dep == 3 && (o < -2 || o > 2)) continue;
+                if (!v.in(cx, fh + 5, cz) || inLevAny(cx, cz)) return false;
+                if (dep <= 2 && !outsideFree(cx, cz, o >= -2 && o <= 2 ? fh + 3 : fh)) return false;
+            }
+        return true;
+    }
+
+    // ------------------------------------------------------------------ Garten (Beete, Bänke, Tisch)
+
+    private boolean gardenCell(int x, int z) {
+        if (!v.in(x, 3, z) || s.isReserved(x, 1, z) || inLevAny(x, z)) return false;
+        String g = v.get(x, 0, z);
+        if (g == null || !B.name(g).equals("grass_block")) return false;
+        for (int y = 1; y <= 2; y++) {
+            String at = v.get(x, y, z);
+            if (at != null && !B.isAir(at) && !B.isPlant(B.name(at)) && !(y == 1 && B.name(at).endsWith("_leaves"))) return false;
+        }
+        return true;
+    }
+
+    private static final List<String> BED_FLOWERS = List.of("poppy", "cornflower", "allium", "azure_bluet", "red_tulip",
+        "pink_tulip", "oxeye_daisy", "lily_of_the_valley", "white_tulip", "orange_tulip");
+
+    private void bedFlower(int x, int z, String a, String b) {
+        double r = rng.nextDouble();
+        if (r < 0.18) {
+            String tall = rng.chance(0.5) ? "rose_bush" : "peony";
+            v.set(x, 1, z, B.with(tall, "half", "lower"));
+            v.set(x, 2, z, B.with(tall, "half", "upper"));
+        } else {
+            v.set(x, 1, z, B.id(r < 0.6 ? a : b));
+        }
+    }
+
+    /** Erhöhtes Blumenbeet: Rand aus Platten, innen Podsol mit Blumen. */
+    private boolean flowerBed(int x0, int z0, int w, int d) {
+        for (int x = x0 - 1; x <= x0 + w; x++)
+            for (int z = z0 - 1; z <= z0 + d; z++) {
+                boolean in = x >= x0 && x < x0 + w && z >= z0 && z < z0 + d;
+                if (in && !gardenCell(x, z)) return false;
+                if (!in && inLev(0, x, z)) return false;
+            }
+        String a = rng.pick(BED_FLOWERS), b = rng.pick(BED_FLOWERS);
+        String border = B.slab(p.trim(), false);
+        for (int x = x0; x < x0 + w; x++)
+            for (int z = z0; z < z0 + d; z++) {
+                boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + d - 1;
+                for (int y = 1; y <= 2; y++) v.set(x, y, z, B.AIR);
+                v.set(x, 0, z, B.id("podzol"));
+                if (edge) v.set(x, 1, z, border);
+                else bedFlower(x, z, a, b);
+                s.reserve(x, 1, z);
+            }
+        return true;
+    }
+
+    /** Tisch (Zaunpfosten + Druckplatte) mit zwei bis vier Stühlen (Treppen, Lehne außen). */
+    private boolean gardenTable(int x, int z) {
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++) if (!gardenCell(x + dx, z + dz)) return false;
+        String plate = B.name(p.fence()).replace("_fence", "_pressure_plate");
+        v.set(x, 1, z, B.id(p.fence()));
+        v.set(x, 2, z, B.id(plate));
+        int chairs = 0;
+        for (Dir d : Dir.values()) {
+            if (chairs >= 2 && !rng.chance(0.5)) continue;
+            v.set(x + d.dx, 1, z + d.dz, B.stairs(p.floor(), d, false));
+            chairs++;
+        }
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++) s.reserve(x + dx, 1, z + dz);
+        // Laternenpfosten in einer freien Ecke neben dem Tisch
+        for (int[] c : new int[][] {{2, 2}, {-2, 2}, {2, -2}, {-2, -2}}) {
+            if (!gardenCell(x + c[0], z + c[1])) continue;
+            v.set(x + c[0], 1, z + c[1], B.id(p.fence()));
+            v.set(x + c[0], 2, z + c[1], B.id(p.fence()));
+            v.set(x + c[0], 3, z + c[1], B.lantern(p.light(), false));
+            s.reserve(x + c[0], 1, z + c[1]);
+            break;
+        }
+        return true;
+    }
+
+    /** Streifen von drei Zellen vor einer geraden Erdgeschosswand: Bank (Lehne zur Wand) oder Blumenstreifen. */
+    private boolean wallStrip(boolean bench) {
+        List<int[]> cands = new ArrayList<>();
+        for (int x = 0; x < W; x++)
+            for (int z = 0; z < D; z++) {
+                if (!inLev(0, x, z)) continue;
+                int mask = openMask(0, x, z);
+                if (Integer.bitCount(mask) != 1) continue;
+                Dir out = Dir.values()[Integer.numberOfTrailingZeros(mask)];
+                int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+                if (!straight(0, x - ax, z - az, mask) || !straight(0, x + ax, z + az, mask)) continue;
+                if (out == doorDir && doorX >= 0 && Math.abs((x - doorX) * ax + (z - doorZ) * az) < 4) continue;
+                boolean ok = true;
+                for (int w = -1; w <= 1 && ok; w++) ok = gardenCell(x + w * ax + out.dx, z + w * az + out.dz);
+                if (ok) cands.add(new int[] {x, z, out.ordinal()});
+            }
+        if (cands.isEmpty()) return false;
+        int[] c = cands.get(rng.nextInt(cands.size()));
+        Dir out = Dir.values()[c[2]];
+        int ax = out.wallAxis() == 'x' ? 1 : 0, az = 1 - ax;
+        String a = rng.pick(BED_FLOWERS), b = rng.pick(BED_FLOWERS);
+        for (int w = -1; w <= 1; w++) {
+            int x = c[0] + w * ax + out.dx, z = c[1] + w * az + out.dz;
+            if (bench) v.set(x, 1, z, B.stairs(p.floor(), out.opposite(), false));
+            else bedFlower(x, z, a, b);
+            s.reserve(x, 1, z);
+        }
+        return true;
+    }
+
+    /** Blumentöpfe vor einem Teil der Erdgeschossfenster (Fensterbank-Pflanzen). */
+    private void windowPots() {
+        for (int x = 0; x < W; x++)
+            for (int z = 0; z < D; z++) {
+                if (!inLev(0, x, z)) continue;
+                int mask = openMask(0, x, z);
+                if (Integer.bitCount(mask) != 1 || !nameAt(x, 2, z).endsWith("_pane")) continue;
+                Dir out = Dir.values()[Integer.numberOfTrailingZeros(mask)];
+                int px = x + out.dx, pz = z + out.dz;
+                if (gardenCell(px, pz) && rng.chance(0.55)) {
+                    v.set(px, 1, pz, pot());
+                    s.reserve(px, 1, pz);
+                }
+            }
+    }
+
+    private void splitGarden() {
+        windowPots();
+        for (int i = 0; i < 2; i++) wallStrip(false);
+        wallStrip(true);
+        int beds = 0, tables = 0;
+        for (int t = 0; t < 500 && (beds < 3 || tables < 1); t++) {
+            int x = 1 + rng.nextInt(Math.max(1, W - 2)), z = 1 + rng.nextInt(Math.max(1, D - 2));
+            if (farFromBuilding(x, z, 7) || !farFromBuilding(x, z, 2)) continue;
+            if (tables < 1 && beds >= 1) {
+                if (gardenTable(x, z)) tables++;
+            } else if (beds < 3) {
+                int w = rng.chance(0.5) ? 4 : 5, d = w == 4 ? 4 : 3;
+                if (rng.chance(0.5)) {
+                    int tmp = w;
+                    w = d;
+                    d = tmp;
+                }
+                if (flowerBed(x, z, w, d)) beds++;
+            }
+        }
+        roofGreens();
+    }
+
+    /** Ein paar Laubbüschel auf den Dachflächen. */
+    private void roofGreens() {
+        String stairName = B.name(p.roof().stairs());
+        String leaf = B.leaves(p.leaves());
+        int n = 3 + rng.nextInt(4);
+        for (int t = 0; t < 80 && n > 0; t++) {
+            int x = rng.nextInt(W), z = rng.nextInt(D);
+            int y = columnTop(x, z);
+            if (y < fh || !nameAt(x, y, z).equals(stairName) || !v.isEmpty(x, y + 1, z)) continue;
+            v.set(x, y + 1, z, leaf);
+            n--;
+            Dir d = Dir.values()[rng.nextInt(4)];
+            if (nameAt(x + d.dx, y, z + d.dz).equals(stairName) && v.isEmpty(x + d.dx, y + 1, z + d.dz) && rng.chance(0.6)) {
+                v.set(x + d.dx, y + 1, z + d.dz, leaf);
             }
         }
     }
