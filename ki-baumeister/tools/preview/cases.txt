@@ -1,0 +1,42 @@
+# name|Breite|Hoehe|Tiefe|Entwurf (JSON)
+haus-mittelalter|17|20|17|{"summary":"Mittelalterliches Fachwerkhaus","type":"house","style":"medieval","floors":2,"roof":"gable","features":["chimney","porch","garden","path","shutters","flower_boxes","lanterns","fence","trees","interior"],"rooms":["living","kitchen","bedroom","library"]}
+huette-rustikal|11|12|11|{"summary":"Rustikale Holzhuette","type":"cottage","style":"rustic","floors":1,"roof":"gable","features":["chimney","porch","garden","path","interior"]}
+villa-modern|21|14|19|{"summary":"Moderne Villa","type":"modern_house","style":"modern","floors":2,"roof":"flat","features":["garden","path","pool","balcony","porch","interior","trees"]}
+taverne|19|22|17|{"summary":"Taverne","type":"tavern","style":"medieval","floors":3,"roof":"gable","features":["porch","balcony","lanterns","path","interior","chimney"]}
+japan|19|16|17|{"summary":"Japanisches Haus","type":"house","style":"japanese","floors":1,"roof":"hip","features":["garden","path","trees","lanterns","interior"]}
+nordisch|15|18|13|{"summary":"Nordisches Langhaus","type":"house","style":"nordic","floors":1,"roof":"gable","features":["chimney","path","interior"]}
+viktorianisch|17|24|15|{"summary":"Viktorianisches Haus","type":"mansion","style":"victorian","floors":3,"roof":"hip","features":["porch","balcony","chimney","garden","path","fence","interior"]}
+wueste|15|12|15|{"summary":"Wuestenhaus","type":"house","style":"desert","floors":2,"roof":"flat","features":["path","interior","garden"]}
+keep-stone-large|33|40|33|{"summary":"Wehrturm aus Stein mit Zinnen","type":"tower","style":"stone","floors":4,"roof":"flat","features":["lanterns","path","garden","interior"],"rooms":["storage","kitchen","library","bedroom"]}
+jetty-medieval|21|38|21|{"summary":"Mittelalterlicher Turm mit Fachwerkaufsatz","type":"tower","style":"medieval","floors":4,"roof":"cone","features":["path","garden","flower_boxes","interior","trees"],"rooms":[]}
+wizard-fantasy|13|42|13|{"summary":"Zauberturm","type":"tower","style":"fantasy","floors":5,"roof":"cone","features":["interior"],"rooms":["storage","library","workshop","bedroom","library"]}
+drum-stone|19|46|19|{"summary":"Burgturm mit Wehrgang und Kegeldach","type":"tower","style":"stone","floors":5,"roof":"cone","features":["interior","path"],"rooms":[]}
+small-rustic|7|14|7|{"summary":"Kleiner Wachturm","type":"tower","style":"rustic","floors":2,"roof":"gable","features":["interior"],"rooms":[]}
+lighthouse-coast|27|52|27|{"summary":"Leuchtturm mit Waerterhaus","type":"lighthouse","style":"medieval","floors":4,"features":["interior","path","lanterns","garden"],"rooms":[]}
+burg-gross|48|40|44|{"summary":"Grosse Burg mit Ringmauer, Ecktuermen und Palas","type":"castle","style":"stone","floors":3,"roof":"cone","features":["garden","lanterns","interior"],"rooms":["bedroom","library","bedroom","office"]}
+burg-mittel|33|30|33|{"summary":"Mittelalterliche Burg","type":"castle","style":"medieval","floors":2,"features":["interior","lanterns"],"rooms":[]}
+burg-nordisch|29|24|27|{"summary":"Nordische Festung","type":"castle","style":"nordic","floors":2,"roof":"hip","features":["interior"],"rooms":["bedroom","storage"]}
+burg-klein|17|22|19|{"summary":"Kleine Burg, Wohnturm mit Rundturm","type":"castle","style":"stone","floors":2,"roof":"cone","features":["interior"],"rooms":["bedroom"]}
+burg-wueste|23|17|25|{"summary":"Wuestenfestung","type":"castle","style":"desert","floors":2,"features":["interior"],"rooms":[]}
+burg-mini|7|8|7|{"summary":"Mini-Wehrturm","type":"castle","style":"stone","floors":1,"features":[],"rooms":[]}
+kirche-stein|25|34|35|{"summary":"Steinkirche mit Glockenturm","type":"church","style":"stone","floors":1,"features":["garden","path","trees","interior"]}
+kirche-mittel|19|30|29|{"summary":"Dorfkirche","type":"church","style":"medieval","floors":1,"features":["garden","path","interior"]}
+kapelle|11|14|15|{"summary":"Kapelle","type":"church","style":"rustic","floors":1,"features":["interior"]}
+kirche-wueste|21|28|31|{"summary":"Missionskirche","type":"church","style":"desert","floors":1,"features":["interior","path"]}
+kirche-nordisch|17|26|25|{"summary":"Stabkirche","type":"church","style":"nordic","floors":1,"features":["interior"]}
+kirche-klassisch|23|30|33|{"summary":"Klassizistische Kirche","type":"church","style":"classical","floors":1,"features":["interior"]}
+bildstock|4|5|4|{"summary":"Bildstock","type":"church","style":"stone","floors":1,"features":[]}
+tempel-gross|25|20|35|{"summary":"Antiker Tempel","type":"temple","style":"classical","floors":1,"features":["interior","path","garden"]}
+tempel-mittel|17|16|23|{"summary":"Griechischer Tempel","type":"temple","style":"classical","floors":1,"features":["interior"]}
+tempel-klein|9|10|11|{"summary":"Kleiner Rundtempel","type":"temple","style":"classical","floors":1,"features":[]}
+tempel-wueste|21|18|29|{"summary":"Wuestentempel","type":"temple","style":"desert","floors":1,"features":["interior"]}
+tempel-stein|19|16|25|{"summary":"Steintempel","type":"temple","style":"stone","floors":1,"features":["interior"]}
+schrein|19|16|27|{"summary":"Japanischer Schrein","type":"temple","style":"japanese","floors":1,"features":["interior","path"]}
+schrein-klein|11|10|13|{"summary":"Kleiner Schrein","type":"temple","style":"japanese","floors":1,"features":[]}
+altar|3|4|3|{"summary":"Altar","type":"temple","style":"classical","floors":1,"features":[]}
+villa-gross|27|14|33|{"summary":"Moderne Villa mit Pool","type":"modern_house","style":"modern","floors":2,"roof":"flat","features":["garden","path","pool","balcony","interior","trees"]}
+villa-mittel|21|14|25|{"summary":"Moderne Villa","type":"modern_house","style":"modern","floors":2,"roof":"flat","features":["garden","path","pool","interior"]}
+villa-klein|13|11|15|{"summary":"Kleines modernes Haus","type":"modern_house","style":"modern","floors":2,"features":["interior"]}
+bungalow|17|7|17|{"summary":"Bungalow","type":"modern_house","style":"modern","floors":1,"features":["interior","garden"]}
+villa-holz|23|16|27|{"summary":"Villa","type":"modern_house","style":"modern","wall":"calcite","floors":2,"features":["interior","pool"]}
+kubus|5|4|5|{"summary":"Kubus","type":"modern_house","style":"modern","floors":1,"features":[]}

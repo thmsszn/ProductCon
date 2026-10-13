@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "ki_baumeister",
+  "version": "${version}",
+  "name": "KI-Baumeister",
+  "description": "Beschreibe ein Bauwerk – eine lokale KI (Ollama) entwirft es als Architekt, eine Architektur-Engine baut daraus ein realistisches Gebäude mit Einrichtung. Vorschau als Hologramm, Ecken per Baumeister-Axt, Export als Schematic, Rückgängig.",
+  "authors": [
+    "thmsszn"
+  ],
+  "icon": "assets/ki_baumeister/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "de.localai.baumeister.BaumeisterMod"
+    ],
+    "client": [
+      "de.localai.baumeister.BaumeisterClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

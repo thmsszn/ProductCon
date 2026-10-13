@@ -1,0 +1,368 @@
+name: KI-Baumeister Mod (JAR) bauen
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "ki-baumeister/**"
+      - ".github/workflows/ki-baumeister.yml"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "GitHub-Release mit der JAR erstellen/aktualisieren"
+        type: boolean
+        default: false
+      diagnose:
+        description: "Classpath und API-Signaturen ins Log schreiben"
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    working-directory: ki-baumeister
+
+jobs:
+  build-jar:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Neueste Fabric-Versionen (Info)
+        continue-on-error: true
+        run: |
+          echo "Fabric Loader:"; curl -fsS https://meta.fabricmc.net/v2/versions/loader | jq -r '.[0:3][] | "  \(.version) stable=\(.stable)"'
+          echo "Minecraft:";     curl -fsS https://meta.fabricmc.net/v2/versions/game   | jq -r '.[0:6][] | "  \(.version) stable=\(.stable)"'
+          echo "Fabric API:";    curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml | grep -oE '<version>[^<]+</version>' | sed -E 's#</?version>##g' | tail -6 | sed 's/^/  /'
+          echo "Loom:";          curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-loom/maven-metadata.xml | grep -oE '<version>[^<]+</version>' | sed -E 's#</?version>##g' | tail -8 | sed 's/^/  /'
+
+      - name: JAR bauen
+        timeout-minutes: 15
+        run: |
+          chmod +x gradlew
+          ./gradlew build --stacktrace --no-daemon
+
+      - name: Diagnose (Classpath + Signaturen)
+        if: inputs.diagnose || contains(github.event.head_commit.message, '[diagnose]')
+        run: |
+          ./gradlew -q printClasspath --no-daemon | sed -n 's/^CP //p' > "$RUNNER_TEMP/cp.txt"
+          CP=$(paste -sd: "$RUNNER_TEMP/cp.txt")
+          echo "== Jars"; xargs -n1 basename < "$RUNNER_TEMP/cp.txt" | sort
+          grep -rhoE '^import (net\.minecraft|net\.fabricmc|com\.mojang)[A-Za-z0-9_.]*;' src \
+            | sed -E 's/^import //; s/;$//' | sort -u > "$RUNNER_TEMP/classes.txt"
+          [ -f .ci-diagnose-classes ] && cat .ci-diagnose-classes >> "$RUNNER_TEMP/classes.txt"
+          while read -r cls pat; do
+            [ -z "$cls" ] && continue
+            if [ "$cls" = "@g" ]; then
+              # "@g Klasse regex": Bytecode nach Muster durchsuchen
+              set -- $pat
+              echo "===== $1 =~ $2 (bytecode grep)"
+              javap -c -p -cp "$CP" "$1" 2>&1 | grep -n -E -B3 -A3 "$2" | head -60 || true
+              continue
+            fi
+            if [ "$cls" = "@c" ]; then
+              # "@c Klasse methode": Bytecode einer Methode ausgeben
+              set -- $pat
+              echo "===== $1#$2 (bytecode)"
+              javap -c -p -cp "$CP" "$1" 2>&1 | sed -n "/ $2(/,/^\s*$/p" | head -80 || true
+              continue
+            fi
+            echo "===== $cls"
+            out=$(javap -cp "$CP" "$cls" 2>&1 || true)
+            if [ -n "$pat" ]; then
+              echo "$out" | grep -E "$pat|^(public |final |abstract |class |interface |Error)" || true
+            else
+              echo "$out"
+            fi
+          done < "$RUNNER_TEMP/classes.txt"
+          if [ -f .ci-diagnose-resources ]; then
+            MCJAR=$(grep -m1 'minecraft-merged\|minecraft-client' "$RUNNER_TEMP/cp.txt" || true)
+            echo "== Ressourcen aus $MCJAR"
+            while read -r res; do
+              [ -z "$res" ] && continue
+              echo "===== $res"
+              unzip -p "$MCJAR" "$res" 2>&1 | head -40 || true
+            done < .ci-diagnose-resources
+            unzip -l "$MCJAR" | grep -E 'assets/minecraft/(items|models/item)/golden_axe|textures/item/golden_axe' || true
+          fi
+
+      - name: Version lesen
+        id: ver
+        run: echo "version=$(grep '^mod_version=' gradle.properties | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: JAR als Download bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: ki-baumeister-${{ steps.ver.outputs.version }}
+          path: ki-baumeister/build/libs/*.jar
+          if-no-files-found: error
+
+  package:
+    name: Komplettpaket (ZIP)
+    needs: build-jar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ki-baumeister-${{ needs.build-jar.outputs.version }}
+          path: ki-baumeister/build/libs
+
+      - name: Komplettpaket zusammenstellen
+        run: |
+          set -euo pipefail
+          prop() { grep "^$1=" gradle.properties | cut -d= -f2; }
+          MC=$(prop minecraft_version); LOADER=$(prop loader_version); FAPI=$(prop fabric_api_version); VER=$(prop mod_version)
+          PROFILE="fabric-loader-$LOADER-$MC"
+          OUT="$RUNNER_TEMP/KI-Baumeister-Komplettpaket"
+          mkdir -p "$OUT/mods" "$OUT/fabric"
+          MODJAR=$(basename build/libs/*.jar)
+          cp "build/libs/$MODJAR" "$OUT/mods/"
+
+          curl -fsSL --retry 3 -o "$OUT/mods/fabric-api-$FAPI.jar" \
+            "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$FAPI/fabric-api-$FAPI.jar"
+          curl -fsSL --retry 3 -o "$OUT/fabric/$PROFILE.json" \
+            "https://meta.fabricmc.net/v2/versions/loader/$MC/$LOADER/profile/json"
+          jq -e --arg id "$PROFILE" --arg mc "$MC" '.id == $id and .inheritsFrom == $mc and (.libraries | length) > 0' "$OUT/fabric/$PROFILE.json"
+
+          INST=$(curl -fsSL --retry 3 https://meta.fabricmc.net/v2/versions/installer | jq -r '[.[] | select(.stable)][0].url')
+          curl -fsSL --retry 3 -o "$OUT/fabric/$(basename "$INST")" "$INST"
+          curl -fsSL --retry 3 -o "$OUT/fabric/$(basename "${INST%.jar}.exe")" "${INST%.jar}.exe" \
+            || echo "Kein Fabric-Installer als .exe verfügbar – nur .jar im Paket."
+          cp src/main/resources/assets/ki_baumeister/icon.png "$OUT/fabric/icon.png"
+
+          cp paket/Installieren.ps1 paket/Installieren.bat "$OUT/"
+          { printf '\xEF\xBB\xBF'; sed -e "s/__MC__/$MC/g" -e "s/__LOADER__/$LOADER/g" -e "s/__FAPI__/$FAPI/g" -e "s/__MOD__/$VER/g" paket/ANLEITUNG.txt; } > "$OUT/ANLEITUNG.txt"
+          jq -n --arg mc "$MC" --arg loader "$LOADER" --arg fapi "$FAPI" --arg mod "$VER" --arg profile "$PROFILE" --arg jar "$MODJAR" \
+            '{minecraft: $mc, loader: $loader, fabricApi: $fapi, modVersion: $mod, profileId: $profile, modJar: $jar}' > "$OUT/paket.json"
+
+          (cd "$RUNNER_TEMP" && zip -r -X -q "$GITHUB_WORKSPACE/KI-Baumeister-Komplettpaket.zip" KI-Baumeister-Komplettpaket)
+          unzip -l "$GITHUB_WORKSPACE/KI-Baumeister-Komplettpaket.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KI-Baumeister-Komplettpaket
+          path: KI-Baumeister-Komplettpaket.zip
+          if-no-files-found: error
+
+  test-installer:
+    name: Installer auf Windows testen
+    needs: package
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: KI-Baumeister-Komplettpaket
+
+      - name: Skript pruefen (Parser + PSScriptAnalyzer)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive -Path KI-Baumeister-Komplettpaket.zip -DestinationPath entpackt -Force
+          $script = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket\Installieren.ps1').Path
+          $tokens = $null; $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$errors)
+          if ($errors) { $errors | Format-List | Out-String | Write-Host; throw 'Syntaxfehler im Installer' }
+          # PowerShell wertet typografische Anfuehrungszeichen wie normale aus - sie beenden Strings unbemerkt.
+          if ([IO.File]::ReadAllText($script) -match '[\u2018\u2019\u201A\u201B\u201C\u201D\u201E]') { throw 'Typografische Anfuehrungszeichen im Installer' }
+          try {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+            Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+          } catch {
+            Write-Warning "PSScriptAnalyzer nicht installierbar, nur Parser-Pruefung: $_"
+            return
+          }
+          $findings = Invoke-ScriptAnalyzer -Path $script -Severity Error, Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseApprovedVerbs, PSUseSingularNouns, PSAvoidUsingInvokeExpression
+          $findings | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+          if ($findings | Where-Object Severity -eq 'Error') { throw 'PSScriptAnalyzer meldet Fehler' }
+
+      - name: Installation in Test-Minecraft-Ordner (Windows PowerShell 5.1)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket').Path
+          $installer = Join-Path $pkgDir 'Installieren.ps1'
+          $pkg = [IO.File]::ReadAllText((Join-Path $pkgDir 'paket.json')) | ConvertFrom-Json
+          $utf8 = New-Object Text.UTF8Encoding($false)
+          function Assert($cond, $msg) { if (-not $cond) { throw $msg } }
+
+          # 1) Ohne Launcher-Daten muss das Skript mit Fehlercode 1 abbrechen.
+          $empty = Join-Path $env:RUNNER_TEMP 'leer'
+          New-Item -ItemType Directory -Force $empty | Out-Null
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $empty -SkipOllama -NonInteractive
+          Assert ($LASTEXITCODE -eq 1) "Erwartet Exitcode 1 ohne Launcher, war $LASTEXITCODE"
+
+          # 2) Beide Launcher-Dateien (klassisch + Microsoft Store), Pfad mit Leerzeichen,
+          #    alte KI-Baumeister-Version (Name mit [ ]) im normalen mods-Ordner, fremde Mods, Einstellungen, Welt.
+          $mc = Join-Path $env:RUNNER_TEMP 'Mein Minecraft'
+          $game = Join-Path $mc 'ki-baumeister'
+          New-Item -ItemType Directory -Force (Join-Path $mc 'mods'), (Join-Path $game 'mods'), (Join-Path $mc 'saves\Welt 1') | Out-Null
+          $initial = '{"profiles":{"abc":{"name":"Mein Profil \u00e4\u00f6\u00fc","type":"custom","created":"2025-01-01T00:00:00.000Z","lastVersionId":"latest-release","icon":"Grass"}},"settings":{"enableSnapshots":false,"locale":"de-de"},"version":3}'
+          [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), $initial, $utf8)
+          [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles_microsoft_store.json'), '{"profiles":{}}', $utf8)
+          [IO.File]::WriteAllText((Join-Path $mc 'options.txt'), "lang:de_de`n")
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\ki-baumeister-1.0.0+mc26.3 [alt].jar'), 'alt')
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\fabric-api-0.150.0+26.1.jar'), 'fremdes Profil')
+          [IO.File]::WriteAllText((Join-Path $mc 'mods\anderer-mod.jar'), 'fremd')
+          [IO.File]::WriteAllText((Join-Path $game 'mods\fabric-api-0.150.0+26.1.jar'), 'alt')
+          [IO.File]::WriteAllText((Join-Path $game 'mods\[1.20.1] Fremd.jar'), 'fremd')
+
+          $label = "'KI-Baumeister (Fabric $($pkg.minecraft))'"
+          foreach ($run in 1..2) {
+            $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -SkipOllama -NonInteractive 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            Write-Host $out
+            Assert ($code -eq 0) "Installer-Lauf $run fehlgeschlagen (Exitcode $code)"
+            foreach ($expected in @("Profil $label in launcher_profiles.json", "Profil $label in launcher_profiles_microsoft_store.json", "das Profil $label w", 'Fertig!')) {
+              Assert $out.Contains($expected) "Ausgabe von Lauf $run enthaelt nicht: $expected"
+            }
+            Assert ($out -notmatch 'FEHLER|Exception|CommandNotFound|not recognized|nicht als Name') "Fehlermeldung in Ausgabe von Lauf $run"
+          }
+
+          foreach ($file in 'launcher_profiles.json', 'launcher_profiles_microsoft_store.json') {
+            $path = Join-Path $mc $file
+            Assert ([IO.File]::ReadAllBytes($path)[0] -ne 0xEF) "$file wurde mit BOM gespeichert"
+            $lp = [IO.File]::ReadAllText($path, $utf8) | ConvertFrom-Json
+            $p = $lp.profiles.'ki-baumeister-fabric'
+            Assert $p "${file}: KI-Baumeister-Profil fehlt"
+            Assert ($p.lastVersionId -eq $pkg.profileId) "${file}: lastVersionId falsch"
+            Assert ($p.gameDir -eq $game) "${file}: gameDir falsch: $($p.gameDir)"
+            Assert ($p.type -eq 'custom' -and $p.icon.StartsWith('data:image/png;base64,')) "${file}: Profil unvollstaendig"
+          }
+          $lp = [IO.File]::ReadAllText((Join-Path $mc 'launcher_profiles.json'), $utf8) | ConvertFrom-Json
+          Assert (@($lp.profiles.PSObject.Properties).Count -eq 2) 'Profil doppelt angelegt'
+          $actualName = [string]$lp.profiles.abc.name
+          $expectedName = 'Mein Profil ' + [char]0xE4 + [char]0xF6 + [char]0xFC
+          if ($actualName -ne $expectedName) {
+            Write-Host ([IO.File]::ReadAllText((Join-Path $mc 'launcher_profiles.json'), $utf8))
+            throw ("Vorhandenes Profil beschaedigt: '$actualName' Zeichen: " + (($actualName.ToCharArray() | ForEach-Object { [int]$_ }) -join ','))
+          }
+          Assert ($lp.profiles.abc.created -eq '2025-01-01T00:00:00.000Z') 'Datum im vorhandenen Profil veraendert'
+          Assert ($lp.settings.locale -eq 'de-de' -and $lp.version -eq 3 -and $lp.settings.enableSnapshots -eq $false) 'Launcher-Einstellungen beschaedigt'
+
+          $v = [IO.File]::ReadAllText((Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).json")) | ConvertFrom-Json
+          Assert ($v.id -eq $pkg.profileId -and $v.inheritsFrom -eq $pkg.minecraft) 'Versions-JSON ungueltig'
+          Assert (Test-Path -LiteralPath (Join-Path $mc "versions\$($pkg.profileId)\$($pkg.profileId).jar")) 'Platzhalter-JAR fehlt'
+
+          $gm = Join-Path $game 'mods'
+          Assert (Test-Path -LiteralPath (Join-Path $gm $pkg.modJar)) 'KI-Baumeister-JAR fehlt im Profil-Ordner'
+          Assert (Test-Path -LiteralPath (Join-Path $gm "fabric-api-$($pkg.fabricApi).jar")) 'Fabric API fehlt im Profil-Ordner'
+          Assert (Test-Path -LiteralPath (Join-Path $gm '_alte-versionen\fabric-api-0.150.0+26.1.jar')) 'Alte Fabric API im Profil-Ordner nicht beiseitegelegt'
+          Assert (Test-Path -LiteralPath (Join-Path $gm '[1.20.1] Fremd.jar')) 'Fremder Mod ohne Zustimmung verschoben'
+          $sm = Join-Path $mc 'mods'
+          Assert (-not (Test-Path -LiteralPath (Join-Path $sm 'ki-baumeister-1.0.0+mc26.3 [alt].jar'))) 'Alte KI-Baumeister-Version liegt noch in .minecraft\mods'
+          Assert (Test-Path -LiteralPath (Join-Path $sm '_alte-versionen\ki-baumeister-1.0.0+mc26.3 [alt].jar')) 'Alte KI-Baumeister-Version nicht gesichert'
+          Assert (Test-Path -LiteralPath (Join-Path $sm 'fabric-api-0.150.0+26.1.jar')) 'Fabric API anderer Profile wurde angefasst'
+          Assert (Test-Path -LiteralPath (Join-Path $sm 'anderer-mod.jar')) 'Mods anderer Profile wurden angefasst'
+          Assert (Test-Path -LiteralPath (Join-Path $game 'options.txt')) 'Einstellungen nicht uebernommen'
+          Assert (-not (Test-Path -LiteralPath (Join-Path $game 'saves'))) 'Welten ohne Zustimmung kopiert'
+          Assert (Test-Path -LiteralPath (Join-Path $mc 'launcher_profiles.json.vor-ki-baumeister.bak')) 'Sicherung fehlt'
+          Assert (-not (Test-Path -LiteralPath (Join-Path $mc 'launcher_profiles.json.ki-baumeister.tmp'))) 'Temp-Datei liegen geblieben'
+          Write-Host 'Installer-Test bestanden.' -ForegroundColor Green
+
+      - name: Ollama-Schritt testen (Ollama schon installiert, Fake-Server)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgDir = (Resolve-Path 'entpackt\KI-Baumeister-Komplettpaket').Path
+          $installer = Join-Path $pkgDir 'Installieren.ps1'
+          $utf8 = New-Object Text.UTF8Encoding($false)
+          function Assert($cond, $msg) { if (-not $cond) { throw $msg } }
+
+          # Fake-"ollama"-Befehl, der Aufrufe protokolliert
+          $bin = Join-Path $env:RUNNER_TEMP 'fake-ollama'
+          New-Item -ItemType Directory -Force $bin | Out-Null
+          [IO.File]::WriteAllText((Join-Path $bin 'ollama.cmd'), "@echo off`r`necho %*>>`"%~dp0calls.txt`"`r`nexit /b 0`r`n")
+
+          # Fake-Ollama-Server auf 127.0.0.1:11434 (eigener Prozess, damit er sich sofort beenden laesst)
+          $tags = '{"models":[{"name":"llama3.1:8b","size":4900000000},{"name":"qwen2.5:14b","size":8900000000},{"name":"qwen2.5:72b","size":47000000000},{"name":"nomic-embed-text:latest","size":274000000},{"name":"gpt-oss:120b-cloud","size":384,"remote_host":"https://ollama.com:443","remote_model":"gpt-oss:120b"}]}'
+          $serverLines = @(
+            '$l = New-Object Net.HttpListener',
+            '$l.Prefixes.Add(''http://127.0.0.1:11434/'')',
+            '$l.Prefixes.Add(''http://localhost:11434/'')',
+            '$l.Start()',
+            'while ($true) {',
+            '  $ctx = $l.GetContext()',
+            '  $path = $ctx.Request.Url.AbsolutePath',
+            '  if ($path -eq ''/api/version'') { $body = ''{"version":"0.40.3"}'' }',
+            "  elseif (`$path -eq '/api/tags') { `$body = '$tags' }",
+            '  else { $body = ''{}'' }',
+            '  $bytes = [Text.Encoding]::UTF8.GetBytes($body)',
+            '  $ctx.Response.ContentType = ''application/json''',
+            '  $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)',
+            '  $ctx.Response.Close()',
+            '}'
+          )
+          $serverScript = Join-Path $env:RUNNER_TEMP 'fake-ollama-server.ps1'
+          [IO.File]::WriteAllLines($serverScript, $serverLines)
+          $server = Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$serverScript`"" -PassThru -WindowStyle Hidden
+          for ($i = 0; $i -lt 30; $i++) {
+            try { Invoke-RestMethod http://127.0.0.1:11434/api/version -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
+          }
+
+          $mc = Join-Path $env:RUNNER_TEMP 'mc-ollama'
+          $cfgPath = Join-Path $mc 'ki-baumeister\config\ki_baumeister.json'
+          New-Item -ItemType Directory -Force (Split-Path -Parent $cfgPath) | Out-Null
+          [IO.File]::WriteAllText((Join-Path $mc 'launcher_profiles.json'), '{"profiles":{}}', $utf8)
+          [IO.File]::WriteAllText($cfgPath, '{"blocksPerTick":123,"model":"gibtsnicht:1b"}', $utf8)
+
+          $env:PATH = "$bin;$env:PATH"
+          try {
+            $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -MinecraftDir $mc -NonInteractive 2>&1 | Out-String
+            $code = $LASTEXITCODE
+          } finally {
+            Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+          }
+          Write-Host $out
+          Assert ($code -eq 0) "Installer mit Ollama fehlgeschlagen (Exitcode $code)"
+          Assert ($out -notmatch 'FEHLER|Exception|CommandNotFound') 'Fehlermeldung in der Ausgabe'
+          Assert ($out -notmatch 'nomic-embed|gpt-oss') 'Embedding-/Cloud-Modelle wurden nicht ausgefiltert'
+          Assert $out.Contains('Ollama-Version 0.40.3') 'Ollama-Version nicht erkannt'
+
+          $cfg = [IO.File]::ReadAllText($cfgPath, $utf8) | ConvertFrom-Json
+          Assert ($cfg.model -eq 'qwen2.5:14b') "Erwartet vorhandenes Modell qwen2.5:14b, eingetragen: $($cfg.model)"
+          Assert ($cfg.blocksPerTick -eq 123) 'Vorhandene Einstellung blocksPerTick ging verloren'
+          $calls = Join-Path $bin 'calls.txt'
+          Assert (-not ((Test-Path $calls) -and ((Get-Content $calls -Raw) -match 'pull'))) 'Modell wurde unnoetig heruntergeladen'
+          Write-Host 'Ollama-Test bestanden.' -ForegroundColor Green
+
+  release:
+    name: GitHub-Release
+    needs: [build-jar, test-installer]
+    if: inputs.release || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ki-baumeister-${{ needs.build-jar.outputs.version }}
+          path: dist
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: KI-Baumeister-Komplettpaket
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ki-baumeister-v${{ needs.build-jar.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: KI-Baumeister ${{ needs.build-jar.outputs.version }} (Minecraft 26.3, Fabric)
+          body_path: ki-baumeister/RELEASE.md
+          overwrite_files: true
+          files: |
+            dist/*.jar
+            dist/KI-Baumeister-Komplettpaket.zip
