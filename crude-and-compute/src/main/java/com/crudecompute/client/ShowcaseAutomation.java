@@ -69,8 +69,10 @@ public final class ShowcaseAutomation {
             {6.5, 3.5, -5, 4.5, 3.6, -2.5},
             {2.3, 2.1, -0.4, 5, 0.6, 3.6},
             {-7.2, 3.0, -7.4, -4, 1.4, -4},
+            {16.5, 3.0, 3.5, 13, 0.4, -1.5},
+            {3.5, 4.0, -11.5, 10, 3.6, -4},
     };
-    private static final String[] SHOT_NAMES = {"uebersicht", "pferdekopfpumpe", "rechenzentrum", "ki_terminal", "raffinerie", "windrad", "chipfabrik_akku", "pumpe"};
+    private static final String[] SHOT_NAMES = {"uebersicht", "pferdekopfpumpe", "rechenzentrum", "ki_terminal", "raffinerie", "windrad", "chipfabrik_akku", "pumpe", "foerderband", "bohrturm"};
 
     private static int stage;
     private static int timer;
@@ -203,10 +205,21 @@ public final class ShowcaseAutomation {
         });
     }
 
+    private static void feedBelt(MinecraftServer server) {
+        ServerLevel level = server.overworld();
+        var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, origin.offset(13, 0, 0), Direction.UP);
+        if (handler != null) {
+            handler.insertItem(0, new ItemStack(ModItems.CIRCUIT_BOARD.get()), false);
+        }
+    }
+
     private static void keepPowered(Minecraft mc) {
         MinecraftServer server = mc.getSingleplayerServer();
         if (server == null) {
             return;
+        }
+        if (timer % 25 == 0) {
+            server.execute(() -> feedBelt(server));
         }
         server.execute(() -> {
             ServerLevel level = server.overworld();
@@ -326,6 +339,19 @@ public final class ShowcaseAutomation {
             fab.insert(new ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 32));
         }
         set(level, o.offset(6, 0, 5), facing(ModBlocks.BATTERY.get(), Direction.WEST));
+        // update 1.2: oil derrick on its own shale field, conveyor belt line
+        for (BlockPos p : BlockPos.betweenClosed(o.offset(9, -1, -5), o.offset(11, -1, -3))) {
+            set(level, p, ModBlocks.OIL_SHALE.get().defaultBlockState());
+        }
+        multiblock(level, o.offset(10, 0, -3), facing(ModBlocks.OIL_DERRICK.get(), Direction.NORTH), ModBlocks.OIL_DERRICK.get());
+        set(level, o.offset(10, 0, -2), facing(ModBlocks.DIESEL_ENGINE.get(), Direction.NORTH));
+        fuel(level, o.offset(10, 0, -2));
+        set(level, o.offset(12, 0, 1), facing(ModBlocks.DIESEL_ENGINE.get(), Direction.NORTH));
+        fuel(level, o.offset(12, 0, 1));
+        for (int z = 0; z >= -3; z--) {
+            set(level, o.offset(12, 0, z), ModBlocks.GEARBOX.get().defaultBlockState());
+            set(level, o.offset(13, 0, z), facing(ModBlocks.CONVEYOR_BELT.get(), Direction.NORTH));
+        }
         REPORT.add("scene built at " + o.toShortString());
     }
 

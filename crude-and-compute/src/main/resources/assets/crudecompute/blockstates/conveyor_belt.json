@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "crudecompute:block/conveyor_belt"
+    },
+    "facing=east": {
+      "model": "crudecompute:block/conveyor_belt",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "crudecompute:block/conveyor_belt",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "crudecompute:block/conveyor_belt",
+      "y": 270
+    }
+  }
+}

@@ -234,4 +234,48 @@ public final class ModGameTests {
             helper.assertTrue(out.is(ModItems.CIRCUIT_BOARD.get()) && out.getCount() >= 4, "two runs should yield 4 circuit boards, got " + out);
         });
     }
+
+    /** Items put on one conveyor travel over a second belt and end up in a chest. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void conveyorCarriesItemsIntoChest(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(3, 1, 6), facing(ModBlocks.CONVEYOR_BELT.get(), Direction.NORTH));
+        helper.setBlock(new BlockPos(3, 1, 5), facing(ModBlocks.CONVEYOR_BELT.get(), Direction.NORTH));
+        helper.setBlock(new BlockPos(3, 1, 4), Blocks.CHEST.defaultBlockState());
+        helper.setBlock(new BlockPos(4, 1, 6), ModBlocks.GEARBOX.get().defaultBlockState());
+        helper.setBlock(new BlockPos(4, 1, 5), ModBlocks.GEARBOX.get().defaultBlockState());
+        BlockPos engine = new BlockPos(5, 1, 6);
+        helper.setBlock(engine, facing(ModBlocks.DIESEL_ENGINE.get(), Direction.WEST));
+        fuel(helper, engine);
+        net.neoforged.neoforge.items.IItemHandler in = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
+                helper.absolutePos(new BlockPos(3, 1, 6)), Direction.UP);
+        helper.assertTrue(in != null && in.insertItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT), false).isEmpty(), "belt should accept an item");
+        helper.succeedWhen(() -> {
+            net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(new BlockPos(3, 1, 4));
+            helper.assertTrue(chest.getItem(0).is(net.minecraft.world.item.Items.IRON_INGOT), "chest should have received the iron ingot");
+        });
+    }
+
+    /** The derrick, driven from behind, drills crude oil out of the shale below its drill pipe. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void derrickDrillsCrude(GameTestHelper helper) {
+        BlockPos main = new BlockPos(4, 1, 6);
+        BlockState state = facing(ModBlocks.OIL_DERRICK.get(), Direction.NORTH);
+        helper.setBlock(main, state);
+        state.getBlock().setPlacedBy(helper.getLevel(), helper.absolutePos(main), helper.getLevel().getBlockState(helper.absolutePos(main)),
+                null, new ItemStack(ModItems.OIL_DERRICK.get()));
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                helper.setBlock(new BlockPos(4 + dx, 0, 5 + dz), ModBlocks.OIL_SHALE.get().defaultBlockState());
+            }
+        }
+        BlockPos engine = new BlockPos(4, 1, 7);
+        helper.setBlock(engine, facing(ModBlocks.DIESEL_ENGINE.get(), Direction.NORTH));
+        fuel(helper, engine);
+        helper.succeedWhen(() -> {
+            helper.assertBlockPresent(ModBlocks.MULTIBLOCK_PART.get(), new BlockPos(4, 7, 5));
+            com.crudecompute.oil.OilDerrickBlockEntity derrick = helper.getBlockEntity(main);
+            helper.assertTrue(derrick.getSpeed() == 64f, "derrick should be driven at 64 RPM, is " + derrick.getSpeed());
+            helper.assertTrue(derrick.getOutput().getFluidInTank(1).getAmount() > 50, "derrick should have drilled crude oil");
+        });
+    }
 }

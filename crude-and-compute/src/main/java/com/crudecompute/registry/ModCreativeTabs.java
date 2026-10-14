@@ -24,6 +24,8 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.GENERATOR.get());
                 output.accept(ModItems.OIL_SHALE.get());
                 output.accept(ModItems.PUMPJACK.get());
+                output.accept(ModItems.OIL_DERRICK.get());
+                output.accept(ModItems.CONVEYOR_BELT.get());
                 output.accept(ModItems.REFINERY.get());
                 output.accept(ModItems.FLUID_PIPE.get());
                 output.accept(ModItems.OIL_TANK.get());

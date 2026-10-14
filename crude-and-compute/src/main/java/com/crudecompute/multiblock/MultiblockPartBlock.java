@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
 public class MultiblockPartBlock extends Block {
     public static final MapCodec<MultiblockPartBlock> CODEC = simpleCodec(MultiblockPartBlock::new);
     public static final IntegerProperty OX = IntegerProperty.create("ox", 0, 4);
-    public static final IntegerProperty OY = IntegerProperty.create("oy", 0, 2);
+    public static final IntegerProperty OY = IntegerProperty.create("oy", 0, 6);
     public static final IntegerProperty OZ = IntegerProperty.create("oz", 0, 4);
 
     public MultiblockPartBlock(Properties properties) {

@@ -1,6 +1,8 @@
 {
   "replace": false,
   "values": [
+    "crudecompute:conveyor_belt",
+    "crudecompute:oil_derrick",
     "crudecompute:mechanical_pump",
     "crudecompute:battery",
     "crudecompute:chip_fab",

@@ -21,7 +21,7 @@ Echte Screenshots aus Minecraft (automatisch per CI aufgenommen, siehe unten):
 ## Installation
 
 1. **Minecraft 1.21.1** mit **NeoForge 21.1.x** installieren (Installer: https://neoforged.net).
-2. Die Datei [`download/crudecompute-1.21.1-1.0.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
+2. Die Datei [`download/crudecompute-1.21.1-1.2.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
 3. Spiel mit dem NeoForge-Profil starten – alles findet sich im Kreativ-Tab **Crude & Compute**.
 
 Die JAR baut GitHub Actions bei jedem Push (Workflow „Minecraft-Mod bauen“, Artefakt
@@ -57,6 +57,14 @@ Jede Maschine verbraucht **Last (SU)**. Ist die Last im Netz größer als die Kr
 5. Diesel → **Dieselmotor** → mehr Kraft → mehr Pumpen … der Kreislauf schließt sich.
 
 Eimer funktionieren überall: Rohöl/Diesel per Rechtsklick ein- und ausfüllen.
+
+**Ölbohrturm** (3×3 Grundfläche, 7 Blöcke hoch, Gittermast): fördert **3×** so viel wie die Pferdekopfpumpe
+(128 SU, Antrieb per Welle **von hinten**, Tank 32 Eimer). Der Bohrstrang in der Mitte der Fläche muss über
+Ölschiefer stehen; der Kronenblock hebt und senkt sich, der Bohrstrang dreht sich. Das Öl fließt in alle
+angrenzenden Rohre.
+
+**Förderband:** Items laufen nach vorne (Blickrichtung beim Setzen). Wellen (4 SU) seitlich anschließen. Bänder
+reihen sich aneinander, am Ende werden Kisten/Trichter befüllt; Trichter und Wurf-Items werden aufgenommen.
 
 **Mechanische Pumpe:** in eine Rohrleitung setzen (der Pfeil zeigt die Flussrichtung, sie pumpt vom Block
 dahinter in den Block davor). Antrieb per Welle von oben, unten oder seitlich (16 SU, 4 mB/t pro U/min).

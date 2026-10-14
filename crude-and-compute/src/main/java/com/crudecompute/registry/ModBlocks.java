@@ -66,6 +66,11 @@ public final class ModBlocks {
     public static final DeferredBlock<com.crudecompute.datacenter.ChipFabBlock> CHIP_FAB = BLOCKS.registerBlock("chip_fab",
             com.crudecompute.datacenter.ChipFabBlock::new, machine().lightLevel(state -> state.getValue(com.crudecompute.datacenter.ChipFabBlock.ACTIVE) ? 5 : 0));
 
+    public static final DeferredBlock<com.crudecompute.logistics.ConveyorBlock> CONVEYOR_BELT = BLOCKS.registerBlock("conveyor_belt",
+            com.crudecompute.logistics.ConveyorBlock::new, machine().strength(2.0f).sound(SoundType.WOOL));
+    public static final DeferredBlock<com.crudecompute.oil.OilDerrickBlock> OIL_DERRICK = BLOCKS.registerBlock("oil_derrick",
+            com.crudecompute.oil.OilDerrickBlock::new, machine());
+
     public static final DeferredBlock<MultiblockPartBlock> MULTIBLOCK_PART = BLOCKS.registerBlock("multiblock_part", MultiblockPartBlock::new,
             machine().noLootTable());
 

@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "active=false,facing=north": {
+      "model": "crudecompute:block/oil_derrick"
+    },
+    "active=true,facing=north": {
+      "model": "crudecompute:block/oil_derrick"
+    },
+    "active=false,facing=east": {
+      "model": "crudecompute:block/oil_derrick",
+      "y": 90
+    },
+    "active=true,facing=east": {
+      "model": "crudecompute:block/oil_derrick",
+      "y": 90
+    },
+    "active=false,facing=south": {
+      "model": "crudecompute:block/oil_derrick",
+      "y": 180
+    },
+    "active=true,facing=south": {
+      "model": "crudecompute:block/oil_derrick",
+      "y": 180
+    },
+    "active=false,facing=west": {
+      "model": "crudecompute:block/oil_derrick",
+      "y": 270
+    },
+    "active=true,facing=west": {
+      "model": "crudecompute:block/oil_derrick",
+      "y": 270
+    }
+  }
+}

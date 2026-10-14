@@ -643,6 +643,135 @@ def chip_fab_wafer():
     return m
 
 
+# ----------------------------------------------------------------------------- update 1.2: conveyor belt, oil derrick
+BELT_TOP = 0.375
+
+
+def conveyor_belt():
+    """Facing north: items travel towards -Z."""
+    m = Mesh()
+    for x0 in (0.0, 0.9):
+        m.add(box(x0, 0.08, 0.0, x0 + 0.1, 0.42, 1.0, "steel_dark", {"u": "hazard"}))
+    for z0 in (0.04, 0.84):
+        for x0 in (0.02, 0.86):
+            m.add(box(x0, 0.0, z0, x0 + 0.12, 0.08, z0 + 0.12, "steel"))
+    m.add(box(0.1, 0.3, 0.0, 0.9, BELT_TOP - 0.01, 1.0, "rubber"))
+    for z in (0.06, 0.94):
+        m.add(along_x(cylinder_y(0.5, 0.5, 0.05, 0.1, 0.9, 10, "steel"), cy=0.31, cz=z))
+    m.add(box(0.12, 0.12, 0.1, 0.88, 0.16, 0.9, "steel_dark"))
+    return m
+
+
+def conveyor_rib():
+    """One cleat across the belt at z = 0.5 (moved along the belt by the renderer)."""
+    return box(0.12, BELT_TOP - 0.012, 0.485, 0.88, BELT_TOP + 0.006, 0.515, "steel")
+
+
+# derrick: footprint x -1..2, z -2..1 (controller cell = middle of the back edge), drill centre (0.5, -0.5)
+DERRICK_CX, DERRICK_CZ = 0.5, -0.5
+DERRICK_FLOOR = 1.0
+DERRICK_TOP = 6.75
+DERRICK_BASE_HALF = 1.32
+DERRICK_TOP_HALF = 0.24
+
+
+def derrick_leg_offset(y):
+    t = (y - DERRICK_FLOOR) / (DERRICK_TOP - DERRICK_FLOOR)
+    return DERRICK_BASE_HALF + (DERRICK_TOP_HALF - DERRICK_BASE_HALF) * t
+
+
+def oil_derrick():
+    cx, cz = DERRICK_CX, DERRICK_CZ
+    m = Mesh()
+    # substructure + skid
+    m.add(box(cx - 1.48, 0, cz - 1.48, cx + 1.48, 0.12, cz + 1.48, "steel_dark"))
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            x, z = cx + sx * 1.25, cz + sz * 1.25
+            m.add(box(x - 0.12, 0.12, z - 0.12, x + 0.12, DERRICK_FLOOR - 0.06, z + 0.12, "paint_yellow"))
+    for sz in (-1, 1):
+        m.add(beam((cx - 1.25, 0.15, cz + sz * 1.25), (cx + 1.25, DERRICK_FLOOR - 0.1, cz + sz * 1.25), 0.06, 0.06, "steel_dark"))
+    # drill floor (grating) with a hole for the rotary table
+    m.add(box(cx - 1.48, DERRICK_FLOOR - 0.06, cz - 1.48, cx + 1.48, DERRICK_FLOOR, cz + 1.48, "grating"))
+    for sx in (-1, 1):  # railings
+        m.add(box(cx + sx * 1.46 - 0.02, DERRICK_FLOOR, cz - 1.46, cx + sx * 1.46 + 0.02, DERRICK_FLOOR + 0.45, cz - 1.42, "paint_yellow"))
+    m.add(box(cx - 1.48, DERRICK_FLOOR + 0.42, cz - 1.48, cx + 1.48, DERRICK_FLOOR + 0.46, cz - 1.44, "paint_yellow"))
+    # blowout preventer stack + wellhead under the floor
+    m.add(cylinder_y(cx, cz, 0.22, 0.12, 0.3, 14, "steel_dark"))
+    m.add(cylinder_y(cx, cz, 0.3, 0.3, 0.62, 16, "paint_red"))
+    m.add(washer_y(cx, cz, 0.0, 0.34, 0.6, 0.66, 16, "steel", inner=False))
+    m.add(cylinder_y(cx, cz, 0.24, 0.66, DERRICK_FLOOR - 0.06, 14, "paint_red"))
+    for sx in (-1, 1):
+        m.add(tube((cx + sx * 0.3, 0.45, cz), (cx + sx * 0.62, 0.45, cz), 0.06, 8, "steel"))
+        m.add(torus_y(cx + sx * 0.66, 0.45, cz, 0.06, 0.012, 10, 4, "paint_red").rotate_z(90, (cx + sx * 0.66, 0.45, cz)))
+    # rotary table
+    m.add(cylinder_y(cx, cz, 0.36, DERRICK_FLOOR, DERRICK_FLOOR + 0.12, 20, "steel_dark"))
+    m.add(cylinder_y(cx, cz, 0.18, DERRICK_FLOOR + 0.12, DERRICK_FLOOR + 0.16, 12, "brass"))
+    # lattice tower: 4 legs, girts and X-bracing on every side
+    corners = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+
+    def leg_point(i, y):
+        sx, sz = corners[i % 4]
+        d = derrick_leg_offset(y)
+        return (cx + sx * d, y, cz + sz * d)
+
+    for i in range(4):
+        m.add(beam(leg_point(i, DERRICK_FLOOR), leg_point(i, DERRICK_TOP), 0.11, 0.11, "paint_red"))
+    levels = [DERRICK_FLOOR + 0.05 + k * (DERRICK_TOP - DERRICK_FLOOR - 0.1) / 6 for k in range(7)]
+    for k, y in enumerate(levels):
+        for i in range(4):
+            m.add(beam(leg_point(i, y), leg_point(i + 1, y), 0.05, 0.05, "steel"))
+        if k + 1 < len(levels):
+            y2 = levels[k + 1]
+            for i in range(4):
+                if i == 3 and k < 2:
+                    continue  # open "V-door" side for pipe handling
+                m.add(beam(leg_point(i, y), leg_point(i + 1, y2), 0.035, 0.035, "steel"))
+                m.add(beam(leg_point(i + 1, y), leg_point(i, y2), 0.035, 0.035, "steel"))
+    # crown block with sheaves
+    m.add(box(cx - 0.32, DERRICK_TOP, cz - 0.32, cx + 0.32, DERRICK_TOP + 0.1, cz + 0.32, "steel_dark"))
+    for dx in (-0.12, 0.0, 0.12):
+        sheave = torus_y(0, 0, 0, 0.1, 0.025, 14, 5, "paint_yellow").rotate_z(90).translate(cx + dx, DERRICK_TOP + 0.2, cz)
+        m.add(sheave)
+    m.add(box(cx - 0.2, DERRICK_TOP + 0.1, cz - 0.03, cx + 0.2, DERRICK_TOP + 0.3, cz + 0.03, "steel"))
+    m.add(cylinder_y(cx + 0.28, cz + 0.28, 0.01, DERRICK_TOP + 0.1, DERRICK_TOP + 0.45, 4, "steel"))
+    m.add(box(cx + 0.26, DERRICK_TOP + 0.45, cz + 0.26, cx + 0.3, DERRICK_TOP + 0.49, cz + 0.3, "led_red"))
+    # drawworks (winch) at the back over the controller cell, with the fast line up to the crown
+    m.add(box(0.1, DERRICK_FLOOR, 0.35, 0.9, DERRICK_FLOOR + 0.2, 0.95, "steel_dark"))
+    m.add(along_x(cylinder_y(0.5, 0.5, 0.2, 0.18, 0.82, 16, "paint_yellow"), cy=DERRICK_FLOOR + 0.42, cz=0.62))
+    for x0 in (0.14, 0.8):
+        m.add(along_x(washer_y(0.5, 0.5, 0.0, 0.27, x0, x0 + 0.06, 16, "steel", inner=False), cy=DERRICK_FLOOR + 0.42, cz=0.62))
+    m.add(beam((0.5, DERRICK_FLOOR + 0.6, 0.55), (cx + 0.1, DERRICK_TOP + 0.1, cz + 0.05), 0.02, 0.02, "steel_dark"))
+    # doghouse (crew cabin) on the right side of the floor
+    m.add(box(1.25, DERRICK_FLOOR, -0.15, 1.95, DERRICK_FLOOR + 0.75, 0.85, "paint_blue", {"w": "glass_dark"}))
+    m.add(box(1.22, DERRICK_FLOOR + 0.75, -0.18, 1.98, DERRICK_FLOOR + 0.8, 0.88, "steel_dark"))
+    # standpipe along the left back leg + mud hose
+    m.add(tube((cx - 1.1, 0.12, cz + 1.1), (cx - 0.95, 3.6, cz + 0.95), 0.04, 8, "steel"))
+    m.add(bezier_tube((cx - 0.95, 3.6, cz + 0.95), (cx - 0.6, 3.9, cz + 0.6), (cx - 0.1, 3.4, cz + 0.1), (cx, 3.0, cz), 0.03, 10, 6, "rubber"))
+    # pipe rack with drill pipes leaning in the V-door
+    for i in range(4):
+        x = cx - 0.25 + i * 0.13
+        m.add(tube((x, DERRICK_FLOOR + 0.02, cz - 1.3), (x + 0.05, DERRICK_FLOOR + 2.4, cz - 0.95), 0.03, 6, "steel_dark"))
+    return m
+
+
+def derrick_block():
+    """Travelling block + hook, centred on the drill axis at y = 0 (renderer moves it up and down)."""
+    cx, cz = DERRICK_CX, DERRICK_CZ
+    m = Mesh()
+    m.add(box(cx - 0.16, -0.25, cz - 0.1, cx + 0.16, 0.12, cz + 0.1, "paint_yellow"))
+    m.add(torus_y(0, 0, 0, 0.1, 0.02, 12, 4, "steel").rotate_z(90).translate(cx, 0.04, cz))
+    m.add(cylinder_y(cx, cz, 0.05, -0.42, -0.25, 8, "steel_dark"))
+    m.add(torus_y(cx, -0.48, cz, 0.07, 0.022, 12, 5, "paint_yellow").rotate_x(90, (cx, -0.48, cz)))
+    m.add(cylinder_y(cx, cz, 0.07, -0.62, -0.5, 10, "steel"))
+    return m
+
+
+def derrick_kelly():
+    """Unit-length square kelly along +Y at the drill axis (stretched and spun by the renderer)."""
+    return box(-0.045, 0, -0.045, 0.045, 1, 0.045, "steel")
+
+
 def mesh_bounds_px(mesh):
     lo, hi = mesh.bbox()
     return lo, hi

@@ -61,6 +61,11 @@ public final class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.crudecompute.datacenter.ChipFabBlockEntity>> CHIP_FAB =
             register("chip_fab", com.crudecompute.datacenter.ChipFabBlockEntity::new, ModBlocks.CHIP_FAB);
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.crudecompute.logistics.ConveyorBlockEntity>> CONVEYOR =
+            register("conveyor_belt", com.crudecompute.logistics.ConveyorBlockEntity::new, ModBlocks.CONVEYOR_BELT);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.crudecompute.oil.OilDerrickBlockEntity>> OIL_DERRICK =
+            register("oil_derrick", com.crudecompute.oil.OilDerrickBlockEntity::new, ModBlocks.OIL_DERRICK);
+
     private ModBlockEntities() {
     }
 

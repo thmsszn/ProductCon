@@ -55,6 +55,8 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.OIL_TANK.get(), OilTankRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MECHANICAL_PUMP.get(), KineticMachineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.BATTERY.get(), BatteryRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CONVEYOR.get(), ConveyorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.OIL_DERRICK.get(), OilDerrickRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.CHIP_FAB.get(), ChipFabRenderer::new);
     }
 

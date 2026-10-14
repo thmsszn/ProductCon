@@ -33,6 +33,9 @@ public final class ModCapabilities {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.BATTERY.get(), (be, side) -> be.getEnergy(side));
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.CHIP_FAB.get(), (be, side) -> be.getAutomation());
 
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.CONVEYOR.get(), (be, side) -> be.getInserter());
+        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.OIL_DERRICK.get(), (be, side) -> be.getFluidHandler(0, 0, 0, side));
+
         // multi-block controllers (cell 0, 0, 0)
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.PUMPJACK.get(), (be, side) -> be.getFluidHandler(0, 0, 0, side));
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.REFINERY.get(), (be, side) -> be.getFluidHandler(0, 0, 0, side));

@@ -21,6 +21,9 @@ public final class ModModels {
     public static final ModelResourceLocation PUMPJACK_ROD = model("pumpjack_rod");
     public static final ModelResourceLocation GPU_BLADE = model("gpu_blade");
     public static final ModelResourceLocation COOLING_FAN = model("cooling_unit_fan");
+    public static final ModelResourceLocation CONVEYOR_RIB = model("conveyor_rib");
+    public static final ModelResourceLocation DERRICK_BLOCK = model("derrick_block");
+    public static final ModelResourceLocation DERRICK_KELLY = model("derrick_kelly");
     public static final ModelResourceLocation PUMP_GEAR = model("mechanical_pump_gear");
     public static final ModelResourceLocation CHIP_FAB_BRIDGE = model("chip_fab_bridge");
     public static final ModelResourceLocation CHIP_FAB_HEAD = model("chip_fab_head");
@@ -28,7 +31,7 @@ public final class ModModels {
 
     public static final List<ModelResourceLocation> ALL = List.of(SHAFT, SHAFT_HALF, HAND_CRANK_HANDLE, WINDMILL_ROTOR,
             ENGINE_FLYWHEEL, PUMPJACK_BEAM, PUMPJACK_CRANK, PUMPJACK_PITMAN, PUMPJACK_CABLE, PUMPJACK_ROD, GPU_BLADE, COOLING_FAN,
-            PUMP_GEAR, CHIP_FAB_BRIDGE, CHIP_FAB_HEAD, CHIP_FAB_WAFER);
+            CONVEYOR_RIB, DERRICK_BLOCK, DERRICK_KELLY, PUMP_GEAR, CHIP_FAB_BRIDGE, CHIP_FAB_HEAD, CHIP_FAB_WAFER);
 
     // pumpjack geometry
     public static final float PJ_PIVOT_Y = 2.4f;

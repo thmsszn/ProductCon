@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ISI",
+    "IWI",
+    "PDP"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "S": {
+      "item": "crudecompute:shaft"
+    },
+    "W": {
+      "item": "crudecompute:gearbox"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "P": {
+      "item": "crudecompute:fluid_pipe"
+    }
+  },
+  "result": {
+    "id": "crudecompute:oil_derrick",
+    "count": 1
+  }
+}

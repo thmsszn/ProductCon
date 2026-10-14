@@ -35,6 +35,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> COOLING_UNIT = blockItem("cooling_unit", ModBlocks.COOLING_UNIT);
     public static final DeferredItem<BlockItem> AI_TERMINAL = blockItem("ai_terminal", ModBlocks.AI_TERMINAL);
     public static final DeferredItem<BlockItem> MECHANICAL_PUMP = blockItem("mechanical_pump", ModBlocks.MECHANICAL_PUMP);
+    public static final DeferredItem<BlockItem> CONVEYOR_BELT = blockItem("conveyor_belt", ModBlocks.CONVEYOR_BELT);
+    public static final DeferredItem<BlockItem> OIL_DERRICK = blockItem("oil_derrick", ModBlocks.OIL_DERRICK);
     public static final DeferredItem<BlockItem> BATTERY = blockItem("battery", ModBlocks.BATTERY);
     public static final DeferredItem<BlockItem> CHIP_FAB = blockItem("chip_fab", ModBlocks.CHIP_FAB);
 

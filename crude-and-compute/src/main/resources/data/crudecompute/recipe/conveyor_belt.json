@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RRR",
+    "ISI"
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:black_wool"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "S": {
+      "item": "crudecompute:shaft"
+    }
+  },
+  "result": {
+    "id": "crudecompute:conveyor_belt",
+    "count": 4
+  }
+}

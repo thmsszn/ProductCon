@@ -130,6 +130,11 @@ BLOCK_MODELS = {
     "cooling_unit_active": (lambda: M.cooling_unit(True), "plastic_white"),
     "cooling_unit_fan": (M.cooling_unit_anim, "fan_blade"),
     "ai_terminal": (M.ai_terminal, "plastic_dark"),
+    "conveyor_belt": (M.conveyor_belt, "steel_dark"),
+    "conveyor_rib": (M.conveyor_rib, "steel"),
+    "oil_derrick": (M.oil_derrick, "paint_red"),
+    "derrick_block": (M.derrick_block, "paint_yellow"),
+    "derrick_kelly": (M.derrick_kelly, "steel"),
     "mechanical_pump": (M.mechanical_pump, "paint_green"),
     "mechanical_pump_gear": (M.mechanical_pump_gear, "brass"),
     "battery": (M.battery, "battery_cell"),
@@ -155,6 +160,8 @@ ITEM_MODELS = {
     "server_rack": (server_rack_full, "steel_dark"),
     "cooling_unit": (lambda: M.cooling_unit(True).add(M.cooling_unit_anim()), "plastic_white"),
     "ai_terminal": (M.ai_terminal, "plastic_dark"),
+    "conveyor_belt": (lambda: M.conveyor_belt().add(M.conveyor_rib()).add(M.conveyor_rib().translate(0, 0, 0.25)).add(M.conveyor_rib().translate(0, 0, -0.25)), "steel_dark"),
+    "oil_derrick": (lambda: M.oil_derrick().add(M.derrick_block().translate(0, 4.2, 0)), "paint_red"),
     "mechanical_pump": (lambda: M.mechanical_pump().add(M.mechanical_pump_gear()), "paint_green"),
     "battery": (M.battery, "battery_cell"),
     "chip_fab": (lambda: M.chip_fab().add(M.chip_fab_bridge()).add(M.chip_fab_head()).add(M.chip_fab_wafer()), "plastic_white"),
@@ -227,6 +234,8 @@ def blockstates():
     bs["oil_tank"] = simple("oil_tank")
     bs["mechanical_pump"] = {"variants": {f"facing={f}": variant("mechanical_pump", x, y) for f, (x, y) in {
         "north": (0, 0), "south": (0, 180), "east": (0, 90), "west": (0, 270), "up": (270, 0), "down": (90, 0)}.items()}}
+    bs["conveyor_belt"] = horizontal_states(lambda p: "conveyor_belt")
+    bs["oil_derrick"] = horizontal_states(lambda p: "oil_derrick", [("active", ["false", "true"])])
     bs["battery"] = horizontal_states(lambda p: "battery")
     bs["chip_fab"] = horizontal_states(lambda p: "chip_fab", [("active", ["false", "true"])])
     bs["cooling_unit"] = {"variants": {"active=false": {"model": ns("block/cooling_unit")},
@@ -259,6 +268,8 @@ BLOCK_NAMES = {
     "multiblock_part": ("Machine Part", "Maschinenteil"),
     "mechanical_pump": ("Mechanical Pump", "Mechanische Pumpe"),
     "battery": ("Battery Bank", "Akku-Block"),
+    "conveyor_belt": ("Conveyor Belt", "Förderband"),
+    "oil_derrick": ("Oil Derrick", "Ölbohrturm"),
     "chip_fab": ("Lithography Machine", "Lithografie-Maschine"),
 }
 
@@ -347,6 +358,12 @@ MESSAGES = {
                                       "Lithografie: %s U/min | Wafer %s, Kunststoff %s, Goldnuggets %s | Platinen %s | %s%%"),
     "message.crudecompute.chip_fab.missing": ("Needs a silicon wafer, plastic pellets and a gold nugget per run.",
                                               "Braucht pro Durchgang einen Silizium-Wafer, Kunststoffgranulat und ein Goldnugget."),
+    "tooltip.crudecompute.conveyor_belt": ("Moves items towards its front. Shafts connect at the sides (4 SU). Chains with other belts, feeds chests and hoppers; accepts dropped items and hoppers.",
+                                           "Befördert Items nach vorne. Wellen seitlich (4 SU). Reiht sich an andere Bänder, füttert Kisten und Trichter; nimmt Wurf-Items und Trichter an."),
+    "tooltip.crudecompute.oil_derrick": ("3×3×7 tower. Drills crude oil under its drill pipe – 3× a pumpjack. Needs rotation (128 SU) from behind.",
+                                         "3×3×7-Turm. Fördert Rohöl unter dem Bohrstrang – 3× so viel wie die Pferdekopfpumpe. Braucht Drehung (128 SU) von hinten."),
+    "message.crudecompute.derrick": ("Derrick: %s RPM | oil deposits below: %s | tank %s / %s mB", "Bohrturm: %s U/min | Ölvorkommen darunter: %s | Tank %s / %s mB"),
+    "message.crudecompute.belt": ("Belt: %s items | %s RPM", "Band: %s Items | %s U/min"),
     "tooltip.crudecompute.mechanical_pump": ("Driven by a shaft from the side: pumps fluid from the back to the front (arrow). 16 SU.",
                                              "Per Welle von der Seite angetrieben: pumpt Flüssigkeit von hinten nach vorne (Pfeil). 16 SU."),
     "tooltip.crudecompute.battery": ("Stores 2,000,000 FE. Charges on every side, outputs on the front.",
@@ -402,7 +419,7 @@ def lang():
 
 
 # =============================================================================== data
-DROPS_SELF = ["mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
+DROPS_SELF = ["conveyor_belt", "oil_derrick", "mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
               "refinery", "fluid_pipe", "oil_tank", "power_cable", "server_rack", "cooling_unit", "ai_terminal"]
 
 
@@ -460,6 +477,8 @@ def recipes():
     shaped("server_rack", ["IBI", "ICI", "IBI"], {"I": I, "B": "minecraft:iron_bars", "C": B})
     shaped("cooling_unit", ["IPI", "PKP", "ICI"], {"I": I, "P": P, "K": "minecraft:packed_ice", "C": B})
     shaped("ai_terminal", ["GGG", "PCP", "PPP"], {"G": "minecraft:glass_pane", "P": P, "C": B})
+    shaped("conveyor_belt", ["RRR", "ISI"], {"R": "minecraft:black_wool", "I": I, "S": S}, count=4)
+    shaped("oil_derrick", ["ISI", "IWI", "PDP"], {"I": I, "S": S, "W": ns("gearbox"), "D": "minecraft:diamond", "P": ns("fluid_pipe")})
     shaped("mechanical_pump", ["CPC", " S "], {"C": C, "P": ns("fluid_pipe"), "S": S})
     shaped("battery", ["PRP", "CBC", "PRP"], {"P": P, "R": "minecraft:redstone_block", "C": C, "B": "minecraft:iron_block"})
     shaped("chip_fab", ["GRG", "IDI", "ISI"], {"G": "minecraft:glass_pane", "R": "minecraft:redstone_lamp", "D": "minecraft:diamond",
@@ -658,7 +677,7 @@ def main(preview=False):
     recipes()
     tags()
     worldgen()
-    empty_structure((12, 6, 12))
+    empty_structure((12, 12, 12))
 
     # mod logo for the mods list
     from preview import render
