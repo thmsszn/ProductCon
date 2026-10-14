@@ -1,5 +1,5 @@
 MODEL CHECK: 0 problem(s)
-scene built at 1, -60, -1
+scene built at 1, -60, 7
 screenshot: Saved screenshot as showcase_1_uebersicht.png
 screenshot: Saved screenshot as showcase_2_pferdekopfpumpe.png
 screenshot: Saved screenshot as showcase_3_rechenzentrum.png
@@ -10,3 +10,7 @@ screenshot: Saved screenshot as showcase_7_chipfabrik_akku.png
 screenshot: Saved screenshot as showcase_8_pumpe.png
 screenshot: Saved screenshot as showcase_9_foerderband.png
 screenshot: Saved screenshot as showcase_10_bohrturm.png
+screenshot: Saved screenshot as showcase_11_gui_rack.png
+screenshot: Saved screenshot as showcase_12_gui_server.png
+screenshot: Saved screenshot as showcase_13_gui_energie.png
+screenshot: Saved screenshot as showcase_14_gui_terminal.png
