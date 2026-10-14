@@ -238,6 +238,39 @@ public final class ModGameTests {
         helper.succeed();
     }
 
+    /** Every catalog part exists as its own item; the PSU curve is worst at tiny loads; shortages shed low-priority servers first. */
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void hardwareItemsAndPowerShedding(GameTestHelper helper) {
+        for (com.crudecompute.hardware.Part part : com.crudecompute.hardware.Catalog.ALL) {
+            helper.assertTrue(com.crudecompute.registry.ModItems.PARTS.containsKey(part.id)
+                    && com.crudecompute.registry.ModItems.partItem(part) instanceof com.crudecompute.item.HardwareItem, "missing item for " + part.id);
+        }
+        com.crudecompute.hardware.ServerConfig cfg = com.crudecompute.hardware.ServerConfig.preset(2);
+        double low = cfg.psuEfficiencyAt(cfg.psuRatedW() * 0.01);
+        double mid = cfg.psuEfficiencyAt(cfg.psuRatedW() * 0.5);
+        helper.assertTrue(low < mid - 0.1, "a PSU is much less efficient at 1 % load: " + low + " vs " + mid);
+
+        BlockPos rackPos = new BlockPos(3, 1, 4);
+        BlockState rackState = facing(ModBlocks.SERVER_RACK.get(), Direction.NORTH);
+        helper.setBlock(rackPos, rackState);
+        rackState.getBlock().setPlacedBy(helper.getLevel(), helper.absolutePos(rackPos), helper.getLevel().getBlockState(helper.absolutePos(rackPos)),
+                null, new ItemStack(ModItems.SERVER_RACK.get()));
+        ServerRackBlockEntity rack = helper.getBlockEntity(rackPos);
+        com.crudecompute.hardware.ServerConfig critical = com.crudecompute.hardware.ServerConfig.preset(1);
+        critical.priority = 0;
+        com.crudecompute.hardware.ServerConfig expendable = com.crudecompute.hardware.ServerConfig.preset(1);
+        expendable.priority = 2;
+        rack.insert(expendable, 0);
+        rack.insert(critical, 1);
+        int needOne = (int) Math.ceil(com.crudecompute.hardware.HardwareSim.nominalInputW(critical) / com.crudecompute.hardware.HardwareSim.WATTS_PER_FE_TICK);
+        IEnergyStorage in = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(rackPos.above()), Direction.WEST);
+        helper.assertTrue(in != null && in.receiveEnergy(needOne + needOne / 2, false) > 0, "rack should accept energy");
+        rack.serverTick();
+        helper.assertTrue(rack.slotStartingAt(1).powered, "the critical server must be kept alive");
+        helper.assertTrue(!rack.slotStartingAt(0).powered && rack.getShedCount() == 1, "the expendable server must be shed first");
+        helper.succeed();
+    }
+
     /** Solar output follows the time of day and only panels connected to an inverter count. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void solarFollowsDaytime(GameTestHelper helper) {

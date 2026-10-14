@@ -136,16 +136,71 @@ public final class ShowcaseAutomation {
                     timer = 0;
                     if (shot >= SHOTS.length) {
                         stage = 3;
+                        timer = 0;
                     }
                 }
             }
             case 3 -> {
+                keepPowered(mc);
+                guiShots(mc);
+            }
+            case 4 -> {
                 if (timer > 20) {
                     finish(mc);
                 }
             }
             default -> {
             }
+        }
+    }
+
+    private static int guiShot;
+
+    /** Opens the rack and terminal screens and photographs them: rack view, server detail, power view, dashboard. */
+    private static void guiShots(Minecraft mc) {
+        MinecraftServer server = mc.getSingleplayerServer();
+        String[] names = {"gui_rack", "gui_server", "gui_energie", "gui_terminal"};
+        if (server == null || guiShot >= names.length) {
+            stage = 4;
+            timer = 0;
+            return;
+        }
+        BlockPos rack = origin.offset(8, 0, 6);
+        BlockPos terminal = origin.offset(9, 0, 3);
+        if (timer == 1) {
+            switch (guiShot) {
+                case 0 -> server.execute(() -> {
+                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                        p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) -> new com.crudecompute.menu.RackMenu(id, inv, rack),
+                                net.minecraft.network.chat.Component.translatable("block.crudecompute.server_rack")), buf -> buf.writeBlockPos(rack));
+                    }
+                });
+                case 1 -> {
+                    if (mc.screen instanceof RackScreen screen) {
+                        screen.showcaseSelect(0);
+                    }
+                }
+                case 2 -> {
+                    if (mc.screen instanceof RackScreen screen) {
+                        screen.showcaseEnergy();
+                    }
+                }
+                default -> server.execute(() -> {
+                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                        p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) -> new com.crudecompute.menu.TerminalMenu(id, inv, terminal),
+                                net.minecraft.network.chat.Component.translatable("block.crudecompute.ai_terminal")), buf -> buf.writeBlockPos(terminal));
+                    }
+                });
+            }
+        }
+        if (guiShot == 3 && timer == 5 && mc.screen instanceof RackScreen) {
+            mc.setScreen(null);
+        }
+        if (timer == (guiShot == 0 || guiShot == 3 ? 70 : 45)) {
+            String name = String.format("showcase_%d_%s.png", SHOTS.length + guiShot + 1, names[guiShot]);
+            Screenshot.grab(mc.gameDirectory, name, mc.getMainRenderTarget(), msg -> REPORT.add("screenshot: " + msg.getString()));
+            guiShot++;
+            timer = 0;
         }
     }
 
@@ -365,6 +420,13 @@ public final class ShowcaseAutomation {
         for (int z = 0; z >= -3; z--) {
             set(level, o.offset(12, 0, z), ModBlocks.GEARBOX.get().defaultBlockState());
             set(level, o.offset(13, 0, z), facing(ModBlocks.CONVEYOR_BELT.get(), Direction.NORTH));
+        }
+        // every placed cable re-evaluates its sides now that all neighbours exist (arms and plugs)
+        for (BlockPos p : BlockPos.betweenClosed(o.offset(-8, 0, -8), o.offset(14, 3, 10))) {
+            BlockState state = level.getBlockState(p);
+            if (state.getBlock() instanceof com.crudecompute.datacenter.PowerCableBlock cable) {
+                level.setBlock(p, cable.connectionState(state, level, p), Block.UPDATE_ALL);
+            }
         }
         REPORT.add("scene built at " + o.toShortString());
     }

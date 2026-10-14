@@ -45,7 +45,7 @@ public final class HardwareSim {
                     + (mb != null ? mb.watts : 0) + c.sum(Kind.RAM, p -> p.watts) + c.sum(Kind.NETWORK, p -> p.watts)
                     + c.sum(Kind.STORAGE, p -> p.watts) * (0.4 + 0.6 * cpuU) + (cool != null ? cool.watts * 0.3 : 0);
         }
-        return load / c.psuEfficiency();
+        return load / c.psuEfficiencyAt(load);
     }
 
     /** Advances the server by {@code dt} seconds. {@code powered} is false during a rack-wide power failure. */
@@ -119,7 +119,8 @@ public final class HardwareSim {
             s.fanDuty += (fanTarget - s.fanDuty) * 0.3f;
         }
         s.loadW = (float) load;
-        s.inputW = (float) (load / c.psuEfficiency());
+        s.psuEff = (float) c.psuEfficiencyAt(load);
+        s.inputW = (float) (load / s.psuEff);
 
         double g = passiveG(sizeU) + coolerG(c, s.fanDuty);
         s.temp += (float) ((load - g * (s.temp - inletC)) / cth * dt);

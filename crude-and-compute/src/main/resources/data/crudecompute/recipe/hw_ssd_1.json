@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "crudecompute:circuit_board"
+    },
+    {
+      "item": "crudecompute:plastic"
+    },
+    {
+      "item": "minecraft:redstone"
+    },
+    {
+      "item": "minecraft:magenta_dye"
+    }
+  ],
+  "result": {
+    "id": "crudecompute:hw_ssd_1",
+    "count": 1
+  }
+}

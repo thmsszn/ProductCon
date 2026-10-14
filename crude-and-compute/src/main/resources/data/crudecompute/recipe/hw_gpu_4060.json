@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "crudecompute:circuit_board"
+    },
+    {
+      "item": "crudecompute:circuit_board"
+    },
+    {
+      "item": "crudecompute:plastic"
+    },
+    {
+      "item": "minecraft:quartz"
+    },
+    {
+      "item": "minecraft:orange_dye"
+    }
+  ],
+  "result": {
+    "id": "crudecompute:hw_gpu_4060",
+    "count": 1
+  }
+}

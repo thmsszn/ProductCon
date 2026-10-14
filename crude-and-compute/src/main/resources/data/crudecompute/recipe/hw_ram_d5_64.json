@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "crudecompute:circuit_board"
+    },
+    {
+      "item": "crudecompute:plastic"
+    },
+    {
+      "item": "minecraft:quartz"
+    },
+    {
+      "item": "minecraft:light_gray_dye"
+    }
+  ],
+  "result": {
+    "id": "crudecompute:hw_ram_d5_64",
+    "count": 1
+  }
+}

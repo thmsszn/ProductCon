@@ -43,10 +43,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     protected void renderBg(GuiGraphics g, float partialTick, int mx, int my) {
         int x0 = leftPos;
         int y0 = topPos;
-        g.fill(x0, y0, x0 + imageWidth, y0 + imageHeight, BG);
-        g.fill(x0, y0, x0 + imageWidth, y0 + 20, PANEL);
-        g.fill(x0, y0 + 20, x0 + imageWidth, y0 + 21, ACCENT);
-        g.drawString(font, Component.translatable("dash.title"), x0 + 8, y0 + 7, TEXT, false);
+        UiKit.window(g, x0, y0, imageWidth, imageHeight, 24);
+        g.drawString(font, Component.translatable("dash.title"), x0 + 10, y0 + 8, TEXT, false);
         AITerminalBlockEntity t = terminal();
         if (t == null) {
             return;
@@ -74,14 +72,14 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
         // bottom: datacenter + training
         int by = chartY + 78;
-        g.fill(x0 + 6, by, x0 + 6 + 194, by + 62, PANEL);
+        UiKit.panel(g, x0 + 6, by, 194, 62);
         g.drawString(font, Component.translatable("dash.datacenter"), x0 + 11, by + 4, ACCENT, false);
         g.drawString(font, Component.translatable("dash.racks", t.getRacks(), t.getGpus()), x0 + 11, by + 16, TEXT, false);
         g.drawString(font, Component.translatable("dash.compute", Lang.num(t.getComputeValue())), x0 + 11, by + 26, TEXT, false);
         g.drawString(font, Component.translatable("dash.pue", t.getPue() > 0 ? String.format(java.util.Locale.ROOT, "%.2f", t.getPue()) : "—"), x0 + 11, by + 36, TEXT, false);
         g.drawString(font, Component.translatable("dash.temps", Lang.num(t.getMaxTemp()), Lang.num(t.getInletAvg())), x0 + 11, by + 46, t.getMaxTemp() > 80 ? BAD : TEXT, false);
 
-        g.fill(x0 + 204, by, x0 + 394, by + 62, PANEL);
+        UiKit.panel(g, x0 + 204, by, 190, 62);
         g.drawString(font, Component.translatable("dash.training"), x0 + 209, by + 4, ACCENT, false);
         int percent = t.getProgressPercent();
         String state = percent < 0 ? Component.translatable("dash.no_drive").getString()
@@ -101,8 +99,8 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     }
 
     private void card(GuiGraphics g, int x, int y, int w, String titleKey, String value, String sub, int color) {
-        g.fill(x, y, x + w, y + 42, PANEL);
-        g.fill(x, y, x + 2, y + 42, color);
+        UiKit.panel(g, x, y, w, 42);
+        g.fill(x + 1, y + 1, x + 3, y + 41, color);
         g.drawString(font, Component.translatable(titleKey), x + 7, y + 4, DIM, false);
         g.drawString(font, value, x + 7, y + 16, color, false);
         g.drawString(font, font.plainSubstrByWidth(sub, w - 10), x + 7, y + 30, DIM, false);
@@ -110,7 +108,7 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
 
     /** Line chart of up to two series (values in tenths). */
     private void chart(GuiGraphics g, int x, int y, int w, int h, String titleKey, int[] a, int colorA, int[] b, int colorB, String unit, float scale) {
-        g.fill(x, y, x + w, y + h, PANEL);
+        UiKit.panel(g, x, y, w, h);
         g.drawString(font, Component.translatable(titleKey), x + 5, y + 3, ACCENT, false);
         int px = x + 24;
         int py = y + 14;

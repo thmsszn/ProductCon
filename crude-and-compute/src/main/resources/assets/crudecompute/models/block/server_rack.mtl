@@ -11,13 +11,23 @@ newmtl server_side
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/server_side
 
-newmtl fan_grille
-Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/fan_grille
-
 newmtl steel
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/steel
+
+newmtl led_blue
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+map_Kd crudecompute:block/led_blue
+
+newmtl led_white
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+map_Kd crudecompute:block/led_white
+
+newmtl fan_grille
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/fan_grille
 
 newmtl rack_rail
 Kd 1.0 1.0 1.0
@@ -27,11 +37,6 @@ newmtl screen
 Kd 1.0 1.0 1.0
 Ka 1.0 1.0 1.0
 map_Kd crudecompute:block/screen
-
-newmtl led_blue
-Kd 1.0 1.0 1.0
-Ka 1.0 1.0 1.0
-map_Kd crudecompute:block/led_blue
 
 newmtl pdu
 Kd 1.0 1.0 1.0
@@ -56,4 +61,8 @@ map_Kd crudecompute:block/rack_mesh
 newmtl brass
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/brass
+
+newmtl glass_dark
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/glass_dark
 

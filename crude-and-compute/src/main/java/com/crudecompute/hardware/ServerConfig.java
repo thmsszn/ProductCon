@@ -26,6 +26,8 @@ public final class ServerConfig {
     public final List<String> nics = new ArrayList<>();
     public final List<String> psus = new ArrayList<>();
     public int mode = MODE_NORMAL;
+    /** Load-shedding priority during power shortages: 0 = critical (kept alive first), 1 = normal, 2 = expendable. */
+    public int priority = 1;
 
     public ServerConfig(int sizeU) {
         this.sizeU = sizeU;
@@ -42,6 +44,7 @@ public final class ServerConfig {
         t.putString("Mobo", mobo);
         t.putString("Cooler", cooler);
         t.putInt("Mode", mode);
+        t.putInt("Prio", priority);
         t.put("Cpus", strings(cpus));
         t.put("Rams", strings(rams));
         t.put("Gpus", strings(gpus));
@@ -56,6 +59,7 @@ public final class ServerConfig {
         c.mobo = t.getString("Mobo");
         c.cooler = t.getString("Cooler");
         c.mode = t.contains("Mode") ? t.getInt("Mode") : MODE_NORMAL;
+        c.priority = t.contains("Prio") ? t.getInt("Prio") : 1;
         read(t.getList("Cpus", Tag.TAG_STRING), c.cpus);
         read(t.getList("Rams", Tag.TAG_STRING), c.rams);
         read(t.getList("Gpus", Tag.TAG_STRING), c.gpus);
@@ -153,6 +157,28 @@ public final class ServerConfig {
     public double psuEfficiency() {
         int n = psus.size();
         return n == 0 ? 0.8 : sum(Kind.PSU, p -> p.eff) / n;
+    }
+
+    /**
+     * Efficiency of the installed PSUs at the given DC load: the load is shared by all PSUs, and every PSU follows a
+     * typical 80 PLUS curve (poor below 10 % load, best around 40-60 %, slightly lower at full load).
+     */
+    public double psuEfficiencyAt(double loadW) {
+        int rated = psuRatedW();
+        if (psus.isEmpty() || rated <= 0) {
+            return 0.8;
+        }
+        double frac = Math.max(0, Math.min(1.2, loadW / rated));
+        double[][] curve = {{0.0, 0.80}, {0.05, 0.88}, {0.10, 0.94}, {0.20, 0.985}, {0.50, 1.0}, {0.80, 0.985}, {1.0, 0.96}, {1.2, 0.93}};
+        double f = curve[curve.length - 1][1];
+        for (int i = 1; i < curve.length; i++) {
+            if (frac <= curve[i][0]) {
+                double t = (frac - curve[i - 1][0]) / (curve[i][0] - curve[i - 1][0]);
+                f = curve[i - 1][1] + t * (curve[i][1] - curve[i - 1][1]);
+                break;
+            }
+        }
+        return Math.min(0.99, psuEfficiency() * f);
     }
 
     public int totalPrice() {
@@ -314,6 +340,7 @@ public final class ServerConfig {
         mobo = o.mobo;
         cooler = o.cooler;
         mode = o.mode;
+        priority = o.priority;
         for (Kind k : new Kind[]{Kind.CPU, Kind.RAM, Kind.GPU, Kind.STORAGE, Kind.NETWORK, Kind.PSU}) {
             list(k).clear();
             list(k).addAll(o.list(k));

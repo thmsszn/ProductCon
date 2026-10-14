@@ -72,6 +72,20 @@ public final class ModItems {
         return sizeU == 1 ? SERVER_1U.get() : sizeU == 2 ? SERVER_2U.get() : SERVER_4U.get();
     }
 
+    /** One item per catalog part: id = "hw_" + part id. */
+    public static final java.util.Map<String, DeferredItem<Item>> PARTS = new java.util.LinkedHashMap<>();
+
+    static {
+        for (com.crudecompute.hardware.Part part : com.crudecompute.hardware.Catalog.ALL) {
+            PARTS.put(part.id, ITEMS.register("hw_" + part.id,
+                    () -> new com.crudecompute.item.HardwareItem(new Item.Properties().stacksTo(16), part)));
+        }
+    }
+
+    public static Item partItem(com.crudecompute.hardware.Part part) {
+        return PARTS.get(part.id).get();
+    }
+
     private ModItems() {
     }
 

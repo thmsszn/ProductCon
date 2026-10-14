@@ -4,7 +4,7 @@ package com.crudecompute.hardware;
 public enum HwError {
     MOBO_TOO_LARGE, NEEDS_MOBO, CPU_SOCKET, CPU_SLOTS, RAM_TYPE, RAM_SLOTS, GPU_TOO_BIG, PCIE_SLOTS, M2_SLOTS, BAYS,
     PSU_SLOTS, PSU_TOO_BIG, PSU_WEAK, COOLER_TOO_BIG, REMOVE_DEPENDENTS, NO_SPACE, NOT_FOUND,
-    NO_MOBO, NO_CPU, NO_RAM, NO_PSU, NO_COOLER;
+    NO_MOBO, NO_CPU, NO_RAM, NO_PSU, NO_COOLER, NOT_OWNED;
 
     public int code() {
         return ordinal() + 1;

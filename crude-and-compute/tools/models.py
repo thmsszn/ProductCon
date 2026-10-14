@@ -485,7 +485,18 @@ def server_rack():
             m.add(box(x0, 0.07, z0, x0 + 0.06, 1.99, z0 + 0.06, "steel_dark"))
     for x0 in (0.05, 0.91):
         m.add(box(x0, 0.07, 0.1, x0 + 0.04, 1.94, 0.9, "server_side"))
+        # louvres on the side panels and a glowing accent bar along the front edge
+        for k in range(26):
+            y = 0.2 + k * 0.067
+            if x0 < 0.5:
+                m.add(box(x0 - 0.012, y, 0.22, x0, y + 0.018, 0.8, "steel"))
+            else:
+                m.add(box(x0 + 0.04, y, 0.22, x0 + 0.052, y + 0.018, 0.8, "steel"))
+        m.add(box(x0 - 0.008 if x0 < 0.5 else x0 + 0.04, 0.1, 0.085, x0 + 0.0 if x0 < 0.5 else x0 + 0.048, 1.92, 0.1, "led_blue"))
     m.add(box(0.04, 1.94, 0.04, 0.96, 2.0, 0.96, "steel_dark"))
+    m.add(box(0.02, 1.985, 0.02, 0.98, 2.0, 0.98, "steel"))                  # protruding top plate
+    m.add(box(0.14, 1.9, 0.07, 0.86, 1.935, 0.09, "steel"))                 # front header bar
+    m.add(box(0.14, 2.0, 0.025, 0.86, 2.012, 0.04, "led_white"))            # light bar on the roof edge
     # roof fan tray
     for x in (0.3, 0.7):
         m.add(washer_y(x, 0.5, 0.0, 0.17, 2.0, 2.03, 16, "steel_dark", inner=False))
@@ -520,6 +531,11 @@ def server_rack():
         door.add(box(0.09, 0.09, z0, 0.91, 0.12, z0 + 0.03, "steel_dark"))
         door.add(box(0.09, 1.9, z0, 0.91, 1.93, z0 + 0.03, "steel_dark"))
     door.add(box(0.1, 0.9, 0.03, 0.13, 1.1, 0.05, "brass"))
+    door.add(box(0.86, 0.85, 0.0, 0.89, 1.2, 0.05, "steel"))                 # pull handle
+    door.add(box(0.12, 1.55, 0.04, 0.88, 1.88, 0.08, "steel_dark", {"n": "glass_dark"}))  # smoked glass window
+    door.add(box(0.12, 1.55, 0.03, 0.88, 1.57, 0.08, "steel"))
+    door.add(box(0.12, 1.86, 0.03, 0.88, 1.88, 0.08, "steel"))
+    door.add(box(0.1, 0.09, 0.0, 0.9, 0.14, 0.05, "steel_dark"))
     m.add(door.rotate_y(-105, (0.93, 0.0, 0.0625)))
     return m
 

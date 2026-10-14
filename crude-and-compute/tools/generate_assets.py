@@ -226,6 +226,18 @@ def connection_multipart(center, arm):
     return {"multipart": parts}
 
 
+def hardware_assets(item_models_dir):
+    """One icon texture + item model per catalog part (rendered from small 3D models in brand colours)."""
+    import hwicons
+    tex_dir = os.path.join(ASSETS, "textures", "item")
+    os.makedirs(tex_dir, exist_ok=True)
+    for part in hwicons.parse_catalog():
+        name = f"hw_{part['id']}"
+        hwicons.make_icon(part, size=32).save(os.path.join(tex_dir, f"{name}.png"))
+        write_json(os.path.join(item_models_dir, f"{name}.json"),
+                   {"parent": "minecraft:item/generated", "textures": {"layer0": ns(f"item/{name}")}})
+
+
 def cable_multipart():
     """Cable arms; a side with plug_<dir> draws the plug variant instead of the cable-to-cable gland."""
     parts = [{"apply": {"model": ns("block/power_cable_center")}}]
@@ -375,6 +387,35 @@ MESSAGES = {
     "hw.err.no_ram": ('no RAM', 'kein RAM'),
     "hw.err.no_psu": ('no power supply', 'kein Netzteil'),
     "hw.err.no_cooler": ('no cooling', 'keine Kühlung'),
+    "hw.err.not_owned": ('You do not have this part in your inventory.', 'Dieses Teil hast du nicht im Inventar.'),
+    "hw.item.install_hint": ('Install via the server rack screen.', 'Einbau über die Rack-Oberfläche.'),
+    "itemGroup.crudecompute.hardware": ('Crude & Compute: Hardware', 'Crude & Compute: Hardware'),
+    "hw.gui.title": ('Server Rack', 'Server-Rack'),
+    "hw.gui.tab.rack": ('Rack', 'Rack'),
+    "hw.gui.tab.energy": ('Power', 'Energie'),
+    "hw.gui.search": ('Search…', 'Suchen…'),
+    "hw.gui.click_open": ('Click to open', 'Klicken zum Öffnen'),
+    "hw.gui.click_install": ('Click to install (uses one from your inventory)', 'Klicken zum Einbauen (verbraucht eins aus dem Inventar)'),
+    "hw.gui.owned": ('In inventory: %s', 'Im Inventar: %s'),
+    "hw.gui.only_compat": ('Fits', 'Passend'),
+    "hw.gui.sort": ('Sort', 'Sort.'),
+    "hw.gui.sort.price": ('price', 'Preis'),
+    "hw.gui.sort.performance": ('power', 'Leistung'),
+    "hw.gui.sort.name": ('name', 'Name'),
+    "hw.gui.prio": ('Power priority', 'Strom-Priorität'),
+    "hw.gui.prio.0": ('CRIT', 'KRIT'),
+    "hw.gui.prio.1": ('NORM', 'NORM'),
+    "hw.gui.prio.2": ('LOW', 'NIEDR'),
+    "hw.gui.shed": ('%s server(s) shut down: not enough power', '%s Server aus: zu wenig Strom'),
+    "hw.gui.draw_per_server": ('Power draw per server', 'Verbrauch pro Server'),
+    "hw.gui.no_servers": ('No servers mounted.', 'Keine Server eingebaut.'),
+    "hw.gui.supply": ('Power supply', 'Stromversorgung'),
+    "hw.gui.runtime": ('Buffer lasts: %s min', 'Puffer reicht: %s min'),
+    "hw.gui.psu_loss": ('PSU losses', 'Netzteil-Verlust'),
+    "hw.gui.efficiency": ('Efficiency', 'Wirkungsgrad'),
+    "hw.gui.history": ('Last 60 s: draw (green) / heat (amber)', 'Letzte 60 s: Verbrauch (grün) / Wärme (gelb)'),
+    "hw.gui.nothing": ('Nothing matches.', 'Nichts gefunden.'),
+    "hw.gui.live": ('Live data', 'Live-Daten'),
     "hw.gui.done": ('Done.', 'Erledigt.'),
     "hw.gui.back": ('Rack', 'Rack'),
     "hw.gui.installed": ('Installed', 'Eingebaut'),
@@ -390,7 +431,7 @@ MESSAGES = {
     "hw.gui.status": ('Status', 'Status'),
     "hw.gui.insert_held": ('Mount held server', 'Gehaltenen Server einbauen'),
     "hw.gui.empty_chassis": ('empty chassis', 'leeres Gehäuse'),
-    "hw.gui.server_title": ('Server %sU at U%s – %s', 'Server %sU bei U%s – %s'),
+    "hw.gui.server_title": ('Server %sU at U%s', 'Server %sU bei U%s'),
     "hw.gui.cpu": ('CPU', 'CPU'),
     "hw.gui.gpu": ('GPU', 'GPU'),
     "hw.gui.disk": ('Disk', 'Disk'),
@@ -602,7 +643,31 @@ def shapeless(name, ingredients, result=None, count=1):
     })
 
 
+DYES = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue",
+        "brown", "green", "red", "black"]
+
+
+def hardware_recipes():
+    """Every part is crafted shapeless: kind base + tier extras (by price) + one dye that selects the model."""
+    import hwicons
+    B, P, W = ns("circuit_board"), ns("plastic"), ns("silicon_wafer")
+    base = {"cpu": [W, "minecraft:gold_nugget"], "ram": [B, P], "motherboard": [B, B, "minecraft:copper_ingot"],
+            "gpu": [B, B, P], "storage": [B, P, "minecraft:redstone"], "network": [B, "minecraft:copper_ingot", "minecraft:redstone"],
+            "psu": ["minecraft:iron_ingot", "minecraft:copper_ingot", "minecraft:redstone", B],
+            "cooler": ["minecraft:iron_ingot", "minecraft:copper_ingot", P]}
+    extras = [[], ["minecraft:quartz"], ["minecraft:gold_ingot"], ["minecraft:diamond"], ["minecraft:diamond", "minecraft:netherite_scrap"]]
+    index = {}
+    for part in hwicons.parse_catalog():
+        price = int(part["args"][-1])
+        tier = 0 if price < 200 else 1 if price < 700 else 2 if price < 2500 else 3 if price < 10000 else 4
+        i = index.get(part["kind"], 0)
+        index[part["kind"]] = i + 1
+        assert i < len(DYES), f"too many {part['kind']} parts for the dye selector"
+        shapeless(f"hw_{part['id']}", base[part["kind"]] + extras[tier] + [f"minecraft:{DYES[i]}_dye"])
+
+
 def recipes():
+    hardware_recipes()
     I, C, G = "minecraft:iron_ingot", "minecraft:copper_ingot", "minecraft:gold_ingot"
     P = ns("plastic")
     B = ns("circuit_board")
@@ -821,6 +886,7 @@ def main(preview=False):
     write_json(os.path.join(im, "oil_shale.json"), {"parent": ns("block/oil_shale")})
     for name in FLAT_ITEMS:
         write_json(os.path.join(im, f"{name}.json"), {"parent": "minecraft:item/generated", "textures": {"layer0": ns(f"item/{name}")}})
+    hardware_assets(im)
     write_json(os.path.join(im, "wrench.json"), {"parent": "minecraft:item/handheld", "textures": {"layer0": ns("item/wrench")}})
 
     blockstates()

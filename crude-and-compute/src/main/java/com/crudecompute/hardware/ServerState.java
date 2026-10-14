@@ -23,6 +23,7 @@ public final class ServerState {
     public float loadW;
     public float inputW;
     public float compute;
+    public float psuEff = 0.9f;
 
     public CompoundTag save() {
         CompoundTag t = new CompoundTag();
@@ -38,6 +39,7 @@ public final class ServerState {
         t.putFloat("Load", loadW);
         t.putFloat("In", inputW);
         t.putFloat("Compute", compute);
+        t.putFloat("Eff", psuEff);
         return t;
     }
 
@@ -55,6 +57,7 @@ public final class ServerState {
         s.loadW = t.getFloat("Load");
         s.inputW = t.getFloat("In");
         s.compute = t.getFloat("Compute");
+        s.psuEff = t.contains("Eff") ? t.getFloat("Eff") : 0.9f;
         return s;
     }
 }

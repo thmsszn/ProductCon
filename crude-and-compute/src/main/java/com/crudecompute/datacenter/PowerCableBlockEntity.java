@@ -16,8 +16,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 
 public class PowerCableBlockEntity extends BlockEntity implements TickingBlockEntity {
-    public static final int CAPACITY = 4096;
-    public static final int RATE = 4096;
+    public static final int CAPACITY = 16384;
+    public static final int RATE = 16384;
 
     private final ModEnergyStorage energy = new ModEnergyStorage(CAPACITY, RATE, RATE, this::setChanged);
     private int rotation;

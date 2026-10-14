@@ -52,6 +52,8 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         public int u;
         public ServerConfig cfg;
         public ServerState st = new ServerState();
+        /** Whether the rack currently supplies this server (false while it is shed during a shortage). */
+        public boolean powered = true;
 
         public Slot(int u, ServerConfig cfg) {
             this.u = u;
@@ -164,6 +166,14 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         return true;
     }
 
+    public void setPriority(int u, int priority) {
+        Slot s = slotStartingAt(u);
+        if (s != null) {
+            s.cfg.priority = Math.max(0, Math.min(2, priority));
+            sync();
+        }
+    }
+
     public void setMode(int u, int mode) {
         Slot s = slotStartingAt(u);
         if (s != null) {
@@ -273,7 +283,7 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
     private double requestedW(boolean nominal) {
         double w = 0;
         for (Slot s : slots) {
-            w += nominal || !powered ? HardwareSim.nominalInputW(s.cfg) : s.st.inputW;
+            w += nominal || !s.powered ? HardwareSim.nominalInputW(s.cfg) : s.st.inputW;
         }
         return w;
     }
@@ -284,19 +294,58 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         if (level == null) {
             return;
         }
-        double needFE = requestedW(false) / HardwareSim.WATTS_PER_FE_TICK;
-        int need = (int) Math.ceil(needFE);
-        if (need <= 0) {
-            powered = true;
-        } else if (energy.getEnergyStored() >= need) {
-            energy.removeInternal(need);
-            powered = true;
-        } else {
-            powered = false;
-        }
+        allocatePower();
         if (level.getGameTime() % 20 == Math.floorMod(worldPosition.hashCode(), 20)) {
             thermalUpdate();
         }
+    }
+
+    /**
+     * Shares the buffered energy between the servers. When there is not enough for everyone, expendable servers are
+     * shed first (priority 2), critical ones (priority 0) stay up the longest.
+     */
+    private void allocatePower() {
+        List<Slot> order = new ArrayList<>(slots);
+        order.sort(Comparator.comparingInt((Slot s) -> s.cfg.priority).thenComparingInt(s -> s.u));
+        int available = energy.getEnergyStored();
+        int used = 0;
+        boolean all = true;
+        for (Slot s : order) {
+            double nominal = HardwareSim.nominalInputW(s.cfg);
+            int need = (int) Math.ceil((s.powered ? s.st.inputW : nominal) / HardwareSim.WATTS_PER_FE_TICK);
+            if (need <= 0 || available >= need) {
+                available -= Math.max(0, need);
+                used += Math.max(0, need);
+                s.powered = true;
+            } else {
+                s.powered = false;
+                all = false;
+            }
+        }
+        if (used > 0) {
+            energy.removeInternal(used);
+        }
+        powered = all;
+    }
+
+    /** Number of servers currently without supply because the rack ran short of energy. */
+    public int getShedCount() {
+        int n = 0;
+        for (Slot s : slots) {
+            if (!s.powered) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Energy lost in the power supplies (heat on top of the load), in watts. */
+    public float getPsuLossW() {
+        float w = 0;
+        for (Slot s : slots) {
+            w += Math.max(0, s.st.inputW - s.st.loadW);
+        }
+        return w;
     }
 
     private void recomputeAll() {
@@ -318,7 +367,7 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         double removable = 0;
         for (Slot s : slots) {
             float localInlet = inletC + 0.12f * s.u;
-            HardwareSim.step(s.cfg, s.st, localInlet, powered, 1.0);
+            HardwareSim.step(s.cfg, s.st, localInlet, s.powered, 1.0);
             removable += (HardwareSim.passiveG(s.cfg.sizeU) + HardwareSim.coolerG(s.cfg, 1f)) * Math.max(1f, HardwareSim.THROTTLE_C - localInlet);
         }
         float heat = getHeatW();

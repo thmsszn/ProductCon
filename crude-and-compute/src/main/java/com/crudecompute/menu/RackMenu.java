@@ -31,6 +31,7 @@ public class RackMenu extends AbstractContainerMenu {
     public static final int A_EJECT = 5000;
     public static final int A_INSERT_HELD = 6000;
     public static final int A_MOVE = 7000;
+    public static final int A_PRIORITY = 8000;
 
     public final BlockPos pos;
     private final ContainerData data = new SimpleContainerData(3);
@@ -85,11 +86,33 @@ public class RackMenu extends AbstractContainerMenu {
             feedback(null);
         } else if (id >= A_INSTALL && id < A_INSTALL + 500) {
             Part part = ServerRackBlockEntity.catalogPart(id - A_INSTALL);
-            feedback(part == null ? new Problem(HwError.NOT_FOUND, 0) : rack.installPart(selectedU, part));
+            if (part == null) {
+                feedback(new Problem(HwError.NOT_FOUND, 0));
+            } else if (!player.getAbilities().instabuild && countInInventory(player, part) == 0) {
+                feedback(new Problem(HwError.NOT_OWNED, 0));
+            } else {
+                Problem problem = rack.installPart(selectedU, part);
+                if (problem == null && !player.getAbilities().instabuild) {
+                    takeFromInventory(player, part);
+                }
+                feedback(problem);
+            }
         } else if (id >= A_REMOVE_PART && id < A_REMOVE_PART + 1000) {
             int kind = (id - A_REMOVE_PART) / 100;
             int index = (id - A_REMOVE_PART) % 100;
-            feedback(kind < Kind.values().length ? rack.removePart(selectedU, Kind.values()[kind], index) : new Problem(HwError.NOT_FOUND, 0));
+            if (kind >= Kind.values().length) {
+                feedback(new Problem(HwError.NOT_FOUND, 0));
+            } else {
+                Part removed = installedPart(rack, selectedU, Kind.values()[kind], index);
+                Problem problem = rack.removePart(selectedU, Kind.values()[kind], index);
+                if (problem == null && removed != null) {
+                    giveItem(player, new ItemStack(com.crudecompute.registry.ModItems.partItem(removed)));
+                }
+                feedback(problem);
+            }
+        } else if (id >= A_PRIORITY && id < A_PRIORITY + 3) {
+            rack.setPriority(selectedU, id - A_PRIORITY);
+            feedback(null);
         } else if (id >= A_MODE && id < A_MODE + 4) {
             rack.setMode(selectedU, id - A_MODE);
             feedback(null);
@@ -129,6 +152,45 @@ public class RackMenu extends AbstractContainerMenu {
             return false;
         }
         return true;
+    }
+
+    @Nullable
+    private static Part installedPart(ServerRackBlockEntity rack, int u, Kind kind, int index) {
+        ServerRackBlockEntity.Slot slot = rack.slotStartingAt(u);
+        if (slot == null) {
+            return null;
+        }
+        java.util.List<Part> parts = slot.cfg.parts(kind);
+        int i = kind == Kind.MOTHERBOARD || kind == Kind.COOLER ? 0 : index;
+        return i >= 0 && i < parts.size() ? parts.get(i) : null;
+    }
+
+    /** How many items of this part the player carries. */
+    public static int countInInventory(Player player, Part part) {
+        net.minecraft.world.item.Item item = com.crudecompute.registry.ModItems.partItem(part);
+        int n = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(item)) {
+                n += stack.getCount();
+            }
+        }
+        return n;
+    }
+
+    private static void takeFromInventory(Player player, Part part) {
+        net.minecraft.world.item.Item item = com.crudecompute.registry.ModItems.partItem(part);
+        for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(item)) {
+                stack.shrink(1);
+                return;
+            }
+        }
+    }
+
+    private static void giveItem(Player player, ItemStack stack) {
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
     }
 
     @Override

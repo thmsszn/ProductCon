@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "crudecompute:item/hw_ram_c_d5_rgb"
+  }
+}

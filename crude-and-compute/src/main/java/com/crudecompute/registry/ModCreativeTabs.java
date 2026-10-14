@@ -58,6 +58,18 @@ public final class ModCreativeTabs {
             })
             .build());
 
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> HARDWARE = TABS.register("hardware", () -> CreativeModeTab.builder()
+            .title(Component.translatable("itemGroup.crudecompute.hardware"))
+            .icon(() -> new ItemStack(ModItems.PARTS.get("gpu_h80").get()))
+            .displayItems((params, output) -> {
+                for (com.crudecompute.hardware.Kind kind : com.crudecompute.hardware.Kind.values()) {
+                    for (com.crudecompute.hardware.Part part : com.crudecompute.hardware.Catalog.BY_KIND.get(kind)) {
+                        output.accept(ModItems.partItem(part));
+                    }
+                }
+            })
+            .build());
+
     private ModCreativeTabs() {
     }
 }
