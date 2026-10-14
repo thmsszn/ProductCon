@@ -109,11 +109,11 @@ public class TerminalScreen extends AbstractContainerScreen<TerminalMenu> {
     /** Line chart of up to two series (values in tenths). */
     private void chart(GuiGraphics g, int x, int y, int w, int h, String titleKey, int[] a, int colorA, int[] b, int colorB, String unit, float scale) {
         UiKit.panel(g, x, y, w, h);
-        g.drawString(font, Component.translatable(titleKey), x + 5, y + 3, ACCENT, false);
+        g.drawString(font, font.plainSubstrByWidth(Component.translatable(titleKey).getString(), w - 34), x + 5, y + 4, ACCENT, false);
         int px = x + 24;
-        int py = y + 14;
+        int py = y + 20;
         int pw = w - 30;
-        int ph = h - 22;
+        int ph = h - 28;
         int max = 1;
         for (int v : a) {
             max = Math.max(max, v);

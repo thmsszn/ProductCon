@@ -21,7 +21,7 @@ Echte Screenshots aus Minecraft (automatisch per CI aufgenommen, siehe unten):
 ## Installation
 
 1. **Minecraft 1.21.1** mit **NeoForge 21.1.x** installieren (Installer: https://neoforged.net).
-2. Die Datei [`download/crudecompute-1.21.1-1.4.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
+2. Die Datei [`download/crudecompute-1.21.1-1.5.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
 3. Spiel mit dem NeoForge-Profil starten – alles findet sich im Kreativ-Tab **Crude & Compute**.
 
 Die JAR baut GitHub Actions bei jedem Push (Workflow „Minecraft-Mod bauen“, Artefakt
@@ -70,6 +70,15 @@ reihen sich aneinander, am Ende werden Kisten/Trichter befüllt; Trichter und Wu
 dahinter in den Block davor). Antrieb per Welle von oben, unten oder seitlich (16 SU, 4 mB/t pro U/min).
 Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 
+### Hardware-Teile (Items)
+Im Kreativ-Tab **Crude & Compute: Hardware** gibt es 77 Einzelteile mit echten Modellen: AMD Ryzen / Threadripper / EPYC,
+Intel Core / Xeon, NVIDIA GeForce / RTX / H100 / H200 / B200, AMD Radeon / Instinct, Corsair Vengeance / Dominator,
+ASUS ROG und MSI Mainboards, Samsung / Corsair / WD / Seagate Speicher, NVIDIA ConnectX, Corsair Netzteile, Noctua
+und Corsair Kühler. Jedes Teil hat ein eigenes Icon in Markenfarben. Im Überleben werden sie **formlos gecraftet**:
+Grundzutaten je Teileart + Aufwertung nach Preisklasse + **ein Farbstoff, der das Modell auswählt** (Reihenfolge der
+Teile im Katalog, Rezeptbuch zeigt es). Eingebaut werden sie in der Rack-Oberfläche: Teil anklicken → ein Stück wird
+aus dem Inventar verbraucht; mit ✖ kommt es zurück ins Inventar.
+
 ### 3. KI-Rechenzentrum
 1. **Strom**: Generator → **Stromkabel** → Verbraucher (Forge Energy, kompatibel mit anderen Mods).
    Die Kabel sind gummiisolierte Leitungen mit Zugentlastung; wo sie auf eine Maschine treffen, endet das Kabel in
@@ -82,13 +91,17 @@ Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 2. **Silizium** aus Quarz schmelzen → **Wafer** → **Platine** (mit Kunststoff) → **KI-Beschleuniger (GPU)**.
    Günstiger geht es mit der **Lithografie-Maschine**: Wafer + Kunststoff + Goldnugget → 2 Platinen, ein
    Laserkopf fährt dabei sichtbar über den Wafer (Antrieb von unten oder hinten, 64 SU; Trichter-kompatibel).
-3. **Server-Rack (14 HE)**: Rechtsklick öffnet die Rack-Oberfläche. Dort werden **1U-, 2U- und 4U-Server** in freie
+3. **Server-Rack (14 HE)** (Rechtsklick öffnet die Oberfläche mit den Ansichten *Rack* und *Energie*; Suche, Filter
+   „Passend“, Sortierung nach Preis/Leistung/Name, Teile mit Icons und Tooltips): Rechtsklick öffnet die Rack-Oberfläche. Dort werden **1U-, 2U- und 4U-Server** in freie
    Höheneinheiten gesetzt, entfernt und per Katalog individuell konfiguriert (CPU, GPU, RAM, Speicher, NIC,
    Netzteil, Kühlung, Mainboard). Die **Kompatibilitätsprüfung** meldet verständliche Fehler (z. B. Netzteil zu
    schwach, Sockel passt nicht, Kühler zu klein, Gehäuse zu flach). Pro Server werden Leistung, Verbrauch,
    Temperatur, Status-LEDs (Strom/Aktivität/Warnung) und Rechenleistung angezeigt; am Rack zeigt ein Display
    Temperatur, belegte HE und Abwärme. Die Hardware wandert mit dem Server-Item.
-4. **Thermik & Strom (Simulation)**: Jeder Server hat ein Wärmemodell (Wärmekapazität, Lüfter/Kühler,
+4. **Stromversorgung**: Netzteile folgen einer 80-PLUS-Kurve (bei sehr kleiner Last ineffizient, am besten bei ca. 50 %).
+   Reicht der Rack-Puffer nicht, werden Server nach **Priorität** abgeschaltet (KRIT bleibt am längsten an, NIEDR zuerst);
+   die Energie-Ansicht zeigt Verbrauch pro Server, Netzteil-Verluste, Puffer-Laufzeit und einen 60-s-Verlauf.
+4a. **Thermik & Strom (Simulation)**: Jeder Server hat ein Wärmemodell (Wärmekapazität, Lüfter/Kühler,
    Einlasstemperatur aus Biom + Abwärme der Racks + Kühlaggregat). Ab 85 °C drosselt er, ab 100 °C schaltet er ab
    und startet erst unter 65 °C wieder. Fehlt Strom im Rack-Puffer, fahren die Server herunter (Brown-out).
    **Kühlaggregat** (16 FE/t) senkt die Einlasstemperatur der Racks im Umkreis von 2 Blöcken.

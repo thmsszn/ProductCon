@@ -352,7 +352,7 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
         int left = x0 + 8;
         double totalW = rack.getPowerDraw() * HardwareSim.WATTS_PER_FE_TICK;
         // left: draw per server
-        UiKit.panel(g, left, top, 250, 218);
+        UiKit.panel(g, left, top, 250, 200);
         g.drawString(font, Component.translatable("hw.gui.draw_per_server"), left + 7, top + 6, ACCENT, false);
         List<Slot> order = new ArrayList<>(rack.getSlots());
         order.sort(Comparator.comparingDouble((Slot s) -> -s.st.inputW));
@@ -362,7 +362,7 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
         }
         int y = top + 20;
         for (Slot s : order) {
-            if (y > top + 205) {
+            if (y > top + 186) {
                 break;
             }
             String name = "U" + (s.u + 1) + " " + s.cfg.sizeU + "U";
@@ -381,7 +381,7 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
         // right: supply
         int rx = x0 + 264;
         int rw = 158;
-        UiKit.panel(g, rx, top, rw, 106);
+        UiKit.panel(g, rx, top, rw, 98);
         g.drawString(font, Component.translatable("hw.gui.supply"), rx + 7, top + 6, ACCENT, false);
         float fill = rack.getEnergyStored() / (float) Math.max(1, rack.getEnergyCapacity());
         g.drawString(font, Component.translatable("hw.gui.buffer"), rx + 7, top + 19, DIM, false);
@@ -398,12 +398,14 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
             g.drawString(font, UiKit.clip(font, Component.translatable("hw.gui.shed", rack.getShedCount()).getString(), rw - 14), rx + 7, top + 94, BAD, false);
         }
         // history
-        UiKit.panel(g, rx, top + 112, rw, 106);
-        g.drawString(font, Component.translatable("hw.gui.history"), rx + 7, top + 118, ACCENT, false);
+        UiKit.panel(g, rx, top + 102, rw, 98);
+        g.drawString(font, Component.translatable("hw.gui.history"), rx + 7, top + 108, ACCENT, false);
+        g.fill(rx + 84, top + 110, rx + 90, top + 114, OK);
+        g.fill(rx + 120, top + 110, rx + 126, top + 114, WARN);
         int px = rx + 8;
-        int py = top + 132;
+        int py = top + 124;
         int pw = rw - 16;
-        int ph = 76;
+        int ph = 66;
         int max = 1000;
         for (int i = 0; i < HISTORY; i++) {
             max = Math.max(max, Math.max(histDraw[i], histHeat[i]));
@@ -487,8 +489,8 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
             for (Part p : parts) {
                 grouped.merge(p.id, 1, Integer::sum);
             }
-            g.drawString(font, Component.translatable(kind.key()).getString(), lx + 6, ry, DIM, false);
             String cap = capacity(kind, cfg);
+            g.drawString(font, UiKit.clip(font, Component.translatable(kind.key()).getString(), lw - 16 - font.width(cap)), lx + 6, ry, DIM, false);
             g.drawString(font, cap, lx + lw - 6 - font.width(cap), ry, FAINT, false);
             ry += 10;
             if (grouped.isEmpty()) {
@@ -687,7 +689,7 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
         y += 10;
         g.drawString(font, Lang.num(st.compute) + " PF", sx + 5, y, OK, false);
         // priority + mode
-        int by = bottom - 52;
+        int by = bottom - 70;
         g.drawString(font, Component.translatable("hw.gui.prio"), sx + 5, by, DIM, false);
         for (int m = 0; m < 3; m++) {
             int bx = sx + 4 + m * 30;
@@ -696,13 +698,14 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
             UiKit.button(g, font, bx, by + 10, 29, 13, Component.translatable("hw.gui.prio." + m).getString(), over(mx, my, bx, by + 10, 29, 13), active, true);
             hit(bx, by + 10, 29, 13, () -> send(RackMenu.A_PRIORITY + prio));
         }
-        int my2 = bottom - 24;
+        g.drawString(font, Component.translatable("hw.gui.mode"), sx + 5, by + 27, DIM, false);
         for (int m = 0; m < 4; m++) {
-            int bx = sx + 4 + m * 22;
+            int bx = sx + 4 + (m % 2) * 45;
+            int byy = by + 37 + (m / 2) * 15;
             int mode = m;
             boolean active = cfg.mode == m;
-            UiKit.button(g, font, bx, my2, 21, 17, Component.translatable("hw.gui.mode." + m).getString(), over(mx, my, bx, my2, 21, 17), active, true);
-            hit(bx, my2, 21, 17, () -> send(RackMenu.A_MODE + mode));
+            UiKit.button(g, font, bx, byy, 44, 13, Component.translatable("hw.gui.mode." + m).getString(), over(mx, my, bx, byy, 44, 13), active, true);
+            hit(bx, byy, 44, 13, () -> send(RackMenu.A_MODE + mode));
         }
     }
 
