@@ -21,7 +21,7 @@ Echte Screenshots aus Minecraft (automatisch per CI aufgenommen, siehe unten):
 ## Installation
 
 1. **Minecraft 1.21.1** mit **NeoForge 21.1.x** installieren (Installer: https://neoforged.net).
-2. Die Datei [`download/crudecompute-1.21.1-1.2.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
+2. Die Datei [`download/crudecompute-1.21.1-1.3.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
 3. Spiel mit dem NeoForge-Profil starten – alles findet sich im Kreativ-Tab **Crude & Compute**.
 
 Die JAR baut GitHub Actions bei jedem Push (Workflow „Minecraft-Mod bauen“, Artefakt
@@ -77,11 +77,22 @@ Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 2. **Silizium** aus Quarz schmelzen → **Wafer** → **Platine** (mit Kunststoff) → **KI-Beschleuniger (GPU)**.
    Günstiger geht es mit der **Lithografie-Maschine**: Wafer + Kunststoff + Goldnugget → 2 Platinen, ein
    Laserkopf fährt dabei sichtbar über den Wafer (Antrieb von unten oder hinten, 64 SU; Trichter-kompatibel).
-3. **KI-Server-Rack** (2 hoch): mit GPUs rechtsklicken (max. 8, Schleichen+Rechtsklick nimmt eine heraus).
-   Jede GPU braucht **64 FE/t**, liefert **2,5 PFLOPS** und heizt das Rack auf.
-4. **Kühlaggregat** (16 FE/t) kühlt Racks im Umkreis von 2 Blöcken; Faustregel: **1 Kühler pro 4 GPUs**.
-   Ab 80 °C drosselt das Rack (halbe Leistung, gelbe LEDs), ab 100 °C schaltet es ab (rote LEDs, Rauch).
-5. **KI-Trainingsterminal**: zeigt live alle Racks im Umkreis von 8 Blöcken (Racks, GPUs, PFLOPS, Strom,
+3. **Server-Rack (14 HE)**: Rechtsklick öffnet die Rack-Oberfläche. Dort werden **1U-, 2U- und 4U-Server** in freie
+   Höheneinheiten gesetzt, entfernt und per Katalog individuell konfiguriert (CPU, GPU, RAM, Speicher, NIC,
+   Netzteil, Kühlung, Mainboard). Die **Kompatibilitätsprüfung** meldet verständliche Fehler (z. B. Netzteil zu
+   schwach, Sockel passt nicht, Kühler zu klein, Gehäuse zu flach). Pro Server werden Leistung, Verbrauch,
+   Temperatur, Status-LEDs (Strom/Aktivität/Warnung) und Rechenleistung angezeigt; am Rack zeigt ein Display
+   Temperatur, belegte HE und Abwärme. Die Hardware wandert mit dem Server-Item.
+4. **Thermik & Strom (Simulation)**: Jeder Server hat ein Wärmemodell (Wärmekapazität, Lüfter/Kühler,
+   Einlasstemperatur aus Biom + Abwärme der Racks + Kühlaggregat). Ab 85 °C drosselt er, ab 100 °C schaltet er ab
+   und startet erst unter 65 °C wieder. Fehlt Strom im Rack-Puffer, fahren die Server herunter (Brown-out).
+   **Kühlaggregat** (16 FE/t) senkt die Einlasstemperatur der Racks im Umkreis von 2 Blöcken.
+   Hinweis: Flüssigkühlung ist aktuell eine in sich geschlossene Komponente (Schläuche/Pumpen folgen).
+4b. **Solaranlage**: **Solarpanels** (Poly / Mono) liefern je nach Sonnenstand und Wetter Leistung, der
+   **Wechselrichter** (96 % Wirkungsgrad) speist FE ein; Akku-Blöcke puffern. Nachts oder bei Regen fällt die
+   Erzeugung – die Server leben dann vom Akku, sonst gehen sie aus.
+5. **KI-Trainingsterminal**: Rechtsklick öffnet ein **Energie-Dashboard** (Solar, Verbrauch, Kühlung, PUE, Akku,
+   Verlaufsdiagramme, Temperaturen); Schleichen+Rechtsklick bedient das Laufwerk. Zeigt live alle Racks im Umkreis von 8 Blöcken (Racks, GPUs, PFLOPS, Strom,
    Temperatur). **Leeres KI-Laufwerk** einlegen → das Rechenzentrum trainiert ein **KI-Modell**
    (8 GPUs ≈ 3–4 Minuten). Fertiges Modell per Rechtsklick herausnehmen.
 6. Aus dem trainierten Modell entstehen **KI-Optimierungschips**: auf Pferdekopfpumpe, Raffinerie, Generator
@@ -112,6 +123,11 @@ Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 | 2 Platinen | Goldnuggets, Redstone, 3 Wafer, 3 Kunststoff |
 | GPU | Kupfer, 3 Platinen, Diamant, 3 Kunststoff |
 | Server-Rack | Eisen, Eisengitter, Platine |
+| 1U-/2U-Server | Eisen, Platinen (+ Platine-Mittelreihe), siehe Rezeptbuch |
+| 4U-Server | Eisen, 2 GPUs, Platinen |
+| 2 Solarpanels | Glasscheiben, Silizium, Eisen |
+| 2 Mono-Solarpanels | Glasscheiben, Wafer, Kupfer |
+| Wechselrichter | Eisen, Kupfer, Platinen, Redstoneblöcke |
 | Kühlaggregat | Eisen, Kunststoff, Packeis, Platine |
 | KI-Terminal | Glasscheiben, Kunststoff, Platine |
 | Leeres KI-Laufwerk | Kunststoff, Redstone, Platine |
