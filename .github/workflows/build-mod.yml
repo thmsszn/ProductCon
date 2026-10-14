@@ -9,6 +9,11 @@ on:
       - "crude-and-compute/**"
       - ".github/workflows/build-mod.yml"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release mit diesem Tag erstellen (z.B. mod-v1.2.0) - leer lassen, um nur zu bauen"
+        required: false
+        default: ""
 
 jobs:
   build:
@@ -42,7 +47,7 @@ jobs:
   # und legt Screenshots + JAR im Branch ab. Läuft nur, wenn die Commit-Nachricht [showcase] enthält.
   showcase:
     needs: build
-    if: contains(github.event.head_commit.message, '[showcase]') || github.event_name == 'workflow_dispatch'
+    if: contains(github.event.head_commit.message, '[showcase]') || (github.event_name == 'workflow_dispatch' && inputs.release_tag == '')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -95,7 +100,7 @@ jobs:
   # Veröffentlicht die JAR als GitHub-Release, wenn ein Tag "mod-vX.Y.Z" gepusht wird.
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/mod-v')
+    if: startsWith(github.ref, 'refs/tags/mod-v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -112,7 +117,9 @@ jobs:
       - name: Release erstellen
         uses: softprops/action-gh-release@v2
         with:
-          name: Crude & Compute ${{ github.ref_name }}
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Crude & Compute ${{ inputs.release_tag || github.ref_name }}
           files: crude-and-compute/build/libs/*.jar
           body: |
             **Crude & Compute** – Minecraft 1.21.1, NeoForge 21.1.x
