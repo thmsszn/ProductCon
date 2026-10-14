@@ -53,6 +53,9 @@ public final class ClientSetup {
         event.registerBlockEntityRenderer(ModBlockEntities.COOLING_UNIT.get(), CoolingUnitRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.AI_TERMINAL.get(), AITerminalRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.OIL_TANK.get(), OilTankRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.MECHANICAL_PUMP.get(), KineticMachineRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.BATTERY.get(), BatteryRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CHIP_FAB.get(), ChipFabRenderer::new);
     }
 
     @SubscribeEvent

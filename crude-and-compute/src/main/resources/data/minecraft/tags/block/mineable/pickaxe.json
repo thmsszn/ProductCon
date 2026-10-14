@@ -1,6 +1,9 @@
 {
   "replace": false,
   "values": [
+    "crudecompute:mechanical_pump",
+    "crudecompute:battery",
+    "crudecompute:chip_fab",
     "crudecompute:oil_shale",
     "crudecompute:shaft",
     "crudecompute:gearbox",

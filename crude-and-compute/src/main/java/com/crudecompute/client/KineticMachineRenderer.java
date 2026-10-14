@@ -54,6 +54,20 @@ public class KineticMachineRenderer<T extends KineticBlockEntity> implements Blo
         } else if (be instanceof GeneratorBlockEntity) {
             Direction facing = be.getBlockState().getValue(HorizontalMachineBlock.FACING);
             RenderUtil.renderShaft(poseStack, buffers, facing.getAxis(), angle, light, overlay);
+        } else if (be instanceof com.crudecompute.oil.MechanicalPumpBlockEntity) {
+            Direction facing = be.getBlockState().getValue(com.crudecompute.oil.MechanicalPumpBlock.FACING);
+            poseStack.pushPose();
+            RenderUtil.rotateNorthTo(poseStack, facing);
+            poseStack.translate(0.5, 0.5, 0);
+            poseStack.mulPose(Axis.ZP.rotationDegrees(angle));
+            poseStack.translate(-0.5, -0.5, 0);
+            RenderUtil.renderModel(poseStack, buffers, ModModels.PUMP_GEAR, light, overlay);
+            poseStack.popPose();
+            for (Direction dir : Direction.values()) {
+                if (dir.getAxis() != facing.getAxis() && be.isConnectedTowards(dir)) {
+                    RenderUtil.renderShaftStub(poseStack, buffers, dir, angle, light, overlay);
+                }
+            }
         } else if (be instanceof RefineryBlockEntity) {
             for (Direction dir : Direction.Plane.HORIZONTAL) {
                 if (be.isConnectedTowards(dir)) {

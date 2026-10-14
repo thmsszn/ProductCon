@@ -58,9 +58,17 @@ Jede Maschine verbraucht **Last (SU)**. Ist die Last im Netz größer als die Kr
 
 Eimer funktionieren überall: Rohöl/Diesel per Rechtsklick ein- und ausfüllen.
 
+**Mechanische Pumpe:** in eine Rohrleitung setzen (der Pfeil zeigt die Flussrichtung, sie pumpt vom Block
+dahinter in den Block davor). Antrieb per Welle von oben, unten oder seitlich (16 SU, 4 mB/t pro U/min).
+Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
+
 ### 3. KI-Rechenzentrum
 1. **Strom**: Generator → **Stromkabel** → Verbraucher (Forge Energy, kompatibel mit anderen Mods).
+   Ein **Akku-Block** (2.000.000 FE) puffert: Er lädt an allen Seiten und gibt nur **vorne** wieder ab –
+   die leuchtende Anzeige zeigt den Ladestand, ein Komparator liest ihn aus.
 2. **Silizium** aus Quarz schmelzen → **Wafer** → **Platine** (mit Kunststoff) → **KI-Beschleuniger (GPU)**.
+   Günstiger geht es mit der **Lithografie-Maschine**: Wafer + Kunststoff + Goldnugget → 2 Platinen, ein
+   Laserkopf fährt dabei sichtbar über den Wafer (Antrieb von unten oder hinten, 64 SU; Trichter-kompatibel).
 3. **KI-Server-Rack** (2 hoch): mit GPUs rechtsklicken (max. 8, Schleichen+Rechtsklick nimmt eine heraus).
    Jede GPU braucht **64 FE/t**, liefert **2,5 PFLOPS** und heizt das Rack auf.
 4. **Kühlaggregat** (16 FE/t) kühlt Racks im Umkreis von 2 Blöcken; Faustregel: **1 Kühler pro 4 GPUs**.
@@ -88,6 +96,9 @@ Eimer funktionieren überall: Rohöl/Diesel per Rechtsklick ein- und ausfüllen.
 | 8 Rohre | 3 Kupferbarren in einer Reihe |
 | Öltank | 6 Eisen, 2 Kupfer |
 | 6 Stromkabel | Kunststoff, Kupfer, Kunststoff |
+| Mechanische Pumpe | 2 Kupfer, Rohr, Welle |
+| Akku-Block | 4 Kunststoff, 2 Redstone-Blöcke, 2 Kupfer, Eisenblock |
+| Lithografie-Maschine | Glasscheiben, Redstone-Lampe, Diamant, Eisen, Welle |
 | Silizium | Quarz im Ofen/Hochofen |
 | 2 Wafer | 1 Silizium |
 | 2 Platinen | Goldnuggets, Redstone, 3 Wafer, 3 Kunststoff |
@@ -107,7 +118,7 @@ Alle Rezepte sind im Spiel per Rezeptbuch (oder JEI/EMI) sichtbar.
   verdrehte Rotorblätter, Kreissegmente …) und werden als OBJ für NeoForges OBJ-Loader exportiert.
 * Java-Code in `src/main/java/com/crudecompute`: `kinetic` (Drehkraft-Netz mit Last), `multiblock`,
   `oil`, `datacenter`, `client` (animierte Block-Entity-Renderer).
-* `./gradlew runGameTestServer` führt die automatischen Spieltests aus (Kraftnetz, Überlast, Pumpe,
-  Multiblock-Abbau, Rechenzentrum).
+* `./gradlew runGameTestServer` führt die automatischen Spieltests aus (Kraftnetz, Überlast, Pferdekopfpumpe,
+  Multiblock-Abbau, Rechenzentrum, mechanische Pumpe, Akku, Lithografie).
 * `./gradlew runClient` startet das Spiel mit der Mod zum Testen, `./gradlew runShowcaseClient` baut
   automatisch die Demo-Szene und macht Screenshots.

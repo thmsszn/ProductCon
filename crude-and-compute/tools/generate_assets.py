@@ -130,6 +130,13 @@ BLOCK_MODELS = {
     "cooling_unit_active": (lambda: M.cooling_unit(True), "plastic_white"),
     "cooling_unit_fan": (M.cooling_unit_anim, "fan_blade"),
     "ai_terminal": (M.ai_terminal, "plastic_dark"),
+    "mechanical_pump": (M.mechanical_pump, "paint_green"),
+    "mechanical_pump_gear": (M.mechanical_pump_gear, "brass"),
+    "battery": (M.battery, "battery_cell"),
+    "chip_fab": (lambda: M.chip_fab(), "plastic_white"),
+    "chip_fab_bridge": (M.chip_fab_bridge, "paint_yellow"),
+    "chip_fab_head": (M.chip_fab_head, "steel"),
+    "chip_fab_wafer": (M.chip_fab_wafer, "wafer"),
 }
 
 # Inventory models: full machine incl. animated parts, normalised into one block
@@ -148,6 +155,9 @@ ITEM_MODELS = {
     "server_rack": (server_rack_full, "steel_dark"),
     "cooling_unit": (lambda: M.cooling_unit(True).add(M.cooling_unit_anim()), "plastic_white"),
     "ai_terminal": (M.ai_terminal, "plastic_dark"),
+    "mechanical_pump": (lambda: M.mechanical_pump().add(M.mechanical_pump_gear()), "paint_green"),
+    "battery": (M.battery, "battery_cell"),
+    "chip_fab": (lambda: M.chip_fab().add(M.chip_fab_bridge()).add(M.chip_fab_head()).add(M.chip_fab_wafer()), "plastic_white"),
 }
 
 FLAT_ITEMS = ["wrench", "crude_oil_bucket", "diesel_bucket", "plastic", "silicon", "silicon_wafer", "circuit_board",
@@ -215,6 +225,10 @@ def blockstates():
     bs["fluid_pipe"] = connection_multipart("fluid_pipe_center", "fluid_pipe_arm")
     bs["power_cable"] = connection_multipart("power_cable_center", "power_cable_arm")
     bs["oil_tank"] = simple("oil_tank")
+    bs["mechanical_pump"] = {"variants": {f"facing={f}": variant("mechanical_pump", x, y) for f, (x, y) in {
+        "north": (0, 0), "south": (0, 180), "east": (0, 90), "west": (0, 270), "up": (270, 0), "down": (90, 0)}.items()}}
+    bs["battery"] = horizontal_states(lambda p: "battery")
+    bs["chip_fab"] = horizontal_states(lambda p: "chip_fab", [("active", ["false", "true"])])
     bs["cooling_unit"] = {"variants": {"active=false": {"model": ns("block/cooling_unit")},
                                        "active=true": {"model": ns("block/cooling_unit_active")}}}
     for name, j in bs.items():
@@ -243,6 +257,9 @@ BLOCK_NAMES = {
     "cooling_unit": ("Cooling Unit", "Kühlaggregat"),
     "ai_terminal": ("AI Training Terminal", "KI-Trainingsterminal"),
     "multiblock_part": ("Machine Part", "Maschinenteil"),
+    "mechanical_pump": ("Mechanical Pump", "Mechanische Pumpe"),
+    "battery": ("Battery Bank", "Akku-Block"),
+    "chip_fab": ("Lithography Machine", "Lithografie-Maschine"),
 }
 
 ITEM_NAMES = {
@@ -323,6 +340,19 @@ MESSAGES = {
     "screen.crudecompute.chatter.4": ("> backprop in progress", "> Backpropagation läuft"),
     "screen.crudecompute.chatter.5": ("> mining creeper data", "> analysiere Creeper-Daten"),
     "screen.crudecompute.temp": ("%s °C", "%s °C"),
+    "message.crudecompute.pump": ("Mechanical pump: %s RPM → up to %s mB/t%s", "Mechanische Pumpe: %s U/min → bis zu %s mB/t%s"),
+    "message.crudecompute.pump.hint": (" (pumps from the back to the arrow side)", " (pumpt von hinten zur Pfeilseite)"),
+    "message.crudecompute.battery": ("Battery bank: %s / %s FE (%s%%) – output on the front", "Akku-Block: %s / %s FE (%s%%) – Ausgang vorne"),
+    "message.crudecompute.chip_fab": ("Lithography: %s RPM | wafers %s, plastic %s, gold nuggets %s | circuit boards %s | %s%%",
+                                      "Lithografie: %s U/min | Wafer %s, Kunststoff %s, Goldnuggets %s | Platinen %s | %s%%"),
+    "message.crudecompute.chip_fab.missing": ("Needs a silicon wafer, plastic pellets and a gold nugget per run.",
+                                              "Braucht pro Durchgang einen Silizium-Wafer, Kunststoffgranulat und ein Goldnugget."),
+    "tooltip.crudecompute.mechanical_pump": ("Driven by a shaft from the side: pumps fluid from the back to the front (arrow). 16 SU.",
+                                             "Per Welle von der Seite angetrieben: pumpt Flüssigkeit von hinten nach vorne (Pfeil). 16 SU."),
+    "tooltip.crudecompute.battery": ("Stores 2,000,000 FE. Charges on every side, outputs on the front.",
+                                     "Speichert 2.000.000 FE. Lädt an allen Seiten, gibt vorne ab."),
+    "tooltip.crudecompute.chip_fab": ("Etches circuit boards: wafer + plastic + gold nugget → 2 boards. Needs rotation (64 SU) from below or behind.",
+                                      "Belichtet Platinen: Wafer + Kunststoff + Goldnugget → 2 Platinen. Braucht Drehung (64 SU) von unten oder hinten."),
     "tooltip.crudecompute.shaft": ("Transmits rotation along its axis.", "Überträgt Drehbewegung entlang der Achse."),
     "tooltip.crudecompute.gearbox": ("Connects shafts on all six sides.", "Verbindet Wellen an allen sechs Seiten."),
     "tooltip.crudecompute.hand_crank": ("Right-click to crank: 32 RPM, 64 SU.", "Rechtsklick zum Kurbeln: 32 U/min, 64 SU."),
@@ -372,7 +402,7 @@ def lang():
 
 
 # =============================================================================== data
-DROPS_SELF = ["oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
+DROPS_SELF = ["mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
               "refinery", "fluid_pipe", "oil_tank", "power_cable", "server_rack", "cooling_unit", "ai_terminal"]
 
 
@@ -430,6 +460,10 @@ def recipes():
     shaped("server_rack", ["IBI", "ICI", "IBI"], {"I": I, "B": "minecraft:iron_bars", "C": B})
     shaped("cooling_unit", ["IPI", "PKP", "ICI"], {"I": I, "P": P, "K": "minecraft:packed_ice", "C": B})
     shaped("ai_terminal", ["GGG", "PCP", "PPP"], {"G": "minecraft:glass_pane", "P": P, "C": B})
+    shaped("mechanical_pump", ["CPC", " S "], {"C": C, "P": ns("fluid_pipe"), "S": S})
+    shaped("battery", ["PRP", "CBC", "PRP"], {"P": P, "R": "minecraft:redstone_block", "C": C, "B": "minecraft:iron_block"})
+    shaped("chip_fab", ["GRG", "IDI", "ISI"], {"G": "minecraft:glass_pane", "R": "minecraft:redstone_lamp", "D": "minecraft:diamond",
+                                             "I": I, "S": S})
     shaped("wrench", [" I ", " GI", "I  "], {"I": I, "G": G})
     shapeless("silicon_wafer", [ns("silicon")], count=2)
     shaped("circuit_board", ["GRG", "WWW", "PPP"], {"G": "minecraft:gold_nugget", "R": "minecraft:redstone", "W": ns("silicon_wafer"), "P": P}, count=2)

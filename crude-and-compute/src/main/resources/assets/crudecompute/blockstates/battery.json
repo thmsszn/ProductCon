@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "crudecompute:block/battery"
+    },
+    "facing=east": {
+      "model": "crudecompute:block/battery",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "crudecompute:block/battery",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "crudecompute:block/battery",
+      "y": 270
+    }
+  }
+}

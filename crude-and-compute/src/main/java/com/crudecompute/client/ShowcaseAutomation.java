@@ -67,8 +67,10 @@ public final class ShowcaseAutomation {
             {9.2, 1.75, 1.75, 9.5, 0.8, 3.6},
             {1.2, 4.2, -9.2, -1, 2, -3},
             {6.5, 3.5, -5, 4.5, 3.6, -2.5},
+            {2.3, 2.1, -0.4, 5, 0.6, 3.6},
+            {-7.2, 3.0, -7.4, -4, 1.4, -4},
     };
-    private static final String[] SHOT_NAMES = {"uebersicht", "pferdekopfpumpe", "rechenzentrum", "ki_terminal", "raffinerie", "windrad"};
+    private static final String[] SHOT_NAMES = {"uebersicht", "pferdekopfpumpe", "rechenzentrum", "ki_terminal", "raffinerie", "windrad", "chipfabrik_akku", "pumpe"};
 
     private static int stage;
     private static int timer;
@@ -304,6 +306,26 @@ public final class ShowcaseAutomation {
         if (level.getBlockEntity(o.offset(9, 0, 3)) instanceof AITerminalBlockEntity terminal) {
             terminal.setDrive(new ItemStack(ModItems.EMPTY_MODEL_DRIVE.get()));
         }
+        // update 1.1: wind-driven pump between two tanks, lithography machine, battery bank
+        set(level, o.offset(-4, 0, -4), ModBlocks.MECHANICAL_PUMP.get().defaultBlockState()
+                .setValue(com.crudecompute.oil.MechanicalPumpBlock.FACING, Direction.WEST));
+        set(level, o.offset(-5, 0, -4), ModBlocks.OIL_TANK.get().defaultBlockState());
+        for (int y = 1; y < 3; y++) {
+            set(level, o.offset(-4, y, -4), ModBlocks.SHAFT.get().defaultBlockState().setValue(ShaftBlock.AXIS, Direction.Axis.Y));
+        }
+        set(level, o.offset(-4, 3, -4), facing(ModBlocks.WINDMILL.get(), Direction.NORTH));
+        if (level.getBlockEntity(o.offset(-3, 0, -4)) instanceof com.crudecompute.oil.OilTankBlockEntity tank) {
+            tank.getTank().fill(new FluidStack(ModFluids.DIESEL.get(), 12000), IFluidHandler.FluidAction.EXECUTE);
+        }
+        set(level, o.offset(4, 0, 2), facing(ModBlocks.CHIP_FAB.get(), Direction.NORTH));
+        set(level, o.offset(4, 0, 3), facing(ModBlocks.DIESEL_ENGINE.get(), Direction.NORTH));
+        fuel(level, o.offset(4, 0, 3));
+        if (level.getBlockEntity(o.offset(4, 0, 2)) instanceof com.crudecompute.datacenter.ChipFabBlockEntity fab) {
+            fab.insert(new ItemStack(ModItems.SILICON_WAFER.get(), 32));
+            fab.insert(new ItemStack(ModItems.PLASTIC.get(), 32));
+            fab.insert(new ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 32));
+        }
+        set(level, o.offset(6, 0, 5), facing(ModBlocks.BATTERY.get(), Direction.WEST));
         REPORT.add("scene built at " + o.toShortString());
     }
 

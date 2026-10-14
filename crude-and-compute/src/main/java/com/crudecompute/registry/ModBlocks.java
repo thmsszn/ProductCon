@@ -59,6 +59,13 @@ public final class ModBlocks {
     public static final DeferredBlock<AITerminalBlock> AI_TERMINAL = BLOCKS.registerBlock("ai_terminal", AITerminalBlock::new,
             machine().lightLevel(state -> 7));
 
+    public static final DeferredBlock<com.crudecompute.oil.MechanicalPumpBlock> MECHANICAL_PUMP = BLOCKS.registerBlock("mechanical_pump",
+            com.crudecompute.oil.MechanicalPumpBlock::new, machine().sound(SoundType.COPPER));
+    public static final DeferredBlock<com.crudecompute.datacenter.BatteryBlock> BATTERY = BLOCKS.registerBlock("battery",
+            com.crudecompute.datacenter.BatteryBlock::new, machine());
+    public static final DeferredBlock<com.crudecompute.datacenter.ChipFabBlock> CHIP_FAB = BLOCKS.registerBlock("chip_fab",
+            com.crudecompute.datacenter.ChipFabBlock::new, machine().lightLevel(state -> state.getValue(com.crudecompute.datacenter.ChipFabBlock.ACTIVE) ? 5 : 0));
+
     public static final DeferredBlock<MultiblockPartBlock> MULTIBLOCK_PART = BLOCKS.registerBlock("multiblock_part", MultiblockPartBlock::new,
             machine().noLootTable());
 

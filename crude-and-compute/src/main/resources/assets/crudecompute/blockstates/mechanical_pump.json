@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "crudecompute:block/mechanical_pump"
+    },
+    "facing=south": {
+      "model": "crudecompute:block/mechanical_pump",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "crudecompute:block/mechanical_pump",
+      "y": 90
+    },
+    "facing=west": {
+      "model": "crudecompute:block/mechanical_pump",
+      "y": 270
+    },
+    "facing=up": {
+      "model": "crudecompute:block/mechanical_pump",
+      "x": 270
+    },
+    "facing=down": {
+      "model": "crudecompute:block/mechanical_pump",
+      "x": 90
+    }
+  }
+}

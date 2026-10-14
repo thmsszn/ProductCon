@@ -537,6 +537,112 @@ def ai_terminal():
     return m
 
 
+# ----------------------------------------------------------------------------- update 1.1: pump, battery, chip fab
+def mechanical_pump():
+    """Facing north = fluid leaves through the north face (-Z), enters from the south face."""
+    m = Mesh()
+    for (z0, z1) in ((0.0, 0.24), (0.76, 1.0)):
+        m.add(along_z(cylinder_y(0.5, 0.5, PIPE_R, z0, z1, 12, "copper", cap_bottom=False, cap_top=False)))
+    for (z0, z1) in ((0.0, 0.05), (0.95, 1.0)):
+        m.add(along_z(cylinder_y(0.5, 0.5, 0.2, z0, z1, 12, "brass")))
+    m.add(along_z(cylinder_y(0.5, 0.5, 0.29, 0.24, 0.76, 20, "paint_green")))
+    for (z0, z1) in ((0.24, 0.28), (0.72, 0.76)):
+        m.add(along_z(cylinder_y(0.5, 0.5, 0.31, z0, z1, 20, "steel")))
+    # flow arrow on top, pointing to the outlet (-Z)
+    m.add(prism_x([(0.3, 0.79), (0.42, 0.79), (0.42, 0.83), (0.3, 0.83)], 0.47, 0.53, "hazard"))
+    m.add(prism_x([(0.22, 0.79), (0.3, 0.79), (0.3, 0.83), (0.22, 0.83)], 0.42, 0.58, "hazard"))
+    # bearing bosses where drive shafts enter
+    for rot in (0, 90, 180, 270):
+        boss = cylinder_y(0.5, 0.5, 0.16, 0.78, 0.82, 12, "steel_dark").rotate_z(rot, (0.5, 0.5, 0.5))
+        m.add(boss.translate(0, 0, 0))
+    return m
+
+
+def mechanical_pump_gear():
+    """Cogwheel around the casing, spinning around the flow axis (Z)."""
+    m = Mesh()
+    m.add(washer_y(0.5, 0.5, 0.29, 0.37, 0.46, 0.54, 20, "brass"))
+    for i in range(16):
+        a = 2 * math.pi * i / 16
+        c, s_ = math.cos(a), math.sin(a)
+        m.add(beam((0.5 + 0.36 * c, 0.5, 0.5 + 0.36 * s_), (0.5 + 0.45 * c, 0.5, 0.5 + 0.45 * s_), 0.05, 0.08, "brass",
+                   up=(0, 1, 0)))
+    return along_z(m.translate(0, 0, 0))
+
+
+def battery():
+    """Facing north: the output terminal panel is on the north face."""
+    m = Mesh()
+    m.add(box(0.03, 0, 0.03, 0.97, 0.08, 0.97, "steel_dark"))
+    for x in (0.27, 0.73):
+        for z in (0.29, 0.73):
+            m.add(cylinder_y(x, z, 0.18, 0.08, 0.8, 18, "battery_cell", cap_top=False))
+            m.add(sphere(x, 0.8, z, 0.18, 0.06, 0.18, 18, 4, "battery_cell", lat_from=0, lat_to=90))
+            m.add(cylinder_y(x - 0.07, z, 0.035, 0.84, 0.92, 8, "copper"))
+            m.add(cylinder_y(x + 0.07, z, 0.035, 0.84, 0.92, 8, "steel"))
+    m.add(box(0.15, 0.9, 0.27, 0.85, 0.93, 0.31, "copper"))
+    m.add(box(0.15, 0.9, 0.71, 0.85, 0.93, 0.75, "copper"))
+    for x0 in (0.02, 0.92):
+        for z0 in (0.02, 0.92):
+            m.add(box(x0, 0.0, z0, x0 + 0.06, 0.98, z0 + 0.06, "steel_dark"))
+    m.add(box(0.02, 0.94, 0.02, 0.98, 0.98, 0.08, "steel_dark"))
+    m.add(box(0.02, 0.94, 0.92, 0.98, 0.98, 0.98, "steel_dark"))
+    m.add(box(0.02, 0.94, 0.08, 0.08, 0.98, 0.92, "steel_dark"))
+    m.add(box(0.92, 0.94, 0.08, 0.98, 0.98, 0.92, "steel_dark"))
+    # front display + output plug
+    m.add(box(0.22, 0.2, 0.03, 0.78, 0.68, 0.08, "steel_dark", {"n": "screen"}))
+    m.add(box(0.4, 0.72, 0.04, 0.6, 0.8, 0.08, "paint_red"))
+    m.add(along_z(cylinder_y(0.5, 0.76, 0.03, 0.0, 0.04, 8, "copper"), cy=0.76))
+    return m
+
+
+CHIP_FAB_TABLE_Y = 0.46
+CHIP_FAB_BRIDGE_Y = 0.86
+
+
+def chip_fab():
+    """Facing north: the open working area faces the player."""
+    m = Mesh()
+    m.add(box(0.04, 0, 0.04, 0.96, 0.42, 0.96, "plastic_white", {"n": "vent"}))
+    m.add(box(0.06, 0.42, 0.06, 0.94, CHIP_FAB_TABLE_Y, 0.94, "steel_dark"))
+    m.add(cylinder_y(0.5, 0.5, 0.22, CHIP_FAB_TABLE_Y, 0.49, 24, "rubber"))
+    m.add(torus_y(0.5, 0.49, 0.5, 0.22, 0.012, 24, 4, "steel"))
+    for x in (0.08, 0.86):
+        for z in (0.1, 0.84):
+            m.add(box(x, CHIP_FAB_TABLE_Y, z, x + 0.06, 0.94, z + 0.06, "steel"))
+    for x in (0.08, 0.86):  # rails the bridge rides on
+        m.add(box(x, 0.9, 0.1, x + 0.06, 0.94, 0.9, "steel_dark"))
+    m.add(box(0.1, CHIP_FAB_TABLE_Y, 0.9, 0.9, 0.92, 0.94, "glass_dark"))
+    # control panel on the right
+    m.add(beam((0.83, 0.48, 0.12), (0.83, 0.6, 0.28), 0.14, 0.03, "plastic_dark", mats={"top": "screen"}))
+    m.add(box(0.1, 0.43, 0.02, 0.4, 0.46, 0.04, "led_blue"))
+    return m
+
+
+def chip_fab_bridge():
+    """Gantry bridge spanning X at z = 0.5 (the renderer moves it along Z)."""
+    m = Mesh()
+    m.add(box(0.1, CHIP_FAB_BRIDGE_Y, 0.46, 0.9, CHIP_FAB_BRIDGE_Y + 0.05, 0.54, "paint_yellow"))
+    for x in (0.08, 0.86):
+        m.add(box(x, CHIP_FAB_BRIDGE_Y + 0.04, 0.44, x + 0.06, 0.95, 0.56, "steel_dark"))
+    return m
+
+
+def chip_fab_head():
+    """Laser head hanging below the bridge at x = z = 0.5 (moved in X and Z by the renderer)."""
+    m = Mesh()
+    m.add(box(0.44, CHIP_FAB_BRIDGE_Y - 0.02, 0.43, 0.56, CHIP_FAB_BRIDGE_Y + 0.07, 0.57, "steel"))
+    m.add(box(0.46, 0.66, 0.46, 0.54, CHIP_FAB_BRIDGE_Y - 0.02, 0.54, "plastic_dark"))
+    m.add(cylinder_y(0.5, 0.5, 0.03, 0.6, 0.66, 10, "brass"))
+    m.add(cylinder_y(0.5, 0.5, 0.018, 0.585, 0.6, 8, "led_red"))
+    return m
+
+
+def chip_fab_wafer():
+    m = cylinder_y(0.5, 0.5, 0.18, 0.49, 0.502, 24, "wafer", cap_bottom=False)
+    return m
+
+
 def mesh_bounds_px(mesh):
     lo, hi = mesh.bbox()
     return lo, hi

@@ -44,6 +44,40 @@ public final class RenderUtil {
         poseStack.translate(-0.5, 0, -0.5);
     }
 
+    /** Like {@link #rotateToFacing} but also handles up/down (model authored facing north). */
+    public static void rotateNorthTo(PoseStack poseStack, Direction facing) {
+        if (facing.getAxis().isHorizontal()) {
+            rotateToFacing(poseStack, facing);
+            return;
+        }
+        poseStack.translate(0.5, 0.5, 0.5);
+        poseStack.mulPose(Axis.XP.rotationDegrees(facing == Direction.UP ? 90 : -90));
+        poseStack.translate(-0.5, -0.5, -0.5);
+    }
+
+    /** Full-bright vertical beam (thin box without caps), e.g. a laser. */
+    public static void glowColumn(PoseStack poseStack, MultiBufferSource buffers, float cx, float cz, float half, float y0, float y1, int argb) {
+        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(CrudeCompute.id("block/led_white"));
+        VertexConsumer vc = buffers.getBuffer(Sheets.cutoutBlockSheet());
+        PoseStack.Pose pose = poseStack.last();
+        float x0 = cx - half, x1 = cx + half, z0 = cz - half, z1 = cz + half;
+        float[][][] faces = {
+                {{x1, y1, z0}, {x1, y0, z0}, {x0, y0, z0}, {x0, y1, z0}, {0, 0, -1}},
+                {{x0, y1, z1}, {x0, y0, z1}, {x1, y0, z1}, {x1, y1, z1}, {0, 0, 1}},
+                {{x0, y1, z0}, {x0, y0, z0}, {x0, y0, z1}, {x0, y1, z1}, {-1, 0, 0}},
+                {{x1, y1, z1}, {x1, y0, z1}, {x1, y0, z0}, {x1, y1, z0}, {1, 0, 0}},
+        };
+        int a = argb >>> 24, r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF;
+        float[][] uv = {{sprite.getU1(), sprite.getV0()}, {sprite.getU1(), sprite.getV1()}, {sprite.getU0(), sprite.getV1()}, {sprite.getU0(), sprite.getV0()}};
+        for (float[][] face : faces) {
+            float[] n = face[4];
+            for (int i = 0; i < 4; i++) {
+                vc.addVertex(pose, face[i][0], face[i][1], face[i][2]).setColor(r, g, b, a).setUv(uv[i][0], uv[i][1])
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(pose, n[0], n[1], n[2]);
+            }
+        }
+    }
+
     /** Rotates around the block centre so that the model's +Y axis points towards {@code dir}. */
     public static void pointUpTo(PoseStack poseStack, Direction dir) {
         poseStack.translate(0.5, 0.5, 0.5);

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CPC",
+    " S "
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "P": {
+      "item": "crudecompute:fluid_pipe"
+    },
+    "S": {
+      "item": "crudecompute:shaft"
+    }
+  },
+  "result": {
+    "id": "crudecompute:mechanical_pump",
+    "count": 1
+  }
+}

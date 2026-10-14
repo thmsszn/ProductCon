@@ -27,13 +27,16 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.REFINERY.get());
                 output.accept(ModItems.FLUID_PIPE.get());
                 output.accept(ModItems.OIL_TANK.get());
+                output.accept(ModItems.MECHANICAL_PUMP.get());
                 output.accept(ModItems.CRUDE_OIL_BUCKET.get());
                 output.accept(ModItems.DIESEL_BUCKET.get());
                 output.accept(ModItems.PLASTIC.get());
                 output.accept(ModItems.POWER_CABLE.get());
+                output.accept(ModItems.BATTERY.get());
                 output.accept(ModItems.SILICON.get());
                 output.accept(ModItems.SILICON_WAFER.get());
                 output.accept(ModItems.CIRCUIT_BOARD.get());
+                output.accept(ModItems.CHIP_FAB.get());
                 output.accept(ModItems.GPU.get());
                 output.accept(ModItems.SERVER_RACK.get());
                 output.accept(ModItems.COOLING_UNIT.get());

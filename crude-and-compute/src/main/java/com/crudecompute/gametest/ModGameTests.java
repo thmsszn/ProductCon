@@ -174,4 +174,64 @@ public final class ModGameTests {
                     "terminal should see the rack and train on its compute");
         });
     }
+
+    /** A pump driven from above moves crude oil sideways from one tank into another. */
+    @GameTest(template = "empty", timeoutTicks = 120)
+    public static void pumpMovesFluidSideways(GameTestHelper helper) {
+        BlockPos from = new BlockPos(2, 1, 4);
+        BlockPos pump = new BlockPos(3, 1, 4);
+        BlockPos to = new BlockPos(4, 1, 4);
+        helper.setBlock(from, ModBlocks.OIL_TANK.get().defaultBlockState());
+        helper.setBlock(pump, ModBlocks.MECHANICAL_PUMP.get().defaultBlockState().setValue(com.crudecompute.oil.MechanicalPumpBlock.FACING, Direction.EAST));
+        helper.setBlock(to, ModBlocks.OIL_TANK.get().defaultBlockState());
+        helper.setBlock(new BlockPos(3, 2, 4), ModBlocks.GEARBOX.get().defaultBlockState());
+        BlockPos engine = new BlockPos(3, 2, 5);
+        helper.setBlock(engine, facing(ModBlocks.DIESEL_ENGINE.get(), Direction.NORTH));
+        fuel(helper, engine);
+        com.crudecompute.oil.OilTankBlockEntity source = helper.getBlockEntity(from);
+        source.getTank().fill(new FluidStack(ModFluids.CRUDE_OIL.get(), 4000), IFluidHandler.FluidAction.EXECUTE);
+        helper.succeedWhen(() -> {
+            com.crudecompute.oil.OilTankBlockEntity target = helper.getBlockEntity(to);
+            helper.assertTrue(target.getFluid().getAmount() >= 1000, "pump should have moved at least a bucket, moved " + target.getFluid().getAmount());
+        });
+    }
+
+    /** The battery charges through its sides and only discharges through its front, into a cable. */
+    @GameTest(template = "empty", timeoutTicks = 60)
+    public static void batteryChargesAndDischargesFront(GameTestHelper helper) {
+        BlockPos battery = new BlockPos(3, 1, 4);
+        helper.setBlock(battery, facing(ModBlocks.BATTERY.get(), Direction.NORTH));
+        BlockPos cable = new BlockPos(3, 1, 3);
+        helper.setBlock(cable, ModBlocks.POWER_CABLE.get().defaultBlockState());
+        IEnergyStorage side = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(battery), Direction.EAST);
+        IEnergyStorage front = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(battery), Direction.NORTH);
+        helper.assertTrue(side != null && front != null, "battery should expose energy on all sides");
+        helper.assertTrue(side.receiveEnergy(50_000, false) == 8192, "side input is limited to 8192 FE per call");
+        helper.assertTrue(front.receiveEnergy(1000, true) == 0 && side.extractEnergy(1000, true) == 0, "front is output only, sides input only");
+        helper.succeedWhen(() -> {
+            IEnergyStorage cableEnergy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(cable), Direction.UP);
+            helper.assertTrue(cableEnergy != null && cableEnergy.getEnergyStored() > 0, "battery should discharge into the cable in front");
+        });
+    }
+
+    /** The lithography machine turns wafer + plastic + gold nugget into two circuit boards. */
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void chipFabEtchesCircuitBoards(GameTestHelper helper) {
+        BlockPos fab = new BlockPos(3, 1, 4);
+        helper.setBlock(fab, facing(ModBlocks.CHIP_FAB.get(), Direction.NORTH));
+        BlockPos engine = new BlockPos(3, 1, 5);
+        helper.setBlock(engine, facing(ModBlocks.DIESEL_ENGINE.get(), Direction.NORTH));
+        fuel(helper, engine);
+        net.neoforged.neoforge.items.IItemHandler handler = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(fab), Direction.UP);
+        helper.assertTrue(handler != null, "chip fab should expose an item handler");
+        for (ItemStack stack : new ItemStack[]{new ItemStack(ModItems.SILICON_WAFER.get(), 2), new ItemStack(ModItems.PLASTIC.get(), 2),
+                new ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 2)}) {
+            ItemStack rest = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(handler, stack, false);
+            helper.assertTrue(rest.isEmpty(), "inputs should be accepted: " + stack);
+        }
+        helper.succeedWhen(() -> {
+            ItemStack out = handler.extractItem(3, 64, true);
+            helper.assertTrue(out.is(ModItems.CIRCUIT_BOARD.get()) && out.getCount() >= 4, "two runs should yield 4 circuit boards, got " + out);
+        });
+    }
 }

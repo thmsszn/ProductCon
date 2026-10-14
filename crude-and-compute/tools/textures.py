@@ -495,6 +495,37 @@ def item_chip():
     return _outline(img)
 
 
+def battery_cell():
+    rng = _rng("battery_cell")
+    img = new()
+    noise_fill(img, (36, 62, 120), 0.04, rng)
+    for y in range(5, 8):
+        for x in range(16):
+            img.putpixel((x, y), (226, 228, 232, 255))
+    for x in range(2, 14, 3):
+        img.putpixel((x, 6), (60, 190, 90, 255))
+    for x in range(16):
+        img.putpixel((x, 0), (90, 110, 160, 255))
+    return img
+
+
+def wafer_block():
+    img = new()
+    for y in range(16):
+        for x in range(16):
+            r = math.hypot(x - 7.5, y - 7.5)
+            if r > 7.9:
+                img.putpixel((x, y), (60, 64, 80, 255))
+                continue
+            base = (118, 124, 150) if (x // 2 + y // 2) % 2 == 0 else (108, 132, 170)
+            sheen = 1.25 - r / 16
+            c = shade(base, sheen)
+            if (x + y) % 5 == 0:
+                c = (170, 120, 210)
+            img.putpixel((x, y), c + (255,))
+    return img
+
+
 def block_textures():
     return {
         "steel": metal("steel", (148, 152, 158), rivets=True),
@@ -532,6 +563,8 @@ def block_textures():
         "led_white": solid((255, 255, 255)),
         "wood": wood(),
         "oil_shale": oil_shale(),
+        "battery_cell": battery_cell(),
+        "wafer": wafer_block(),
     }
 
 

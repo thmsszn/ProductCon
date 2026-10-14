@@ -29,6 +29,10 @@ public final class ModCapabilities {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.COOLING_UNIT.get(), (be, side) -> be.getEnergy());
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.AI_TERMINAL.get(), (be, side) -> be.getDriveSlot());
 
+        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.MECHANICAL_PUMP.get(), (be, side) -> be.getPort(side));
+        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.BATTERY.get(), (be, side) -> be.getEnergy(side));
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.CHIP_FAB.get(), (be, side) -> be.getAutomation());
+
         // multi-block controllers (cell 0, 0, 0)
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.PUMPJACK.get(), (be, side) -> be.getFluidHandler(0, 0, 0, side));
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.REFINERY.get(), (be, side) -> be.getFluidHandler(0, 0, 0, side));

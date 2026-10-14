@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "active=false,facing=north": {
+      "model": "crudecompute:block/chip_fab"
+    },
+    "active=true,facing=north": {
+      "model": "crudecompute:block/chip_fab"
+    },
+    "active=false,facing=east": {
+      "model": "crudecompute:block/chip_fab",
+      "y": 90
+    },
+    "active=true,facing=east": {
+      "model": "crudecompute:block/chip_fab",
+      "y": 90
+    },
+    "active=false,facing=south": {
+      "model": "crudecompute:block/chip_fab",
+      "y": 180
+    },
+    "active=true,facing=south": {
+      "model": "crudecompute:block/chip_fab",
+      "y": 180
+    },
+    "active=false,facing=west": {
+      "model": "crudecompute:block/chip_fab",
+      "y": 270
+    },
+    "active=true,facing=west": {
+      "model": "crudecompute:block/chip_fab",
+      "y": 270
+    }
+  }
+}
