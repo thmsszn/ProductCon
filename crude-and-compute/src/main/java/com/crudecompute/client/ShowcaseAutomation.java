@@ -167,7 +167,15 @@ public final class ShowcaseAutomation {
         }
         BlockPos rack = origin.offset(8, 0, 6);
         BlockPos terminal = origin.offset(9, 0, 3);
-        if (timer == 1) {
+        if (timer == 1 && guiShot == 0) {
+            // the menus close when the player is too far away, so stand next to the rack first
+            server.execute(() -> {
+                for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                    p.connection.teleport(origin.getX() + 9.5, origin.getY() + 0.1, origin.getZ() + 2.5, 0f, 0f);
+                }
+            });
+        }
+        if ((guiShot == 0 ? timer == 15 : timer == 1)) {
             switch (guiShot) {
                 case 0 -> server.execute(() -> {
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
@@ -196,7 +204,7 @@ public final class ShowcaseAutomation {
         if (guiShot == 3 && timer == 5 && mc.screen instanceof RackScreen) {
             mc.setScreen(null);
         }
-        if (timer == (guiShot == 0 || guiShot == 3 ? 70 : 45)) {
+        if (timer == (guiShot == 0 ? 85 : guiShot == 3 ? 70 : 45)) {
             String name = String.format("showcase_%d_%s.png", SHOTS.length + guiShot + 1, names[guiShot]);
             Screenshot.grab(mc.gameDirectory, name, mc.getMainRenderTarget(), msg -> REPORT.add("screenshot: " + msg.getString()));
             guiShot++;
