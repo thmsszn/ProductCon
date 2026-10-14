@@ -17,6 +17,10 @@ public class TransmissionBlockEntity extends KineticBlockEntity {
         return new TransmissionBlockEntity(ModBlockEntities.SHAFT.get(), pos, state);
     }
 
+    public static TransmissionBlockEntity tower(BlockPos pos, BlockState state) {
+        return new TransmissionBlockEntity(ModBlockEntities.WIND_TOWER.get(), pos, state);
+    }
+
     public static TransmissionBlockEntity gearbox(BlockPos pos, BlockState state) {
         return new TransmissionBlockEntity(ModBlockEntities.GEARBOX.get(), pos, state);
     }

@@ -66,7 +66,7 @@ public final class ShowcaseAutomation {
             {4.6, 2.6, -1.6, 9, 1, 6},
             {9.2, 1.75, 1.75, 9.5, 0.8, 3.6},
             {1.2, 4.2, -9.2, -1, 2, -3},
-            {6.5, 3.5, -5, 4.5, 3.6, -2.5},
+            {9.0, 4.0, -7.5, 4.8, 2.6, -3},
             {2.3, 2.1, -0.4, 5, 0.6, 3.6},
             {-7.2, 3.0, -7.4, -4, 1.4, -4},
             {16.5, 3.0, 3.5, 13, 0.4, -1.5},
@@ -288,11 +288,18 @@ public final class ShowcaseAutomation {
         set(level, o.offset(-3, 0, 3), ModBlocks.GEARBOX.get().defaultBlockState());
         set(level, o.offset(-3, 1, 3), ModBlocks.HAND_CRANK.get().defaultBlockState());
         set(level, o.offset(-2, 0, 3), ModBlocks.SHAFT.get().defaultBlockState().setValue(ShaftBlock.AXIS, Direction.Axis.X));
-        // wind turbine on a shaft tower
-        for (int y = 0; y < 3; y++) {
-            set(level, o.offset(4, y, -3), ModBlocks.SHAFT.get().defaultBlockState().setValue(ShaftBlock.AXIS, Direction.Axis.Y));
+        // wind turbine on a proper tower: foundation, tube segments, generator at the foot, plugged cables to a battery
+        set(level, o.offset(4, 0, -3), ModBlocks.TOWER_BASE.get().defaultBlockState());
+        for (int y = 1; y < 5; y++) {
+            set(level, o.offset(4, y, -3), ModBlocks.WIND_TOWER.get().defaultBlockState());
         }
-        set(level, o.offset(4, 3, -3), facing(ModBlocks.WINDMILL.get(), Direction.NORTH));
+        set(level, o.offset(4, 5, -3), facing(ModBlocks.WINDMILL.get(), Direction.NORTH));
+        set(level, o.offset(5, 0, -3), facing(ModBlocks.GENERATOR.get(), Direction.EAST));
+        set(level, o.offset(6, 0, -3), facing(ModBlocks.BATTERY.get(), Direction.NORTH));
+        for (int x = 5; x <= 6; x++) {
+            BlockPos cable = o.offset(x, 1, -3);
+            set(level, cable, ModBlocks.POWER_CABLE.get().connectionState(ModBlocks.POWER_CABLE.get().defaultBlockState(), level, cable));
+        }
         // datacenter: engine -> generators -> cables -> racks + cooling, terminal in front
         set(level, o.offset(6, 0, 2), facing(ModBlocks.DIESEL_ENGINE.get(), Direction.SOUTH));
         fuel(level, o.offset(6, 0, 2));

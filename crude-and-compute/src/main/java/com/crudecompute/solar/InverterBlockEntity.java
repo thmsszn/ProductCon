@@ -17,6 +17,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+import org.jetbrains.annotations.Nullable;
 
 /** Collects all solar panels touching it (flood fill through panels), converts DC to AC at 96 % and feeds its front. */
 public class InverterBlockEntity extends BlockEntity implements TickingBlockEntity {
@@ -35,6 +37,51 @@ public class InverterBlockEntity extends BlockEntity implements TickingBlockEnti
     public InverterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INVERTER.get(), pos, state);
     }
+
+    /** AC output: only the front face (where the cable plugs in) delivers energy. */
+    @Nullable
+    public IEnergyStorage getOutput(@Nullable Direction side) {
+        if (side != null && side != getBlockState().getValue(HorizontalMachineBlock.FACING)) {
+            return null;
+        }
+        return output;
+    }
+
+    private final IEnergyStorage output = new IEnergyStorage() {
+        @Override
+        public int receiveEnergy(int toReceive, boolean simulate) {
+            return 0;
+        }
+
+        @Override
+        public int extractEnergy(int toExtract, boolean simulate) {
+            int out = Math.min(Math.min(RATE, toExtract), buffer.getEnergyStored());
+            if (!simulate) {
+                buffer.removeInternal(out);
+            }
+            return out;
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return buffer.getEnergyStored();
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return buffer.getMaxEnergyStored();
+        }
+
+        @Override
+        public boolean canExtract() {
+            return true;
+        }
+
+        @Override
+        public boolean canReceive() {
+            return false;
+        }
+    };
 
     public int getPanels() {
         return panels;
@@ -84,9 +131,20 @@ public class InverterBlockEntity extends BlockEntity implements TickingBlockEnti
         }
         int count = 0;
         double peak = 0;
-        while (!queue.isEmpty() && count < MAX_PANELS) {
+        // panels touching each other or linked through DC cables belong to this inverter
+        while (!queue.isEmpty() && count < MAX_PANELS && seen.size() < MAX_PANELS * 4) {
             BlockPos p = queue.poll();
-            if (!seen.add(p) || !level.isLoaded(p) || !(level.getBlockState(p).getBlock() instanceof SolarPanelBlock panel)) {
+            if (!seen.add(p) || !level.isLoaded(p)) {
+                continue;
+            }
+            net.minecraft.world.level.block.Block block = level.getBlockState(p).getBlock();
+            if (block instanceof com.crudecompute.datacenter.PowerCableBlock) {
+                for (Direction d : Direction.values()) {
+                    queue.add(p.relative(d));
+                }
+                continue;
+            }
+            if (!(block instanceof SolarPanelBlock panel)) {
                 continue;
             }
             count++;

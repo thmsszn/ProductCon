@@ -60,9 +60,14 @@ public abstract class ConnectingBlock extends MachineBlock {
 
     public BlockState connectionState(BlockState state, LevelAccessor level, BlockPos pos) {
         for (Direction dir : Direction.values()) {
-            state = state.setValue(PROPS.get(dir), canConnect(level, pos, dir));
+            state = applyDirection(state, level, pos, dir);
         }
         return state;
+    }
+
+    /** Sets the connection state for one side; subclasses may add more per-side state (e.g. plugs). */
+    protected BlockState applyDirection(BlockState state, LevelAccessor level, BlockPos pos, Direction dir) {
+        return state.setValue(PROPS.get(dir), canConnect(level, pos, dir));
     }
 
     @Override
@@ -72,7 +77,7 @@ public abstract class ConnectingBlock extends MachineBlock {
 
     @Override
     protected BlockState updateShape(BlockState state, Direction dir, BlockState neighbor, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
-        return state.setValue(PROPS.get(dir), canConnect(level, pos, dir));
+        return applyDirection(state, level, pos, dir);
     }
 
     @Override

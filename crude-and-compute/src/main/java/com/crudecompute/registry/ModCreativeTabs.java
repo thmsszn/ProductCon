@@ -20,6 +20,8 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.GEARBOX.get());
                 output.accept(ModItems.HAND_CRANK.get());
                 output.accept(ModItems.WINDMILL.get());
+                output.accept(ModItems.WIND_TOWER.get());
+                output.accept(ModItems.TOWER_BASE.get());
                 output.accept(ModItems.DIESEL_ENGINE.get());
                 output.accept(ModItems.GENERATOR.get());
                 output.accept(ModItems.OIL_SHALE.get());

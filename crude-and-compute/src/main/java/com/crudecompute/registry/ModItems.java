@@ -24,6 +24,8 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> GEARBOX = blockItem("gearbox", ModBlocks.GEARBOX);
     public static final DeferredItem<BlockItem> HAND_CRANK = blockItem("hand_crank", ModBlocks.HAND_CRANK);
     public static final DeferredItem<BlockItem> WINDMILL = blockItem("windmill", ModBlocks.WINDMILL);
+    public static final DeferredItem<BlockItem> WIND_TOWER = blockItem("wind_tower", ModBlocks.WIND_TOWER);
+    public static final DeferredItem<BlockItem> TOWER_BASE = blockItem("tower_base", ModBlocks.TOWER_BASE);
     public static final DeferredItem<BlockItem> DIESEL_ENGINE = blockItem("diesel_engine", ModBlocks.DIESEL_ENGINE);
     public static final DeferredItem<BlockItem> GENERATOR = blockItem("generator", ModBlocks.GENERATOR);
     public static final DeferredItem<BlockItem> PUMPJACK = blockItem("pumpjack", ModBlocks.PUMPJACK);

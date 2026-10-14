@@ -13,6 +13,8 @@
     "crudecompute:shaft",
     "crudecompute:gearbox",
     "crudecompute:windmill",
+    "crudecompute:wind_tower",
+    "crudecompute:tower_base",
     "crudecompute:diesel_engine",
     "crudecompute:generator",
     "crudecompute:pumpjack",

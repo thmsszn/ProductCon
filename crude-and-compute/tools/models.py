@@ -382,13 +382,70 @@ def pipe_arm():
 
 
 def cable_center():
-    return sphere(0.5, 0.5, 0.5, 0.105, 0.105, 0.105, 10, 6, "rubber")
+    """Moulded junction where cable arms meet."""
+    m = sphere(0.5, 0.5, 0.5, 0.1, 0.1, 0.1, 12, 8, "rubber")
+    m.add(torus_y(0.5, 0.5, 0.5, 0.098, 0.012, 14, 4, "steel_dark"))
+    return m
+
+
+def _to_north(mesh):
+    return along_z(mesh).rotate_y(180, (0.5, 0.5, 0.5))
 
 
 def cable_arm():
-    arm = cylinder_y(0.5, 0.5, 0.07, 0.5, 1.0, 8, "rubber", cap_bottom=False, cap_top=False)
-    plug = cylinder_y(0.5, 0.5, 0.09, 0.93, 0.99, 8, "copper")
-    return along_z(Mesh().add(arm).add(plug)).rotate_y(180, (0.5, 0.5, 0.5))
+    """Cable run towards another cable: insulated core with ribs and a steel cable gland at the block edge."""
+    m = cylinder_y(0.5, 0.5, 0.068, 0.5, 1.0, 10, "rubber", cap_bottom=False, cap_top=False)
+    for y in (0.62, 0.74, 0.86):
+        m.add(torus_y(0.5, y, 0.5, 0.068, 0.011, 12, 4, "rubber"))
+    m.add(cylinder_y(0.5, 0.5, 0.088, 0.93, 1.0, 10, "steel_dark"))
+    m.add(torus_y(0.5, 0.945, 0.5, 0.088, 0.008, 12, 4, "brass"))
+    return _to_north(m)
+
+
+def cable_plug():
+    """Cable run ending in a plug that sits on the neighbouring machine: strain-relief boot, body, collar, prongs."""
+    m = cylinder_y(0.5, 0.5, 0.068, 0.5, 0.74, 10, "rubber", cap_bottom=False, cap_top=False)
+    m.add(frustum_y(0.5, 0.5, 0.07, 0.115, 0.72, 0.82, 10, "plastic_dark", cap_bottom=False, cap_top=False))
+    m.add(cylinder_y(0.5, 0.5, 0.125, 0.82, 0.95, 12, "plastic_dark"))
+    m.add(cylinder_y(0.5, 0.5, 0.135, 0.95, 0.975, 12, "steel"))
+    for dx, dz in ((-0.05, 0), (0.05, 0), (0, 0.05)):
+        m.add(cylinder_y(0.5 + dx, 0.5 + dz, 0.02, 0.975, 1.0, 6, "brass"))
+    m.add(box(0.46, 0.84, 0.61, 0.54, 0.9, 0.625, "led_green"))  # live indicator
+    return _to_north(m)
+
+
+# ----------------------------------------------------------------------------- wind tower
+def wind_tower():
+    """One tower segment: steel tube with bolted flanges and a service ladder."""
+    m = cylinder_y(0.5, 0.5, 0.23, 0.0, 1.0, 20, "column_white", cap_bottom=False, cap_top=False)
+    for y0, y1 in ((0.0, 0.05), (0.95, 1.0)):
+        m.add(cylinder_y(0.5, 0.5, 0.285, y0, y1, 20, "steel_dark"))
+    for i in range(10):
+        a = 2 * math.pi * i / 10
+        m.add(cylinder_y(0.5 + 0.255 * math.cos(a), 0.5 + 0.255 * math.sin(a), 0.014, 0.95, 1.012, 6, "steel"))
+    m.add(box(0.435, 0.0, 0.725, 0.45, 1.0, 0.75, "steel"))
+    m.add(box(0.55, 0.0, 0.725, 0.565, 1.0, 0.75, "steel"))
+    for y in (0.12, 0.37, 0.62, 0.87):
+        m.add(box(0.45, y, 0.73, 0.55, y + 0.025, 0.745, "steel"))
+    return m
+
+
+def tower_base():
+    """Concrete plinth with an anchor flange; bearing housings lead the axle out to the four sides."""
+    m = box(0.02, 0.0, 0.02, 0.98, 0.22, 0.98, "concrete")
+    m.add(frustum_y(0.5, 0.5, 0.44, 0.285, 0.22, 0.5, 20, "concrete", cap_bottom=False))
+    m.add(cylinder_y(0.5, 0.5, 0.23, 0.5, 1.0, 20, "column_white", cap_bottom=False, cap_top=False))
+    m.add(cylinder_y(0.5, 0.5, 0.285, 0.95, 1.0, 20, "steel_dark"))
+    for i in range(10):
+        a = 2 * math.pi * i / 10
+        m.add(cylinder_y(0.5 + 0.255 * math.cos(a), 0.5 + 0.255 * math.sin(a), 0.014, 0.95, 1.012, 6, "steel"))
+    for (x0, z0, x1, z1) in ((0.0, 0.5, 0.3, 0.5), (1.0, 0.5, 0.7, 0.5), (0.5, 0.0, 0.5, 0.3), (0.5, 1.0, 0.5, 0.7)):
+        m.add(tube((x0, 0.5, z0), (x1, 0.5, z1), 0.1, 12, "steel_dark"))
+        m.add(tube((x0, 0.5, z0), (x0 + (x1 - x0) * 0.2, 0.5, z0 + (z1 - z0) * 0.2), 0.115, 12, "brass"))
+    m.add(box(0.05, 0.22, 0.05, 0.95, 0.24, 0.95, "steel_dark"))
+    for cx, cz in ((0.1, 0.1), (0.9, 0.1), (0.1, 0.9), (0.9, 0.9)):
+        m.add(cylinder_y(cx, cz, 0.03, 0.24, 0.27, 6, "steel"))
+    return m
 
 
 def oil_tank():

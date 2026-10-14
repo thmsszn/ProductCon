@@ -33,6 +33,10 @@ public final class ModBlockEntities {
             register("hand_crank", HandCrankBlockEntity::new, ModBlocks.HAND_CRANK);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WindmillBlockEntity>> WINDMILL =
             register("windmill", WindmillBlockEntity::new, ModBlocks.WINDMILL);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TransmissionBlockEntity>> WIND_TOWER =
+            register("wind_tower", TransmissionBlockEntity::tower, ModBlocks.WIND_TOWER);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.crudecompute.kinetic.TowerBaseBlockEntity>> TOWER_BASE =
+            register("tower_base", com.crudecompute.kinetic.TowerBaseBlockEntity::new, ModBlocks.TOWER_BASE);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DieselEngineBlockEntity>> DIESEL_ENGINE =
             register("diesel_engine", DieselEngineBlockEntity::new, ModBlocks.DIESEL_ENGINE);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<GeneratorBlockEntity>> GENERATOR =

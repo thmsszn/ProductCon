@@ -7,7 +7,14 @@
     },
     {
       "when": {
-        "north": "true"
+        "AND": [
+          {
+            "north": "true"
+          },
+          {
+            "plug_north": "false"
+          }
+        ]
       },
       "apply": {
         "model": "crudecompute:block/power_cable_arm"
@@ -15,7 +22,29 @@
     },
     {
       "when": {
-        "east": "true"
+        "AND": [
+          {
+            "north": "true"
+          },
+          {
+            "plug_north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "crudecompute:block/power_cable_plug"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "east": "true"
+          },
+          {
+            "plug_east": "false"
+          }
+        ]
       },
       "apply": {
         "model": "crudecompute:block/power_cable_arm",
@@ -24,7 +53,30 @@
     },
     {
       "when": {
-        "south": "true"
+        "AND": [
+          {
+            "east": "true"
+          },
+          {
+            "plug_east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "crudecompute:block/power_cable_plug",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "south": "true"
+          },
+          {
+            "plug_south": "false"
+          }
+        ]
       },
       "apply": {
         "model": "crudecompute:block/power_cable_arm",
@@ -33,7 +85,30 @@
     },
     {
       "when": {
-        "west": "true"
+        "AND": [
+          {
+            "south": "true"
+          },
+          {
+            "plug_south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "crudecompute:block/power_cable_plug",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "west": "true"
+          },
+          {
+            "plug_west": "false"
+          }
+        ]
       },
       "apply": {
         "model": "crudecompute:block/power_cable_arm",
@@ -42,7 +117,30 @@
     },
     {
       "when": {
-        "up": "true"
+        "AND": [
+          {
+            "west": "true"
+          },
+          {
+            "plug_west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "crudecompute:block/power_cable_plug",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "up": "true"
+          },
+          {
+            "plug_up": "false"
+          }
+        ]
       },
       "apply": {
         "model": "crudecompute:block/power_cable_arm",
@@ -51,10 +149,49 @@
     },
     {
       "when": {
-        "down": "true"
+        "AND": [
+          {
+            "up": "true"
+          },
+          {
+            "plug_up": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "crudecompute:block/power_cable_plug",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "down": "true"
+          },
+          {
+            "plug_down": "false"
+          }
+        ]
       },
       "apply": {
         "model": "crudecompute:block/power_cable_arm",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "down": "true"
+          },
+          {
+            "plug_down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "crudecompute:block/power_cable_plug",
         "x": 90
       }
     }

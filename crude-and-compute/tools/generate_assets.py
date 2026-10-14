@@ -125,6 +125,9 @@ BLOCK_MODELS = {
     "oil_tank": (M.oil_tank, "column_white"),
     "power_cable_center": (M.cable_center, "rubber"),
     "power_cable_arm": (M.cable_arm, "rubber"),
+    "power_cable_plug": (M.cable_plug, "rubber"),
+    "wind_tower": (M.wind_tower, "column_white"),
+    "tower_base": (M.tower_base, "concrete"),
     "server_rack": (M.server_rack, "steel_dark"),
     "gpu_blade": (M.gpu_blade, "gpu_side"),
     "solar_panel": (lambda: M.solar_panel("solar_cell_poly"), "solar_cell_poly"),
@@ -163,7 +166,9 @@ ITEM_MODELS = {
     "refinery": (M.refinery, "column_white"),
     "fluid_pipe": (lambda: M.pipe_center().add(M.pipe_arm()).add(M.pipe_arm().rotate_y(180, (0.5, 0.5, 0.5))), "copper"),
     "oil_tank": (M.oil_tank, "column_white"),
-    "power_cable": (lambda: M.cable_center().add(M.cable_arm()).add(M.cable_arm().rotate_y(180, (0.5, 0.5, 0.5))), "rubber"),
+    "power_cable": (lambda: M.cable_center().add(M.cable_arm()).add(M.cable_plug().rotate_y(180, (0.5, 0.5, 0.5))), "rubber"),
+    "wind_tower": (M.wind_tower, "column_white"),
+    "tower_base": (M.tower_base, "concrete"),
     "server_rack": (server_rack_full, "steel_dark"),
     "cooling_unit": (lambda: M.cooling_unit(True).add(M.cooling_unit_anim()), "plastic_white"),
     "ai_terminal": (M.ai_terminal, "plastic_dark"),
@@ -221,6 +226,20 @@ def connection_multipart(center, arm):
     return {"multipart": parts}
 
 
+def cable_multipart():
+    """Cable arms; a side with plug_<dir> draws the plug variant instead of the cable-to-cable gland."""
+    parts = [{"apply": {"model": ns("block/power_cable_center")}}]
+    for d, (x, y) in {"north": (0, 0), "east": (0, 90), "south": (0, 180), "west": (0, 270), "up": (270, 0), "down": (90, 0)}.items():
+        for plug in (False, True):
+            apply = {"model": ns("block/power_cable_plug" if plug else "block/power_cable_arm")}
+            if x:
+                apply["x"] = x
+            if y:
+                apply["y"] = y
+            parts.append({"when": {"AND": [{d: "true"}, {f"plug_{d}": "true" if plug else "false"}]}, "apply": apply})
+    return {"multipart": parts}
+
+
 def blockstates():
     bs = {}
     simple = lambda m: {"variants": {"": {"model": ns(f"block/{m}")}}}
@@ -240,7 +259,9 @@ def blockstates():
     bs["server_rack"] = horizontal_states(lambda p: "server_rack", [("active", ["false", "true"])])
     bs["ai_terminal"] = horizontal_states(lambda p: "ai_terminal")
     bs["fluid_pipe"] = connection_multipart("fluid_pipe_center", "fluid_pipe_arm")
-    bs["power_cable"] = connection_multipart("power_cable_center", "power_cable_arm")
+    bs["power_cable"] = cable_multipart()
+    bs["wind_tower"] = {"variants": {f"axis={a}": {"model": ns("block/wind_tower")} for a in "xyz"}}
+    bs["tower_base"] = simple("tower_base")
     bs["oil_tank"] = simple("oil_tank")
     bs["mechanical_pump"] = {"variants": {f"facing={f}": variant("mechanical_pump", x, y) for f, (x, y) in {
         "north": (0, 0), "south": (0, 180), "east": (0, 90), "west": (0, 270), "up": (270, 0), "down": (90, 0)}.items()}}
@@ -266,6 +287,8 @@ BLOCK_NAMES = {
     "diesel": ("Diesel", "Diesel"),
     "shaft": ("Shaft", "Welle"),
     "gearbox": ("Gearbox", "Getriebe"),
+    "wind_tower": ("Wind Tower", "Windradturm"),
+    "tower_base": ("Tower Base", "Turmfuß"),
     "hand_crank": ("Hand Crank", "Handkurbel"),
     "windmill": ("Wind Turbine", "Windrad"),
     "diesel_engine": ("Diesel Engine", "Dieselmotor"),
@@ -431,7 +454,7 @@ MESSAGES = {
     "message.crudecompute.tank.empty": ("Oil tank: empty (capacity %s mB)", "Öltank: leer (Kapazität %s mB)"),
     "message.crudecompute.pipe": ("Pipe: %s %s mB", "Rohr: %s %s mB"),
     "message.crudecompute.pipe.empty": ("Pipe: empty", "Rohr: leer"),
-    "message.crudecompute.cable": ("Cable: %s / %s FE", "Kabel: %s / %s FE"),
+    "message.crudecompute.cable": ("Cable: %s / %s FE, flow %s FE/t", "Kabel: %s / %s FE, Durchfluss %s FE/t"),
     "message.crudecompute.rack": ("Server rack: %s GPUs | %s °C | %s | energy %s / %s FE | cooling %s °C/s",
                                   "Server-Rack: %s GPUs | %s °C | %s | Energie %s / %s FE | Kühlung %s °C/s"),
     "message.crudecompute.rack.online": ("ONLINE", "ONLINE"),
@@ -490,6 +513,10 @@ MESSAGES = {
     "tooltip.crudecompute.shaft": ("Transmits rotation along its axis.", "Überträgt Drehbewegung entlang der Achse."),
     "tooltip.crudecompute.gearbox": ("Connects shafts on all six sides.", "Verbindet Wellen an allen sechs Seiten."),
     "tooltip.crudecompute.hand_crank": ("Right-click to crank: 32 RPM, 64 SU.", "Rechtsklick zum Kurbeln: 32 U/min, 64 SU."),
+    "tooltip.crudecompute.wind_tower": ("Stackable tower segment with an axle inside. Put a wind turbine on top, stack higher for stronger wind.",
+                                        "Stapelbares Turmsegment mit Welle im Inneren. Windrad oben aufsetzen, höher bauen = mehr Wind."),
+    "tooltip.crudecompute.tower_base": ("Foundation: leads the tower axle out to the four sides (to a generator).",
+                                        "Fundament: führt die Turmwelle zu den vier Seiten (zum Generator)."),
     "tooltip.crudecompute.windmill": ("Place on top of a vertical shaft. 16-32 RPM, 256 SU.",
                                       "Auf eine senkrechte Welle setzen. 16-32 U/min, 256 SU."),
     "tooltip.crudecompute.diesel_engine": ("Burns diesel: 64 RPM, 1024 SU. Output shaft at the flywheel.",
@@ -502,7 +529,7 @@ MESSAGES = {
                                       "3 Blöcke hoch. Raffiniert Rohöl zu Diesel und Kunststoff. Braucht Drehung (96 SU) am Sockel."),
     "tooltip.crudecompute.fluid_pipe": ("Moves fluids between machines and tanks.", "Transportiert Flüssigkeiten zwischen Maschinen und Tanks."),
     "tooltip.crudecompute.oil_tank": ("Stores 16 buckets. Drains downwards.", "Speichert 16 Eimer. Gibt nach unten ab."),
-    "tooltip.crudecompute.power_cable": ("Transports Forge Energy.", "Leitet Forge Energy."),
+    "tooltip.crudecompute.power_cable": ("Transports Forge Energy. Plugs into machines, the inverter and solar panels (DC link).", "Leitet Forge Energy. Steckt per Stecker an Maschinen, Wechselrichter und Solarpanels (DC-Anbindung)."),
     "tooltip.crudecompute.server_rack": ("2 blocks tall. Right-click with GPUs (up to 8). Needs FE and cooling.",
                                          "2 Blöcke hoch. Mit GPUs rechtsklicken (bis zu 8). Braucht FE und Kühlung."),
     "tooltip.crudecompute.cooling_unit": ("Cools server racks within 2 blocks. Uses 16 FE/t.",
@@ -536,7 +563,7 @@ def lang():
 
 
 # =============================================================================== data
-DROPS_SELF = ["solar_panel", "solar_panel_mono", "inverter", "conveyor_belt", "oil_derrick", "mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
+DROPS_SELF = ["solar_panel", "solar_panel_mono", "inverter", "conveyor_belt", "oil_derrick", "mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "wind_tower", "tower_base", "diesel_engine", "generator", "pumpjack",
               "refinery", "fluid_pipe", "oil_tank", "power_cable", "server_rack", "cooling_unit", "ai_terminal"]
 
 
@@ -583,6 +610,8 @@ def recipes():
     shaped("shaft", ["I", "I"], {"I": I}, count=4)
     shaped("gearbox", [" S ", "SIS", " S "], {"S": S, "I": "minecraft:iron_block"})
     shaped("hand_crank", ["WWW", "  S"], {"W": "#minecraft:planks", "S": S})
+    shaped("wind_tower", ["I I", "ISI", "I I"], {"I": I, "S": S}, count=2)
+    shaped("tower_base", [" S ", "IGI", "BBB"], {"I": I, "S": ns("wind_tower"), "G": ns("gearbox"), "B": "minecraft:stone_bricks"})
     shaped("windmill", [" W ", "WSW", " I "], {"W": "minecraft:white_wool", "S": S, "I": I})
     shaped("diesel_engine", ["IPI", "CFC", "ISI"], {"I": I, "P": "minecraft:piston", "C": C, "F": "minecraft:blast_furnace", "S": S})
     shaped("generator", ["CRC", "CSC", "III"], {"C": C, "R": "minecraft:redstone_block", "S": S, "I": I})

@@ -3,7 +3,24 @@ newmtl rubber
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/rubber
 
-newmtl copper
+newmtl steel_dark
 Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/copper
+map_Kd crudecompute:block/steel_dark
+
+newmtl brass
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/brass
+
+newmtl plastic_dark
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/plastic_dark
+
+newmtl steel
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/steel
+
+newmtl led_green
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+map_Kd crudecompute:block/led_green
 

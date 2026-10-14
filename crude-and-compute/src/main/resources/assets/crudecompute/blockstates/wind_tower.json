@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "crudecompute:block/wind_tower"
+    },
+    "axis=y": {
+      "model": "crudecompute:block/wind_tower"
+    },
+    "axis=z": {
+      "model": "crudecompute:block/wind_tower"
+    }
+  }
+}

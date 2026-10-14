@@ -42,6 +42,10 @@ public final class ModBlocks {
     public static final DeferredBlock<HandCrankBlock> HAND_CRANK = BLOCKS.registerBlock("hand_crank", HandCrankBlock::new,
             machine().strength(1.5f).sound(SoundType.WOOD));
     public static final DeferredBlock<WindmillBlock> WINDMILL = BLOCKS.registerBlock("windmill", WindmillBlock::new, machine());
+    public static final DeferredBlock<com.crudecompute.kinetic.WindTowerBlock> WIND_TOWER = BLOCKS.registerBlock("wind_tower",
+            com.crudecompute.kinetic.WindTowerBlock::new, machine().strength(2f));
+    public static final DeferredBlock<com.crudecompute.kinetic.TowerBaseBlock> TOWER_BASE = BLOCKS.registerBlock("tower_base",
+            com.crudecompute.kinetic.TowerBaseBlock::new, machine().strength(3f));
     public static final DeferredBlock<DieselEngineBlock> DIESEL_ENGINE = BLOCKS.registerBlock("diesel_engine", DieselEngineBlock::new, machine());
     public static final DeferredBlock<GeneratorBlock> GENERATOR = BLOCKS.registerBlock("generator", GeneratorBlock::new, machine());
 

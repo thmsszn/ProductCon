@@ -21,7 +21,7 @@ Echte Screenshots aus Minecraft (automatisch per CI aufgenommen, siehe unten):
 ## Installation
 
 1. **Minecraft 1.21.1** mit **NeoForge 21.1.x** installieren (Installer: https://neoforged.net).
-2. Die Datei [`download/crudecompute-1.21.1-1.3.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
+2. Die Datei [`download/crudecompute-1.21.1-1.4.0.jar`](download/) in den Ordner `.minecraft/mods` legen.
 3. Spiel mit dem NeoForge-Profil starten – alles findet sich im Kreativ-Tab **Crude & Compute**.
 
 Die JAR baut GitHub Actions bei jedem Push (Workflow „Minecraft-Mod bauen“, Artefakt
@@ -72,6 +72,11 @@ Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 
 ### 3. KI-Rechenzentrum
 1. **Strom**: Generator → **Stromkabel** → Verbraucher (Forge Energy, kompatibel mit anderen Mods).
+   Die Kabel sind gummiisolierte Leitungen mit Zugentlastung; wo sie auf eine Maschine treffen, endet das Kabel in
+   einem **Stecker** (Gehäuse, Kragen, Kontaktstifte, grüne Betriebs-LED), zwischen zwei Kabeln sitzt eine
+   Kabelverschraubung. Rechtsklick auf ein Kabel zeigt Füllstand und **Durchfluss (FE/t)**.
+   Kabel stecken auch am **Wechselrichter** (Ausgang = Vorderseite) und an **Solarpanels**: Panels, die über
+   Kabel mit dem Wechselrichter verbunden sind (auch durch Kabelstrecken), zählen zur Anlage.
    Ein **Akku-Block** (2.000.000 FE) puffert: Er lädt an allen Seiten und gibt nur **vorne** wieder ab –
    die leuchtende Anzeige zeigt den Ladestand, ein Komparator liest ihn aus.
 2. **Silizium** aus Quarz schmelzen → **Wafer** → **Platine** (mit Kunststoff) → **KI-Beschleuniger (GPU)**.
@@ -98,6 +103,12 @@ Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 6. Aus dem trainierten Modell entstehen **KI-Optimierungschips**: auf Pferdekopfpumpe, Raffinerie, Generator
    oder Dieselmotor anwenden → **doppelte Leistung**. Die KI optimiert die Ölförderung!
 
+### Windkraftanlage (Turm)
+1. **Turmfuß** (Fundament) setzen – er leitet die Drehung zu allen vier Seiten, z. B. in einen **Generator** daneben.
+2. Darauf beliebig viele **Windradtürme** stapeln (Stahlrohr mit Flanschen und Leiter, Welle im Inneren).
+3. Oben das **Windrad** aufsetzen. Je höher, desto mehr Wind (bis 32 U/min; Gewitter/Regen geben Bonus).
+4. Generator → Kabel (mit Stecker) → Akku/Rack. Mehrere Türme nebeneinander ergeben einen Windpark.
+
 ### Werkzeug
 **Schraubenschlüssel**: Rechtsklick dreht Maschinen/Wellen, Schleichen + Rechtsklick baut sie sofort ab.
 
@@ -118,6 +129,8 @@ Damit holt man z. B. Diesel seitlich aus einem Öltank in den Dieselmotor.
 | Mechanische Pumpe | 2 Kupfer, Rohr, Welle |
 | Akku-Block | 4 Kunststoff, 2 Redstone-Blöcke, 2 Kupfer, Eisenblock |
 | Lithografie-Maschine | Glasscheiben, Redstone-Lampe, Diamant, Eisen, Welle |
+| 2 Windradtürme | Eisen, Welle |
+| Turmfuß | Windradturm, Getriebe, Eisen, Ziegelsteine |
 | Silizium | Quarz im Ofen/Hochofen |
 | 2 Wafer | 1 Silizium |
 | 2 Platinen | Goldnuggets, Redstone, 3 Wafer, 3 Kunststoff |

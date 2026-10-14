@@ -43,6 +43,7 @@ public final class ClientSetup {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.SHAFT.get(), TransmissionRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.GEARBOX.get(), TransmissionRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TOWER_BASE.get(), TowerBaseRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.HAND_CRANK.get(), KineticMachineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.WINDMILL.get(), KineticMachineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DIESEL_ENGINE.get(), KineticMachineRenderer::new);

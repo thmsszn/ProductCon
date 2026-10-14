@@ -21,6 +21,8 @@ public class PowerCableBlockEntity extends BlockEntity implements TickingBlockEn
 
     private final ModEnergyStorage energy = new ModEnergyStorage(CAPACITY, RATE, RATE, this::setChanged);
     private int rotation;
+    private int flowThisTick;
+    private int flow;
 
     public PowerCableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.POWER_CABLE.get(), pos, state);
@@ -32,7 +34,13 @@ public class PowerCableBlockEntity extends BlockEntity implements TickingBlockEn
 
     @Override
     public void serverTick() {
-        if (level == null || energy.getEnergyStored() <= 0) {
+        if (level == null) {
+            return;
+        }
+        // moving average of the energy leaving this cable (shown when right-clicking)
+        flow = (flow * 7 + flowThisTick) / 8;
+        flowThisTick = 0;
+        if (energy.getEnergyStored() <= 0) {
             return;
         }
         BlockState state = getBlockState();
@@ -48,15 +56,16 @@ public class PowerCableBlockEntity extends BlockEntity implements TickingBlockEn
                 if (diff > 1) {
                     int moved = cable.energy.addInternal(diff / 2);
                     energy.removeInternal(moved);
+                    flowThisTick += moved;
                 }
             } else {
-                Transfer.pushEnergy(level, worldPosition, dir, energy, RATE);
+                flowThisTick += Transfer.pushEnergy(level, worldPosition, dir, energy, RATE);
             }
         }
     }
 
     public void showStatus(Player player) {
-        Lang.status(player, Lang.msg("cable", energy.getEnergyStored(), CAPACITY));
+        Lang.status(player, Lang.msg("cable", energy.getEnergyStored(), CAPACITY, flow));
     }
 
     @Override

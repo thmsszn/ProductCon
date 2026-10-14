@@ -301,6 +301,91 @@ public final class ModGameTests {
         });
     }
 
+    /** Engine -> tower base -> three tower segments -> gearbox on top: the axle carries rotation up the tower. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void windTowerCarriesRotation(GameTestHelper helper) {
+        BlockPos engine = new BlockPos(2, 1, 4);
+        helper.setBlock(engine, facing(ModBlocks.DIESEL_ENGINE.get(), Direction.EAST));
+        helper.setBlock(new BlockPos(3, 1, 4), ModBlocks.TOWER_BASE.get().defaultBlockState());
+        for (int y = 2; y <= 4; y++) {
+            helper.setBlock(new BlockPos(3, y, 4), ModBlocks.WIND_TOWER.get().defaultBlockState());
+        }
+        BlockPos top = new BlockPos(3, 5, 4);
+        helper.setBlock(top, ModBlocks.GEARBOX.get().defaultBlockState());
+        fuel(helper, engine);
+        helper.succeedWhen(() -> {
+            KineticBlockEntity gearbox = helper.getBlockEntity(top);
+            helper.assertTrue(gearbox.getSpeed() == DieselEngineBlockEntity.SPEED && !gearbox.isOverstressed(),
+                    "tower should carry 64 RPM to the top, is " + gearbox.getSpeed());
+        });
+    }
+
+    /** A wind turbine on a tower drives a generator at the foot of the tower. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void windTowerDrivesGenerator(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(3, 1, 4), ModBlocks.TOWER_BASE.get().defaultBlockState());
+        for (int y = 2; y <= 4; y++) {
+            helper.setBlock(new BlockPos(3, y, 4), ModBlocks.WIND_TOWER.get().defaultBlockState());
+        }
+        helper.setBlock(new BlockPos(3, 5, 4), facing(ModBlocks.WINDMILL.get(), Direction.NORTH));
+        BlockPos generator = new BlockPos(4, 1, 4);
+        helper.setBlock(generator, facing(ModBlocks.GENERATOR.get(), Direction.EAST));
+        helper.succeedWhen(() -> {
+            GeneratorBlockEntity gen = helper.getBlockEntity(generator);
+            helper.assertTrue(gen.getSpeed() > 0, "generator at the tower foot should spin");
+            IEnergyStorage energy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(generator), Direction.UP);
+            helper.assertTrue(energy != null && energy.getEnergyStored() > 0, "wind farm should have produced energy");
+        });
+    }
+
+    /** Battery -> three cables -> cooling unit: energy arrives, and the last cable ends in a plug on the machine. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void cableChainDeliversPowerWithPlug(GameTestHelper helper) {
+        BlockPos battery = new BlockPos(3, 1, 6);
+        helper.setBlock(battery, facing(ModBlocks.BATTERY.get(), Direction.NORTH));
+        com.crudecompute.datacenter.PowerCableBlock cableBlock = ModBlocks.POWER_CABLE.get();
+        for (int z = 5; z >= 3; z--) {
+            BlockPos pos = new BlockPos(3, 1, z);
+            helper.setBlock(pos, cableBlock.connectionState(cableBlock.defaultBlockState(), helper.getLevel(), helper.absolutePos(pos)));
+        }
+        BlockPos cooler = new BlockPos(3, 1, 2);
+        helper.setBlock(cooler, ModBlocks.COOLING_UNIT.get().defaultBlockState());
+        // re-evaluate the connections now that every neighbour exists
+        for (int z = 5; z >= 3; z--) {
+            BlockPos pos = new BlockPos(3, 1, z);
+            BlockPos abs = helper.absolutePos(pos);
+            helper.getLevel().setBlock(abs, cableBlock.connectionState(helper.getLevel().getBlockState(abs), helper.getLevel(), abs), Block.UPDATE_ALL);
+        }
+        BlockState last = helper.getLevel().getBlockState(helper.absolutePos(new BlockPos(3, 1, 3)));
+        helper.assertTrue(last.getValue(com.crudecompute.datacenter.PowerCableBlock.PLUGS.get(Direction.NORTH)), "cable next to the machine must end in a plug");
+        BlockState middle = helper.getLevel().getBlockState(helper.absolutePos(new BlockPos(3, 1, 4)));
+        helper.assertFalse(middle.getValue(com.crudecompute.datacenter.PowerCableBlock.PLUGS.get(Direction.NORTH)), "cable-to-cable link has no plug");
+        IEnergyStorage side = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(battery), Direction.EAST);
+        side.receiveEnergy(8000, false);
+        helper.succeedWhen(() -> {
+            IEnergyStorage energy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(cooler), Direction.SOUTH);
+            helper.assertTrue(energy != null && energy.getEnergyStored() > 0, "cooling unit should receive power through the cables");
+        });
+    }
+
+    /** Solar panels linked to the inverter through a DC cable are counted, and the inverter's front exposes its output. */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void inverterCountsCabledPanels(GameTestHelper helper) {
+        BlockPos inverter = new BlockPos(3, 1, 4);
+        helper.setBlock(inverter, facing(ModBlocks.INVERTER.get(), Direction.NORTH));
+        helper.setBlock(new BlockPos(3, 1, 5), ModBlocks.POWER_CABLE.get().defaultBlockState());
+        helper.setBlock(new BlockPos(3, 1, 6), ModBlocks.POWER_CABLE.get().defaultBlockState());
+        helper.setBlock(new BlockPos(3, 1, 7), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
+        helper.setBlock(new BlockPos(4, 1, 7), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
+        IEnergyStorage front = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(inverter), Direction.NORTH);
+        IEnergyStorage back = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(inverter), Direction.SOUTH);
+        helper.assertTrue(front != null && back == null, "inverter delivers through its front only");
+        helper.succeedWhen(() -> {
+            com.crudecompute.solar.InverterBlockEntity be = helper.getBlockEntity(inverter);
+            helper.assertTrue(be.getPanels() == 2, "both panels behind the cable should be linked, found " + be.getPanels());
+        });
+    }
+
     /** The lithography machine turns wafer + plastic + gold nugget into two circuit boards. */
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void chipFabEtchesCircuitBoards(GameTestHelper helper) {
