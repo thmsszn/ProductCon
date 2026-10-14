@@ -2,6 +2,7 @@ name: Minecraft-Mod bauen (Crude & Compute)
 
 on:
   push:
+    branches: ["**"]
     tags:
       - "mod-v*"
     paths:
