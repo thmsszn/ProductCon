@@ -61,6 +61,12 @@ public final class ClientSetup {
     }
 
     @SubscribeEvent
+    public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        event.register(com.crudecompute.registry.ModMenus.RACK.get(), RackScreen::new);
+        event.register(com.crudecompute.registry.ModMenus.TERMINAL.get(), TerminalScreen::new);
+    }
+
+    @SubscribeEvent
     public static void registerModels(ModelEvent.RegisterAdditional event) {
         for (ModelResourceLocation model : ModModels.ALL) {
             event.register(model);

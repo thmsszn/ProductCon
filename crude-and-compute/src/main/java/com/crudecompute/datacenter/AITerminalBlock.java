@@ -74,7 +74,12 @@ public class AITerminalBlock extends HorizontalMachineBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof AITerminalBlockEntity terminal) {
+        if (!level.isClientSide && !player.isShiftKeyDown() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof AITerminalBlockEntity) {
+            serverPlayer.openMenu(new net.minecraft.world.SimpleMenuProvider(
+                    (id, inv, p) -> new com.crudecompute.menu.TerminalMenu(id, inv, pos),
+                    net.minecraft.network.chat.Component.translatable("block.crudecompute.ai_terminal")), buf -> buf.writeBlockPos(pos));
+        } else if (!level.isClientSide && level.getBlockEntity(pos) instanceof AITerminalBlockEntity terminal) {
             ItemStack drive = terminal.getDrive();
             if (!drive.isEmpty() && (player.isShiftKeyDown() || drive.is(ModItems.TRAINED_MODEL_DRIVE.get()))) {
                 terminal.setDrive(ItemStack.EMPTY);

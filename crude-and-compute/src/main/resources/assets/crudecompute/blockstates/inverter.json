@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "crudecompute:block/inverter"
+    },
+    "facing=east": {
+      "model": "crudecompute:block/inverter",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "crudecompute:block/inverter",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "crudecompute:block/inverter",
+      "y": 270
+    }
+  }
+}

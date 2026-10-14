@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IGI",
+    "PBP",
+    "IGI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "crudecompute:plastic"
+    },
+    "B": {
+      "item": "crudecompute:circuit_board"
+    },
+    "G": {
+      "item": "crudecompute:gpu"
+    }
+  },
+  "result": {
+    "id": "crudecompute:server_4u",
+    "count": 1
+  }
+}

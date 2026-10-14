@@ -34,12 +34,19 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.DIESEL_BUCKET.get());
                 output.accept(ModItems.PLASTIC.get());
                 output.accept(ModItems.POWER_CABLE.get());
+                output.accept(ModItems.SOLAR_PANEL.get());
+                output.accept(ModItems.SOLAR_PANEL_MONO.get());
+                output.accept(ModItems.INVERTER.get());
                 output.accept(ModItems.BATTERY.get());
                 output.accept(ModItems.SILICON.get());
                 output.accept(ModItems.SILICON_WAFER.get());
                 output.accept(ModItems.CIRCUIT_BOARD.get());
                 output.accept(ModItems.CHIP_FAB.get());
                 output.accept(ModItems.GPU.get());
+                for (int u : new int[]{1, 2, 4}) {
+                    output.accept(new net.minecraft.world.item.ItemStack(ModItems.serverItem(u)));
+                    output.accept(com.crudecompute.item.ServerItem.make(ModItems.serverItem(u), com.crudecompute.hardware.ServerConfig.preset(u)));
+                }
                 output.accept(ModItems.SERVER_RACK.get());
                 output.accept(ModItems.COOLING_UNIT.get());
                 output.accept(ModItems.AI_TERMINAL.get());

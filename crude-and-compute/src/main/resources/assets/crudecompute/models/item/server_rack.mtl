@@ -3,21 +3,25 @@ newmtl steel_dark
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/steel_dark
 
+newmtl rubber
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/rubber
+
 newmtl server_side
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/server_side
 
-newmtl server_back
+newmtl fan_grille
 Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/server_back
-
-newmtl server_bay
-Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/server_bay
+map_Kd crudecompute:block/fan_grille
 
 newmtl steel
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/steel
+
+newmtl rack_rail
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/rack_rail
 
 newmtl screen
 Kd 1.0 1.0 1.0
@@ -29,9 +33,9 @@ Kd 1.0 1.0 1.0
 Ka 1.0 1.0 1.0
 map_Kd crudecompute:block/led_blue
 
-newmtl rubber
+newmtl pdu
 Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/rubber
+map_Kd crudecompute:block/pdu
 
 newmtl paint_blue
 Kd 1.0 1.0 1.0
@@ -45,15 +49,35 @@ newmtl grating
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/grating
 
-newmtl gpu_front
+newmtl rack_mesh
 Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/gpu_front
-
-newmtl gpu_side
-Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/gpu_side
+map_Kd crudecompute:block/rack_mesh
 
 newmtl brass
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/brass
+
+newmtl srv_front_4u
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/srv_front_4u
+
+newmtl srv_rear_4u
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/srv_rear_4u
+
+newmtl srv_front_2u
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/srv_front_2u
+
+newmtl srv_rear_2u
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/srv_rear_2u
+
+newmtl srv_front_1u
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/srv_front_1u
+
+newmtl srv_rear_1u
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/srv_rear_1u
 

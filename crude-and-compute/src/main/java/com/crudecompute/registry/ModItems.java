@@ -37,6 +37,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> MECHANICAL_PUMP = blockItem("mechanical_pump", ModBlocks.MECHANICAL_PUMP);
     public static final DeferredItem<BlockItem> CONVEYOR_BELT = blockItem("conveyor_belt", ModBlocks.CONVEYOR_BELT);
     public static final DeferredItem<BlockItem> OIL_DERRICK = blockItem("oil_derrick", ModBlocks.OIL_DERRICK);
+    public static final DeferredItem<BlockItem> SOLAR_PANEL = blockItem("solar_panel", ModBlocks.SOLAR_PANEL);
+    public static final DeferredItem<BlockItem> SOLAR_PANEL_MONO = blockItem("solar_panel_mono", ModBlocks.SOLAR_PANEL_MONO);
+    public static final DeferredItem<BlockItem> INVERTER = blockItem("inverter", ModBlocks.INVERTER);
     public static final DeferredItem<BlockItem> BATTERY = blockItem("battery", ModBlocks.BATTERY);
     public static final DeferredItem<BlockItem> CHIP_FAB = blockItem("chip_fab", ModBlocks.CHIP_FAB);
 
@@ -58,6 +61,14 @@ public final class ModItems {
             () -> new TooltipItem(new Item.Properties().stacksTo(16).rarity(Rarity.RARE), "tooltip.crudecompute.trained_model_drive"));
     public static final DeferredItem<Item> AI_OVERCLOCK_CHIP = ITEMS.register("ai_overclock_chip",
             () -> new OverclockChipItem(new Item.Properties().rarity(Rarity.EPIC)));
+
+    public static final DeferredItem<Item> SERVER_1U = ITEMS.register("server_1u", () -> new com.crudecompute.item.ServerItem(new Item.Properties().stacksTo(1), 1));
+    public static final DeferredItem<Item> SERVER_2U = ITEMS.register("server_2u", () -> new com.crudecompute.item.ServerItem(new Item.Properties().stacksTo(1), 2));
+    public static final DeferredItem<Item> SERVER_4U = ITEMS.register("server_4u", () -> new com.crudecompute.item.ServerItem(new Item.Properties().stacksTo(1), 4));
+
+    public static Item serverItem(int sizeU) {
+        return sizeU == 1 ? SERVER_1U.get() : sizeU == 2 ? SERVER_2U.get() : SERVER_4U.get();
+    }
 
     private ModItems() {
     }

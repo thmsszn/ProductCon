@@ -28,6 +28,7 @@ public class CrudeCompute {
         ModBlocks.BLOCKS.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
+        com.crudecompute.registry.ModMenus.MENUS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         modBus.addListener(ModCapabilities::register);
 

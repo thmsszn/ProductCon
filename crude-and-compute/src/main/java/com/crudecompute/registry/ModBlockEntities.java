@@ -66,6 +66,9 @@ public final class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.crudecompute.oil.OilDerrickBlockEntity>> OIL_DERRICK =
             register("oil_derrick", com.crudecompute.oil.OilDerrickBlockEntity::new, ModBlocks.OIL_DERRICK);
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.crudecompute.solar.InverterBlockEntity>> INVERTER =
+            register("inverter", com.crudecompute.solar.InverterBlockEntity::new, ModBlocks.INVERTER);
+
     private ModBlockEntities() {
     }
 

@@ -302,16 +302,23 @@ public final class ShowcaseAutomation {
             set(level, o.offset(x, 0, 5), ModBlocks.POWER_CABLE.get().defaultBlockState());
         }
         set(level, o.offset(7, 0, 4), ModBlocks.POWER_CABLE.get().defaultBlockState());
-        int[] gpus = {8, 4, 6};
+        int[][] fill = {{4, 2, 1, 1}, {2, 2, 2}, {4, 1, 1, 1, 2}};
         for (int i = 0; i < 3; i++) {
             BlockPos rack = o.offset(8 + i, 0, 6);
             multiblock(level, rack, facing(ModBlocks.SERVER_RACK.get(), Direction.NORTH), ModBlocks.SERVER_RACK.get());
             if (level.getBlockEntity(rack) instanceof ServerRackBlockEntity be) {
-                for (int g = 0; g < gpus[i]; g++) {
-                    be.addGpu();
+                for (int size : fill[i]) {
+                    be.insert(com.crudecompute.hardware.ServerConfig.preset(size), -1);
                 }
             }
         }
+        // solar field with inverter feeding the battery bank
+        set(level, o.offset(8, 0, 9), facing(ModBlocks.INVERTER.get(), Direction.NORTH));
+        for (int dx = 0; dx < 4; dx++) {
+            set(level, o.offset(8 + dx, 0, 10), ModBlocks.SOLAR_PANEL_MONO.get().defaultBlockState());
+            set(level, o.offset(8 + dx, 0, 11), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
+        }
+        set(level, o.offset(9, 0, 9), ModBlocks.SOLAR_PANEL_MONO.get().defaultBlockState());
         set(level, o.offset(7, 0, 6), ModBlocks.COOLING_UNIT.get().defaultBlockState());
         set(level, o.offset(11, 0, 6), ModBlocks.COOLING_UNIT.get().defaultBlockState());
         set(level, o.offset(9, 0, 7), ModBlocks.COOLING_UNIT.get().defaultBlockState());

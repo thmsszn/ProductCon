@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:block/block",
+  "loader": "neoforge:obj",
+  "model": "crudecompute:models/item/solar_panel_mono.obj",
+  "flip_v": false,
+  "automatic_culling": false,
+  "shade_quads": true,
+  "emissive_ambient": true,
+  "ambientocclusion": false,
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "crudecompute:block/solar_cell_mono"
+  }
+}

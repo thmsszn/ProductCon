@@ -526,6 +526,139 @@ def wafer_block():
     return img
 
 
+# ---------------------------------------------------------------------------- rack hardware (phase 1 of the datacenter update)
+DIGITS = {
+    "0": ("111", "101", "101", "101", "111"), "1": ("010", "110", "010", "010", "111"),
+    "2": ("111", "001", "111", "100", "111"), "3": ("111", "001", "111", "001", "111"),
+    "4": ("101", "101", "111", "001", "001"), "5": ("111", "100", "111", "001", "111"),
+    "6": ("111", "100", "111", "101", "111"), "7": ("111", "001", "010", "010", "010"),
+    "8": ("111", "101", "111", "101", "111"), "9": ("111", "101", "111", "001", "111"),
+}
+
+
+def draw_number(img, text, x, y, color):
+    for ch in text:
+        for ry, row in enumerate(DIGITS[ch]):
+            for rx, bit in enumerate(row):
+                if bit == "1":
+                    img.putpixel((x + rx, y + ry), color + (255,))
+        x += 4
+
+
+def solar_cells(name, base, line, cell=5):
+    rng = _rng(name)
+    img = new()
+    for y in range(16):
+        for x in range(16):
+            f = 1 + rng.uniform(-0.05, 0.05)
+            c = shade(base, f)
+            if x % cell == 0 or y % cell == 0:
+                c = line
+            if name.endswith("mono") and x % cell == cell - 1 and y % cell == cell - 1:
+                c = shade(base, 0.7)
+            img.putpixel((x, y), tuple(c[:3]) + (255,))
+    for i in range(16):
+        img.putpixel((i, 0), (196, 200, 208, 255))
+        img.putpixel((0, i), (196, 200, 208, 255))
+    return img
+
+
+def rack_rail():
+    img = Image.new("RGBA", (12, 224), (58, 62, 70, 255))
+    for u in range(1, 15):
+        top = (14 - u) * 16
+        for x in range(12):
+            img.putpixel((x, top), (30, 32, 38, 255))
+        label = str(u)
+        draw_number(img, label, 1 if u >= 10 else 3, top + 5, (214, 218, 226))
+        for hy in (2, 8, 13):  # square mounting holes
+            for dx in range(2):
+                for dy in range(2):
+                    img.putpixel((9 + dx, top + hy + dy), (12, 13, 16, 255))
+    return img
+
+
+def rack_mesh():
+    rng = _rng("rack_mesh")
+    img = Image.new("RGBA", (32, 64), (44, 47, 54, 255))
+    for y in range(64):
+        for x in range(32):
+            if x % 4 in (1, 2) and y % 4 in (1, 2):
+                img.putpixel((x, y), (8, 9, 11, 255))
+            elif rng.random() < 0.08:
+                img.putpixel((x, y), (60, 64, 72, 255))
+    for x in range(32):
+        img.putpixel((x, 0), (90, 94, 102, 255))
+        img.putpixel((x, 63), (24, 26, 30, 255))
+    return img
+
+
+def pdu():
+    img = Image.new("RGBA", (16, 16), (22, 23, 26, 255))
+    d = ImageDraw.Draw(img)
+    for y in range(1, 15, 4):
+        d.rectangle((3, y, 12, y + 2), fill=(52, 54, 60, 255))
+        d.rectangle((5, y + 1, 6, y + 1), fill=(8, 8, 9, 255))
+        d.rectangle((9, y + 1, 10, y + 1), fill=(8, 8, 9, 255))
+    return img
+
+
+def server_front(u):
+    w, h = 86, 14 * u
+    img = Image.new("RGBA", (w, h), (36, 38, 44, 255))
+    d = ImageDraw.Draw(img)
+    d.rectangle((0, 0, w - 1, 0), fill=(120, 126, 136, 255))
+    d.rectangle((0, h - 1, w - 1, h - 1), fill=(14, 15, 18, 255))
+    rows = u
+    cols = 6
+    cell_w, bay_left = 9, 3
+    cell_h = (h - 6) // rows
+    for r in range(rows):
+        for c in range(cols):
+            x0 = bay_left + c * (cell_w + 0)
+            y0 = 3 + r * cell_h
+            d.rectangle((x0, y0, x0 + cell_w - 2, y0 + cell_h - 2), fill=(18, 19, 22, 255), outline=(70, 74, 84, 255))
+            d.rectangle((x0 + 1, y0 + cell_h - 4, x0 + cell_w - 3, y0 + cell_h - 3), fill=(96, 100, 110, 255))
+            img.putpixel((x0 + 2, y0 + 1), (60, 220, 100, 255))
+    for vx in range(59, 67, 2):  # ventilation slits
+        for vy in range(2, h - 2, 2):
+            d.rectangle((vx, vy, vx, vy), fill=(10, 11, 13, 255))
+    d.rectangle((68, 1, 82, 5), fill=(8, 9, 11, 255), outline=(60, 64, 72, 255))  # LED recess
+    d.ellipse((72, 7 if h > 14 else 8, 78, 13 if h > 14 else 13), fill=(60, 64, 72, 255), outline=(150, 154, 162, 255))
+    if h >= 28:
+        d.rectangle((68, 18, 82, 24), fill=(24, 26, 30, 255), outline=(60, 64, 72, 255))
+        d.rectangle((70, 20, 80, 22), fill=(118, 185, 0, 255))
+    return img
+
+
+def server_rear(u):
+    w, h = 86, 14 * u
+    img = Image.new("RGBA", (w, h), (30, 32, 38, 255))
+    d = ImageDraw.Draw(img)
+    for i, x0 in enumerate((2, 26)):  # two hot-swap PSUs
+        d.rectangle((x0, 2, x0 + 21, h - 3), fill=(52, 55, 62, 255), outline=(14, 15, 18, 255))
+        for gy in range(5, h - 5, 3):
+            d.line((x0 + 3, gy, x0 + 15, gy), fill=(14, 15, 18, 255))
+        d.rectangle((x0 + 17, 4, x0 + 19, 6), fill=(60, 220, 100, 255))
+        d.rectangle((x0 + 17, h - 8, x0 + 20, h - 4), fill=(20, 21, 24, 255))
+    for r in range(u):  # expansion brackets + ports
+        y0 = 2 + r * 14
+        d.rectangle((52, y0, 83, y0 + 11), fill=(40, 42, 48, 255), outline=(14, 15, 18, 255))
+        for k in range(3):
+            d.rectangle((54 + k * 8, y0 + 2, 59 + k * 8, y0 + 7), fill=(10, 11, 13, 255), outline=(150, 154, 162, 255))
+        for k in range(8):
+            img.putpixel((55 + k * 3, y0 + 10), (60, 190, 90, 255) if k % 3 else (230, 200, 40, 255))
+    return img
+
+
+def server_textures():
+    out = {}
+    for u in (1, 2, 4):
+        out[f"srv_front_{u}u"] = server_front(u)
+        out[f"srv_rear_{u}u"] = server_rear(u)
+    return out
+
+
 def block_textures():
     return {
         "steel": metal("steel", (148, 152, 158), rivets=True),
@@ -564,12 +697,36 @@ def block_textures():
         "wood": wood(),
         "oil_shale": oil_shale(),
         "battery_cell": battery_cell(),
+        "rack_rail": rack_rail(),
+        "solar_cell_poly": solar_cells("solar_poly", (38, 78, 150), (150, 170, 205)),
+        "solar_cell_mono": solar_cells("solar_mono", (14, 22, 44), (200, 170, 90)),
+        "rack_mesh": rack_mesh(),
+        "pdu": pdu(),
+        **server_textures(),
         "wafer": wafer_block(),
     }
 
 
+def item_server(u):
+    img = new()
+    d = ImageDraw.Draw(img)
+    h = {1: 4, 2: 7, 4: 12}[u]
+    top = 8 - h // 2
+    d.rectangle((1, top, 14, top + h), fill=(40, 42, 48, 255), outline=(150, 154, 162, 255))
+    for r in range(u if u < 3 else 3):
+        y = top + 1 + r * (h // (u if u < 3 else 3))
+        for c in range(5):
+            d.rectangle((3 + c * 2, y, 4 + c * 2, y + max(1, h // (u if u < 3 else 3) - 2)), fill=(14, 15, 18, 255))
+    img.putpixel((12, top + 1), (60, 255, 110, 255))
+    img.putpixel((12, top + 2), (70, 200, 255, 255))
+    return _outline(img)
+
+
 def item_textures():
     return {
+        "server_1u": item_server(1),
+        "server_2u": item_server(2),
+        "server_4u": item_server(4),
         "wrench": item_wrench(),
         "crude_oil_bucket": item_bucket((22, 18, 16), (90, 84, 96)),
         "diesel_bucket": item_bucket((214, 168, 40), (255, 236, 150)),

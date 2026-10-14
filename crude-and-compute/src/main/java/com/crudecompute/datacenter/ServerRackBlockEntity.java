@@ -1,40 +1,46 @@
 package com.crudecompute.datacenter;
 
+import com.crudecompute.hardware.Catalog;
+import com.crudecompute.hardware.HardwareSim;
+import com.crudecompute.hardware.HwError;
+import com.crudecompute.hardware.HwError.Problem;
+import com.crudecompute.hardware.Kind;
+import com.crudecompute.hardware.Part;
+import com.crudecompute.hardware.ServerConfig;
+import com.crudecompute.hardware.ServerState;
 import com.crudecompute.multiblock.MultiblockCapabilities;
 import com.crudecompute.registry.ModBlockEntities;
-import com.crudecompute.registry.ModItems;
 import com.crudecompute.util.HorizontalMachineBlock;
 import com.crudecompute.util.Lang;
 import com.crudecompute.util.ModEnergyStorage;
 import com.crudecompute.util.SyncedBlockEntity;
 import com.crudecompute.util.TickingBlockEntity;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Holds up to 8 GPUs. Each GPU draws {@link #FE_PER_GPU} FE/t, delivers {@link #PFLOPS_PER_GPU} PFLOPS and heats the
- * rack up. Cooling units nearby remove heat; above {@link #THROTTLE_TEMP} the rack throttles, above
- * {@link #SHUTDOWN_TEMP} it shuts down until it has cooled to {@link #RESTART_TEMP}.
+ * A 14U rack holding individual servers (1U / 2U / 4U). Every server is simulated separately: hardware determines
+ * load, heat and compute; the rack supplies electricity (FE) and inlet air whose temperature depends on the room,
+ * the rack's own waste heat and nearby cooling units.
  */
 public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingBlockEntity, MultiblockCapabilities {
-    public static final int MAX_GPUS = 8;
-    public static final int FE_PER_GPU = 64;
-    public static final float PFLOPS_PER_GPU = 2.5f;
-    public static final float HEAT_PER_GPU = 1.5f;
-    public static final float AMBIENT = 22f;
-    public static final float THROTTLE_TEMP = 80f;
-    public static final float SHUTDOWN_TEMP = 100f;
-    public static final float RESTART_TEMP = 50f;
+    public static final int RACK_U = 14;
+    /** Model space: height of the first U slot above the rack floor and height of one U. */
+    public static final float U0 = 0.125f;
+    public static final float U_H = 0.125f;
 
     public static final int STATUS_IDLE = 0;
     public static final int STATUS_ONLINE = 1;
@@ -42,159 +48,323 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
     public static final int STATUS_OVERHEATED = 3;
     public static final int STATUS_NO_POWER = 4;
 
-    private final ModEnergyStorage energy = new ModEnergyStorage(64_000, 8192, 0, this::setChanged);
-    private int gpus;
-    private float temperature = AMBIENT;
-    private boolean overheated;
-    private boolean powered;
-    private float cooling;
+    public static final class Slot {
+        public int u;
+        public ServerConfig cfg;
+        public ServerState st = new ServerState();
+
+        public Slot(int u, ServerConfig cfg) {
+            this.u = u;
+            this.cfg = cfg;
+        }
+
+        public boolean covers(int row) {
+            return row >= u && row < u + cfg.sizeU;
+        }
+    }
+
+    private final List<Slot> slots = new ArrayList<>();
+    private final ModEnergyStorage energy = new ModEnergyStorage(200_000, 16_384, 0, this::setChanged);
+    private boolean powered = true;
     private int status;
-
-    private final IItemHandler gpuSlot = new IItemHandler() {
-        @Override
-        public int getSlots() {
-            return 1;
-        }
-
-        @Override
-        public ItemStack getStackInSlot(int slot) {
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-            if (!stack.is(ModItems.GPU.get()) || gpus >= MAX_GPUS) {
-                return stack;
-            }
-            if (!simulate) {
-                addGpu();
-            }
-            return stack.copyWithCount(stack.getCount() - 1);
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            return ItemStack.EMPTY;
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 1;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return stack.is(ModItems.GPU.get());
-        }
-    };
+    private float inletC = 22f;
+    private float coolingLoad;
+    private float cracCooling;
 
     public ServerRackBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SERVER_RACK.get(), pos, state);
     }
 
+    // ------------------------------------------------------------------ slots
+    public List<Slot> getSlots() {
+        return slots;
+    }
+
+    @Nullable
+    public Slot slotAt(int row) {
+        for (Slot s : slots) {
+            if (s.covers(row)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    public Slot slotStartingAt(int u) {
+        for (Slot s : slots) {
+            if (s.u == u) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    public boolean fits(int u, int size, @Nullable Slot ignore) {
+        if (u < 0 || u + size > RACK_U) {
+            return false;
+        }
+        for (Slot s : slots) {
+            if (s != ignore && u < s.u + s.cfg.sizeU && s.u < u + size) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int firstFit(int size) {
+        for (int u = 0; u + size <= RACK_U; u++) {
+            if (fits(u, size, null)) {
+                return u;
+            }
+        }
+        return -1;
+    }
+
+    public int usedU() {
+        int n = 0;
+        for (Slot s : slots) {
+            n += s.cfg.sizeU;
+        }
+        return n;
+    }
+
+    /** Inserts at the preferred U (0-based from the bottom) or the first free spot. Returns the U used or -1. */
+    public int insert(ServerConfig cfg, int preferredU) {
+        int u = preferredU >= 0 && fits(preferredU, cfg.sizeU, null) ? preferredU : firstFit(cfg.sizeU);
+        if (u < 0) {
+            return -1;
+        }
+        Slot slot = new Slot(u, cfg);
+        slot.st.inputW = (float) HardwareSim.nominalInputW(cfg);
+        slots.add(slot);
+        slots.sort(Comparator.comparingInt(s -> s.u));
+        sync();
+        return u;
+    }
+
+    @Nullable
+    public Slot remove(int u) {
+        Slot s = slotStartingAt(u);
+        if (s != null) {
+            slots.remove(s);
+            sync();
+        }
+        return s;
+    }
+
+    public boolean move(int u, int delta) {
+        Slot s = slotStartingAt(u);
+        if (s == null || !fits(u + delta, s.cfg.sizeU, s)) {
+            return false;
+        }
+        s.u += delta;
+        slots.sort(Comparator.comparingInt(x -> x.u));
+        sync();
+        return true;
+    }
+
+    public void setMode(int u, int mode) {
+        Slot s = slotStartingAt(u);
+        if (s != null) {
+            s.cfg.mode = mode;
+            recomputeAll();
+            sync();
+        }
+    }
+
+    @Nullable
+    public Problem installPart(int u, Part part) {
+        Slot s = slotStartingAt(u);
+        if (s == null) {
+            return new Problem(HwError.NOT_FOUND, 0);
+        }
+        Problem p = s.cfg.install(part);
+        if (p == null) {
+            recomputeAll();
+            sync();
+        }
+        return p;
+    }
+
+    @Nullable
+    public Problem removePart(int u, Kind kind, int index) {
+        Slot s = slotStartingAt(u);
+        if (s == null) {
+            return new Problem(HwError.NOT_FOUND, 0);
+        }
+        Problem p = s.cfg.remove(kind, index);
+        if (p == null) {
+            recomputeAll();
+            sync();
+        }
+        return p;
+    }
+
+    // ------------------------------------------------------------------ aggregated values
     public int getGpus() {
-        return gpus;
+        int n = 0;
+        for (Slot s : slots) {
+            n += s.cfg.gpus.size();
+        }
+        return n;
+    }
+
+    /** Current compute output in PFLOPS. */
+    public float getCompute() {
+        float c = 0;
+        for (Slot s : slots) {
+            if (s.st.status == ServerState.ONLINE || s.st.status == ServerState.THROTTLED) {
+                c += s.st.compute;
+            }
+        }
+        return c;
+    }
+
+    /** Current draw in FE per tick. */
+    public int getPowerDraw() {
+        return (int) Math.ceil(requestedW(false) / HardwareSim.WATTS_PER_FE_TICK);
+    }
+
+    public float getHeatW() {
+        float h = 0;
+        for (Slot s : slots) {
+            h += s.st.loadW;
+        }
+        return h;
     }
 
     public float getTemperature() {
-        return temperature;
+        float t = inletC;
+        for (Slot s : slots) {
+            t = Math.max(t, s.st.temp);
+        }
+        return t;
+    }
+
+    public float getInlet() {
+        return inletC;
+    }
+
+    public float getCoolingLoad() {
+        return coolingLoad;
+    }
+
+    public float getCracCooling() {
+        return cracCooling;
+    }
+
+    public boolean isPowered() {
+        return powered;
     }
 
     public int getStatus() {
         return status;
     }
 
-    /** Current compute output in PFLOPS. */
-    public float getCompute() {
-        return switch (status) {
-            case STATUS_ONLINE -> gpus * PFLOPS_PER_GPU;
-            case STATUS_THROTTLED -> gpus * PFLOPS_PER_GPU * 0.5f;
-            default -> 0f;
-        };
+    public int getEnergyStored() {
+        return energy.getEnergyStored();
     }
 
-    public int getPowerDraw() {
-        return status == STATUS_ONLINE || status == STATUS_THROTTLED ? gpus * FE_PER_GPU : 0;
+    public int getEnergyCapacity() {
+        return energy.getMaxEnergyStored();
     }
 
-    public boolean addGpu() {
-        if (gpus >= MAX_GPUS) {
-            return false;
+    private double requestedW(boolean nominal) {
+        double w = 0;
+        for (Slot s : slots) {
+            w += nominal || !powered ? HardwareSim.nominalInputW(s.cfg) : s.st.inputW;
         }
-        gpus++;
-        sync();
-        return true;
+        return w;
     }
 
-    public boolean removeGpu() {
-        if (gpus <= 0) {
-            return false;
-        }
-        gpus--;
-        sync();
-        return true;
-    }
-
+    // ------------------------------------------------------------------ simulation
     @Override
     public void serverTick() {
         if (level == null) {
             return;
         }
-        int needed = gpus * FE_PER_GPU;
-        if (status == STATUS_THROTTLED) {
-            needed /= 2;
-        }
-        powered = gpus > 0 && !overheated && energy.getEnergyStored() >= needed;
-        if (powered) {
-            energy.removeInternal(needed);
+        double needFE = requestedW(false) / HardwareSim.WATTS_PER_FE_TICK;
+        int need = (int) Math.ceil(needFE);
+        if (need <= 0) {
+            powered = true;
+        } else if (energy.getEnergyStored() >= need) {
+            energy.removeInternal(need);
+            powered = true;
+        } else {
+            powered = false;
         }
         if (level.getGameTime() % 20 == Math.floorMod(worldPosition.hashCode(), 20)) {
             thermalUpdate();
         }
     }
 
-    /** Once per second: heat balance and status. */
+    private void recomputeAll() {
+        // inputs changed: refresh requested draw immediately so the brown-out check stays consistent
+        for (Slot s : slots) {
+            s.st.inputW = (float) HardwareSim.nominalInputW(s.cfg);
+        }
+    }
+
+    /** Once per second: inlet air temperature, thermal step of every server, rack status. */
     private void thermalUpdate() {
-        cooling = CoolingUnitBlockEntity.coolingFor(level, worldPosition);
-        float heat = powered ? gpus * HEAT_PER_GPU * (temperature >= THROTTLE_TEMP ? 0.5f : 1f) : 0f;
-        float passive = (temperature - AMBIENT) * 0.05f;
-        temperature = Math.max(AMBIENT - 2f, temperature + heat - passive - cooling);
-        if (overheated && temperature < RESTART_TEMP) {
-            overheated = false;
-        } else if (temperature >= SHUTDOWN_TEMP) {
-            overheated = true;
+        if (level == null) {
+            return;
         }
-        int newStatus;
-        if (gpus == 0) {
-            newStatus = STATUS_IDLE;
-        } else if (overheated) {
-            newStatus = STATUS_OVERHEATED;
-        } else if (!powered) {
-            newStatus = STATUS_NO_POWER;
-        } else if (temperature >= THROTTLE_TEMP) {
-            newStatus = STATUS_THROTTLED;
-        } else {
-            newStatus = STATUS_ONLINE;
+        float ambient = Math.max(8f, Math.min(40f, 12f + level.getBiome(worldPosition).value().getBaseTemperature() * 10f));
+        cracCooling = CoolingUnitBlockEntity.coolingFor(level, worldPosition);
+        float recirc = 0.0012f * getHeatW();
+        inletC = Math.max(14f, Math.min(60f, ambient + recirc - Math.min(12f, cracCooling * 2f)));
+        double removable = 0;
+        for (Slot s : slots) {
+            float localInlet = inletC + 0.12f * s.u;
+            HardwareSim.step(s.cfg, s.st, localInlet, powered, 1.0);
+            removable += (HardwareSim.passiveG(s.cfg.sizeU) + HardwareSim.coolerG(s.cfg, 1f)) * Math.max(1f, HardwareSim.THROTTLE_C - localInlet);
         }
-        status = newStatus;
+        float heat = getHeatW();
+        coolingLoad = removable > 0 ? (float) Math.min(2.0, heat / removable) : 0f;
+
+        int worst = STATUS_IDLE;
+        boolean anyRunning = false;
+        for (Slot s : slots) {
+            int st = s.st.status;
+            if (st == ServerState.ONLINE || st == ServerState.THROTTLED) {
+                anyRunning = true;
+            }
+            int rank = switch (st) {
+                case ServerState.OVERHEATED -> 4;
+                case ServerState.NO_POWER -> 3;
+                case ServerState.THROTTLED -> 2;
+                case ServerState.ONLINE -> 1;
+                default -> 0;
+            };
+            int cur = switch (worst) {
+                case STATUS_OVERHEATED -> 4;
+                case STATUS_NO_POWER -> 3;
+                case STATUS_THROTTLED -> 2;
+                case STATUS_ONLINE -> 1;
+                default -> 0;
+            };
+            if (rank > cur) {
+                worst = switch (rank) {
+                    case 4 -> STATUS_OVERHEATED;
+                    case 3 -> STATUS_NO_POWER;
+                    case 2 -> STATUS_THROTTLED;
+                    default -> STATUS_ONLINE;
+                };
+            }
+        }
+        status = worst;
         BlockState state = getBlockState();
-        boolean active = status == STATUS_ONLINE || status == STATUS_THROTTLED;
-        if (state.getValue(HorizontalMachineBlock.ACTIVE) != active) {
-            level.setBlock(worldPosition, state.setValue(HorizontalMachineBlock.ACTIVE, active), Block.UPDATE_CLIENTS);
+        if (state.getValue(HorizontalMachineBlock.ACTIVE) != anyRunning) {
+            level.setBlock(worldPosition, state.setValue(HorizontalMachineBlock.ACTIVE, anyRunning), Block.UPDATE_CLIENTS);
         }
-        sync(); // temperature display on the rack + terminal
+        sync();
     }
 
     public void showStatus(Player player) {
-        String key = switch (status) {
-            case STATUS_ONLINE -> "rack.online";
-            case STATUS_THROTTLED -> "rack.throttled";
-            case STATUS_OVERHEATED -> "rack.overheated";
-            case STATUS_NO_POWER -> "rack.no_power";
-            default -> "rack.idle";
-        };
-        Component line = Lang.msg("rack", gpus, Lang.num(temperature), Lang.msg(key), energy.getEnergyStored(),
-                energy.getMaxEnergyStored(), Lang.num(cooling));
+        Component line = Component.translatable("hw.rack.summary", slots.size(), usedU(), RACK_U, Lang.num(getHeatW() / 1000.0),
+                Lang.num(getTemperature()), Component.translatable("hw.status." + status));
         if (status == STATUS_ONLINE || status == STATUS_IDLE) {
             Lang.status(player, line);
         } else {
@@ -208,29 +378,48 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         return energy;
     }
 
-    @Nullable
-    @Override
-    public IItemHandler getItemHandler(int right, int up, int forward, @Nullable Direction side) {
-        return gpuSlot;
-    }
-
+    // ------------------------------------------------------------------ persistence
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putInt("Energy", energy.getEnergyStored());
-        tag.putInt("Gpus", gpus);
-        tag.putFloat("Temperature", temperature);
-        tag.putBoolean("Overheated", overheated);
         tag.putInt("Status", status);
+        tag.putBoolean("Powered", powered);
+        tag.putFloat("Inlet", inletC);
+        tag.putFloat("CoolLoad", coolingLoad);
+        tag.putFloat("Crac", cracCooling);
+        ListTag list = new ListTag();
+        for (Slot s : slots) {
+            CompoundTag e = new CompoundTag();
+            e.putInt("U", s.u);
+            e.put("Cfg", s.cfg.save());
+            e.put("State", s.st.save());
+            list.add(e);
+        }
+        tag.put("Servers", list);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         energy.setEnergy(tag.getInt("Energy"));
-        gpus = tag.getInt("Gpus");
-        temperature = tag.contains("Temperature") ? tag.getFloat("Temperature") : AMBIENT;
-        overheated = tag.getBoolean("Overheated");
         status = tag.getInt("Status");
+        powered = !tag.contains("Powered") || tag.getBoolean("Powered");
+        inletC = tag.contains("Inlet") ? tag.getFloat("Inlet") : 22f;
+        coolingLoad = tag.getFloat("CoolLoad");
+        cracCooling = tag.getFloat("Crac");
+        slots.clear();
+        for (Tag t : tag.getList("Servers", Tag.TAG_COMPOUND)) {
+            CompoundTag e = (CompoundTag) t;
+            Slot s = new Slot(e.getInt("U"), ServerConfig.load(e.getCompound("Cfg")));
+            s.st = ServerState.load(e.getCompound("State"));
+            slots.add(s);
+        }
+        slots.sort(Comparator.comparingInt(s -> s.u));
+    }
+
+    /** Used by the catalog index lookups in the GUI. */
+    public static Part catalogPart(int index) {
+        return index >= 0 && index < Catalog.ALL.size() ? Catalog.ALL.get(index) : null;
     }
 }

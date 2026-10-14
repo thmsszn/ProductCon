@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "PBP"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "crudecompute:plastic"
+    },
+    "B": {
+      "item": "crudecompute:circuit_board"
+    }
+  },
+  "result": {
+    "id": "crudecompute:server_1u",
+    "count": 1
+  }
+}

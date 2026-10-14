@@ -33,6 +33,10 @@ public class CoolingUnitBlockEntity extends SyncedBlockEntity implements Ticking
         super(ModBlockEntities.COOLING_UNIT.get(), pos, state);
     }
 
+    public boolean isRunning() {
+        return running;
+    }
+
     public IEnergyStorage getEnergy() {
         return energy;
     }

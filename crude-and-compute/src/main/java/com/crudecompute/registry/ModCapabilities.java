@@ -41,7 +41,6 @@ public final class ModCapabilities {
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ModBlockEntities.REFINERY.get(), (be, side) -> be.getFluidHandler(0, 0, 0, side));
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.REFINERY.get(), (be, side) -> be.getItemHandler(0, 0, 0, side));
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.SERVER_RACK.get(), (be, side) -> be.getEnergyStorage(0, 0, 0, side));
-        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.SERVER_RACK.get(), (be, side) -> be.getItemHandler(0, 0, 0, side));
 
         // multi-block parts forward to their controller
         event.registerBlock(Capabilities.FluidHandler.BLOCK, (level, pos, state, be, side) -> {

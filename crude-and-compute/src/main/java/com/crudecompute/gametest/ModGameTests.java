@@ -140,8 +140,8 @@ public final class ModGameTests {
         });
     }
 
-    /** A powered and cooled rack with GPUs delivers compute, and the terminal trains on it. */
-    @GameTest(template = "empty", timeoutTicks = 200)
+    /** A powered and cooled rack with real servers delivers compute, and the terminal trains on it. */
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void datacenterTrainsModel(GameTestHelper helper) {
         BlockPos rackPos = new BlockPos(3, 1, 4);
         BlockState rackState = facing(ModBlocks.SERVER_RACK.get(), Direction.NORTH);
@@ -149,9 +149,8 @@ public final class ModGameTests {
         rackState.getBlock().setPlacedBy(helper.getLevel(), helper.absolutePos(rackPos), helper.getLevel().getBlockState(helper.absolutePos(rackPos)),
                 null, new ItemStack(ModItems.SERVER_RACK.get()));
         ServerRackBlockEntity rack = helper.getBlockEntity(rackPos);
-        for (int i = 0; i < 4; i++) {
-            rack.addGpu();
-        }
+        helper.assertTrue(rack.insert(com.crudecompute.hardware.ServerConfig.preset(4), -1) >= 0, "4U server should fit");
+        helper.assertTrue(rack.insert(com.crudecompute.hardware.ServerConfig.preset(2), -1) >= 0, "2U server should fit");
         helper.setBlock(new BlockPos(4, 1, 4), ModBlocks.COOLING_UNIT.get().defaultBlockState());
         BlockPos terminalPos = new BlockPos(3, 1, 2);
         helper.setBlock(terminalPos, facing(ModBlocks.AI_TERMINAL.get(), Direction.NORTH));
@@ -160,7 +159,7 @@ public final class ModGameTests {
         helper.onEachTick(() -> {
             IEnergyStorage rackEnergy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(rackPos.above()), Direction.WEST);
             if (rackEnergy != null) {
-                rackEnergy.receiveEnergy(8192, false);
+                rackEnergy.receiveEnergy(16384, false);
             }
             IEnergyStorage coolerEnergy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(new BlockPos(4, 1, 4)), Direction.UP);
             if (coolerEnergy != null) {
@@ -169,9 +168,97 @@ public final class ModGameTests {
         });
         helper.succeedWhen(() -> {
             helper.assertTrue(rack.getStatus() == ServerRackBlockEntity.STATUS_ONLINE, "rack should be online, status " + rack.getStatus());
-            helper.assertTrue(rack.getCompute() == 4 * ServerRackBlockEntity.PFLOPS_PER_GPU, "4 GPUs should deliver 10 PFLOPS");
+            helper.assertTrue(rack.getCompute() > 5f, "servers should deliver compute, got " + rack.getCompute());
             helper.assertTrue(terminal.getRacks() == 1 && terminal.getComputeValue() > 0 && terminal.getProgressPercent() >= 0,
                     "terminal should see the rack and train on its compute");
+        });
+    }
+
+    /** Every shipped preset is a valid configuration; incompatible parts are rejected with the right reason. */
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void hardwareCompatibility(GameTestHelper helper) {
+        for (int u : new int[]{1, 2, 4}) {
+            helper.assertTrue(com.crudecompute.hardware.ServerConfig.preset(u).validate() == null, "preset " + u + "U must be valid");
+        }
+        com.crudecompute.hardware.ServerConfig c = new com.crudecompute.hardware.ServerConfig(1);
+        helper.assertTrue(err(c.install(cat("mb_4u_gpu"))) == com.crudecompute.hardware.HwError.MOBO_TOO_LARGE, "4U board must not fit a 1U chassis");
+        helper.assertTrue(c.install(cat("mb_1u_epyc")) == null, "1U board fits");
+        helper.assertTrue(err(c.install(cat("cpu_e2388"))) == com.crudecompute.hardware.HwError.CPU_SOCKET, "wrong socket");
+        helper.assertTrue(c.install(cat("cpu_epyc32")) == null, "matching CPU installs");
+        helper.assertTrue(err(c.install(cat("cpu_epyc32"))) == com.crudecompute.hardware.HwError.CPU_SLOTS, "second CPU on a 1P board");
+        helper.assertTrue(err(c.install(cat("ram_d4_16"))) == com.crudecompute.hardware.HwError.RAM_TYPE, "DDR4 on DDR5 board");
+        helper.assertTrue(err(c.install(cat("gpu_h80"))) == com.crudecompute.hardware.HwError.GPU_TOO_BIG, "2U GPU in a 1U chassis");
+        com.crudecompute.hardware.ServerConfig w = new com.crudecompute.hardware.ServerConfig(2);
+        helper.assertTrue(w.install(cat("mb_2u_ws")) == null && w.install(cat("cpu_i9")) == null && w.install(cat("psu_450")) == null, "base build");
+        helper.assertTrue(err(w.install(cat("gpu_m48"))) == com.crudecompute.hardware.HwError.PSU_WEAK, "450 W PSU cannot power a 300 W GPU");
+        helper.assertTrue(w.install(cat("psu_1600")) == null && w.install(cat("gpu_m48")) == null, "stronger PSU makes it work");
+        helper.succeed();
+    }
+
+    private static com.crudecompute.hardware.Part cat(String id) {
+        return com.crudecompute.hardware.Catalog.get(id);
+    }
+
+    private static com.crudecompute.hardware.HwError err(com.crudecompute.hardware.HwError.Problem p) {
+        return p == null ? null : p.error();
+    }
+
+    /** More GPUs mean more power and heat; a weak cooler on a big server overheats it. */
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void thermalSimulationReactsToHardware(GameTestHelper helper) {
+        com.crudecompute.hardware.ServerConfig withGpu = com.crudecompute.hardware.ServerConfig.preset(2);
+        com.crudecompute.hardware.ServerConfig noGpu = withGpu.copy();
+        noGpu.gpus.clear();
+        withGpu.mode = com.crudecompute.hardware.ServerConfig.MODE_FULL;
+        noGpu.mode = com.crudecompute.hardware.ServerConfig.MODE_FULL;
+        com.crudecompute.hardware.ServerState a = new com.crudecompute.hardware.ServerState();
+        com.crudecompute.hardware.ServerState b = new com.crudecompute.hardware.ServerState();
+        for (int i = 0; i < 900; i++) {
+            com.crudecompute.hardware.HardwareSim.step(withGpu, a, 22, true, 1.0);
+            com.crudecompute.hardware.HardwareSim.step(noGpu, b, 22, true, 1.0);
+        }
+        helper.assertTrue(a.inputW > b.inputW + 400, "GPUs must raise power draw: " + a.inputW + " vs " + b.inputW);
+        helper.assertTrue(a.temp > b.temp + 5, "GPUs must raise temperature: " + a.temp + " vs " + b.temp);
+        helper.assertTrue(a.compute > b.compute, "GPUs must add compute");
+
+        com.crudecompute.hardware.ServerConfig weak = com.crudecompute.hardware.ServerConfig.preset(4);
+        weak.cooler = "cool_air1";
+        weak.mode = com.crudecompute.hardware.ServerConfig.MODE_FULL;
+        com.crudecompute.hardware.ServerState hot = new com.crudecompute.hardware.ServerState();
+        boolean everOverheated = false;
+        for (int i = 0; i < 1500; i++) {
+            com.crudecompute.hardware.HardwareSim.step(weak, hot, 22, true, 1.0);
+            everOverheated |= hot.status == com.crudecompute.hardware.ServerState.OVERHEATED;
+        }
+        helper.assertTrue(everOverheated, "a 4U GPU server with a tiny air cooler must overheat");
+
+        com.crudecompute.hardware.ServerState dark = new com.crudecompute.hardware.ServerState();
+        com.crudecompute.hardware.HardwareSim.step(withGpu, dark, 22, false, 1.0);
+        helper.assertTrue(dark.status == com.crudecompute.hardware.ServerState.NO_POWER && dark.compute == 0f, "no power means no compute");
+        helper.succeed();
+    }
+
+    /** Solar output follows the time of day and only panels connected to an inverter count. */
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void solarFollowsDaytime(GameTestHelper helper) {
+        BlockPos inverter = new BlockPos(3, 1, 3);
+        helper.setBlock(inverter, facing(ModBlocks.INVERTER.get(), Direction.NORTH));
+        helper.setBlock(new BlockPos(4, 1, 3), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
+        helper.setBlock(new BlockPos(5, 1, 3), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
+        helper.setBlock(new BlockPos(3, 1, 4), ModBlocks.SOLAR_PANEL_MONO.get().defaultBlockState());
+        helper.setBlock(new BlockPos(8, 1, 8), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
+        helper.getLevel().setDayTime(6000);
+        java.util.concurrent.atomic.AtomicReference<Double> noon = new java.util.concurrent.atomic.AtomicReference<>(0.0);
+        helper.runAfterDelay(45, () -> {
+            com.crudecompute.solar.InverterBlockEntity inv = helper.getBlockEntity(inverter);
+            noon.set(inv.getAcW());
+            helper.assertTrue(inv.getPanels() == 3, "only the 3 connected panels count, found " + inv.getPanels());
+            helper.getLevel().setDayTime(18000);
+        });
+        helper.succeedWhen(() -> {
+            com.crudecompute.solar.InverterBlockEntity inv = helper.getBlockEntity(inverter);
+            helper.assertTrue(noon.get() > 1500, "noon output should exceed 1.5 kW, was " + noon.get());
+            helper.assertTrue(inv.getAcW() == 0.0, "no output at night, was " + inv.getAcW());
         });
     }
 

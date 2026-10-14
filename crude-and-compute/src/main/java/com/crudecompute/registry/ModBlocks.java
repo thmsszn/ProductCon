@@ -71,6 +71,13 @@ public final class ModBlocks {
     public static final DeferredBlock<com.crudecompute.oil.OilDerrickBlock> OIL_DERRICK = BLOCKS.registerBlock("oil_derrick",
             com.crudecompute.oil.OilDerrickBlock::new, machine());
 
+    public static final DeferredBlock<com.crudecompute.solar.SolarPanelBlock> SOLAR_PANEL = BLOCKS.registerBlock("solar_panel",
+            p -> new com.crudecompute.solar.SolarPanelBlock(p, 0.15), machine().strength(1.5f).sound(SoundType.GLASS));
+    public static final DeferredBlock<com.crudecompute.solar.SolarPanelBlock> SOLAR_PANEL_MONO = BLOCKS.registerBlock("solar_panel_mono",
+            p -> new com.crudecompute.solar.SolarPanelBlock(p, 0.22), machine().strength(1.5f).sound(SoundType.GLASS));
+    public static final DeferredBlock<com.crudecompute.solar.InverterBlock> INVERTER = BLOCKS.registerBlock("inverter",
+            com.crudecompute.solar.InverterBlock::new, machine());
+
     public static final DeferredBlock<MultiblockPartBlock> MULTIBLOCK_PART = BLOCKS.registerBlock("multiblock_part", MultiblockPartBlock::new,
             machine().noLootTable());
 

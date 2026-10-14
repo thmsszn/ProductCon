@@ -1,6 +1,9 @@
 {
   "replace": false,
   "values": [
+    "crudecompute:solar_panel",
+    "crudecompute:solar_panel_mono",
+    "crudecompute:inverter",
     "crudecompute:conveyor_belt",
     "crudecompute:oil_derrick",
     "crudecompute:mechanical_pump",

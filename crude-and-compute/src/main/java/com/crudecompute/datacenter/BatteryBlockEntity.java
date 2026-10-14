@@ -43,6 +43,10 @@ public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBloc
         return side == facing() ? output : input;
     }
 
+    public int getStoredEnergy() {
+        return storage.getEnergyStored();
+    }
+
     public float getFill() {
         return storage.getEnergyStored() / (float) CAPACITY;
     }

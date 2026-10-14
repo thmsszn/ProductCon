@@ -411,33 +411,79 @@ def oil_tank():
 
 
 # ----------------------------------------------------------------------------- datacenter
-RACK_BAY0 = 0.12
-RACK_BAY_H = 0.21
-RACK_BAYS = 8
+RACK_BAY0 = 0.125
+RACK_BAY_H = 0.125
+RACK_BAYS = 14
 
 
 def server_rack():
+    """14U rack: numbered mounting rails, open front door, PDUs and cable managers on the rear, no back panel."""
     m = Mesh()
+    m.add(box(0.04, 0.0, 0.04, 0.96, 0.07, 0.96, "steel_dark"))
+    for x in (0.1, 0.9):  # casters
+        for z in (0.1, 0.9):
+            m.add(cylinder_y(x, z, 0.03, 0.0, 0.05, 8, "rubber"))
     for x0 in (0.04, 0.9):
         for z0 in (0.04, 0.9):
-            m.add(box(x0, 0, z0, x0 + 0.06, 2.0, z0 + 0.06, "steel_dark"))
+            m.add(box(x0, 0.07, z0, x0 + 0.06, 1.99, z0 + 0.06, "steel_dark"))
     for x0 in (0.05, 0.91):
-        m.add(box(x0, 0.06, 0.1, x0 + 0.04, 1.94, 0.9, "server_side"))
-    m.add(box(0.1, 0.06, 0.9, 0.9, 1.94, 0.94, "server_back"))
+        m.add(box(x0, 0.07, 0.1, x0 + 0.04, 1.94, 0.9, "server_side"))
     m.add(box(0.04, 1.94, 0.04, 0.96, 2.0, 0.96, "steel_dark"))
-    m.add(box(0.04, 0.0, 0.04, 0.96, 0.06, 0.96, "steel_dark"))
-    m.add(box(0.1, 0.06, 0.84, 0.9, 1.94, 0.9, "server_bay"))
-    for i in range(RACK_BAYS + 1):
-        y = RACK_BAY0 + i * RACK_BAY_H
-        m.add(box(0.1, y - 0.008, 0.1, 0.9, y + 0.004, 0.84, "steel"))
-    # status display above the bays
-    m.add(box(0.12, 1.82, 0.09, 0.88, 1.93, 0.12, "steel_dark", {"n": "screen"}))
-    # brand strip at the bottom
-    m.add(box(0.1, 0.06, 0.09, 0.9, 0.1, 0.12, "led_blue"))
-    # cable bundle on top
+    # roof fan tray
+    for x in (0.3, 0.7):
+        m.add(washer_y(x, 0.5, 0.0, 0.17, 2.0, 2.03, 16, "steel_dark", inner=False))
+        m.add(disc_y(x, 0.5, 0.15, 2.031, 16, "fan_grille", uv_r=0.5))
+    # mounting rails (front with U numbers, rear plain)
+    for x0 in (0.09, 0.85):
+        m.add(box(x0, 0.07, 0.1, x0 + 0.06, 1.94, 0.12, "steel"))
+        m.add(box(x0, 0.07, 0.78, x0 + 0.06, 1.94, 0.8, "steel"))
+        y0, y1 = U0_, U0_ + 14 * U_H_
+        m.quad("rack_rail", (x0, y1, 0.0985), (x0 + 0.06, y1, 0.0985), (x0 + 0.06, y0, 0.0985), (x0, y0, 0.0985),
+               ((0, 0), (1, 0), (1, 1), (0, 1)), outward=(0, 0, -1))
+    # status display strip + bottom light
+    m.add(box(0.2, 1.885, 0.09, 0.8, 1.94, 0.12, "steel_dark", {"n": "screen"}))
+    m.add(box(0.15, 0.085, 0.09, 0.85, 0.105, 0.1, "led_blue"))
+    # rear: PDUs with outlets, cable managers with fingers
+    m.add(box(0.12, 0.2, 0.86, 0.17, 1.85, 0.9, "pdu"))
+    m.add(box(0.83, 0.2, 0.86, 0.88, 1.85, 0.9, "pdu"))
+    for x0 in (0.18, 0.78):
+        m.add(box(x0, 0.1, 0.84, x0 + 0.04, 1.9, 0.9, "steel_dark"))
+        for k in range(14):
+            m.add(box(x0 - 0.02 if x0 < 0.5 else x0 + 0.04, 0.16 + k * U_H_, 0.84, x0 + 0.04 if x0 < 0.5 else x0 + 0.06, 0.2 + k * U_H_, 0.93, "steel"))
+    # cable bundles on top and down the rear managers
     for i, (mat, x) in enumerate((("rubber", 0.3), ("paint_blue", 0.4), ("paint_yellow", 0.5), ("rubber", 0.62))):
-        m.add(bezier_tube((x, 2.0, 0.92), (x, 2.1 + 0.02 * i, 0.88), (x + 0.05, 2.08, 0.35), (x + 0.1, 2.0, 0.12), 0.028, 10, 6, mat))
-    m.add(box(0.25, 2.0, 0.1, 0.8, 2.03, 0.96, "grating"))
+        m.add(bezier_tube((x, 2.03, 0.9), (x, 2.13 + 0.02 * i, 0.88), (x + 0.05, 2.1, 0.35), (x + 0.1, 2.03, 0.12), 0.028, 10, 6, mat))
+    m.add(box(0.25, 2.03, 0.1, 0.8, 2.06, 0.96, "grating"))
+    # open front door, hinged on the left edge (seen from the front)
+    door = Mesh()
+    door.add(box(0.09, 0.09, 0.05, 0.91, 1.93, 0.075, "rack_mesh"))
+    for z0 in (0.05,):
+        door.add(box(0.09, 0.09, z0, 0.12, 1.93, z0 + 0.03, "steel_dark"))
+        door.add(box(0.88, 0.09, z0, 0.91, 1.93, z0 + 0.03, "steel_dark"))
+        door.add(box(0.09, 0.09, z0, 0.91, 0.12, z0 + 0.03, "steel_dark"))
+        door.add(box(0.09, 1.9, z0, 0.91, 1.93, z0 + 0.03, "steel_dark"))
+    door.add(box(0.1, 0.9, 0.03, 0.13, 1.1, 0.05, "brass"))
+    m.add(door.rotate_y(-105, (0.93, 0.0, 0.0625)))
+    return m
+
+
+U0_ = 0.125
+U_H_ = 0.125
+
+
+def server_chassis(u):
+    """Rack server of u rack units, facing the front of the rack (north)."""
+    h = u * U_H_
+    m = Mesh()
+    x0, x1, z0, z1 = 0.15, 0.85, 0.115, 0.83
+    m.add(box(x0, 0.004, z0, x1, h - 0.004, z1, "steel_dark", {"u": "steel", "d": "steel"}))
+    m.quad(f"srv_front_{u}u", (x1, h - 0.004, z0 - 0.0005), (x0, h - 0.004, z0 - 0.0005), (x0, 0.004, z0 - 0.0005), (x1, 0.004, z0 - 0.0005),
+           ((0, 0), (1, 0), (1, 1), (0, 1)), outward=(0, 0, -1))
+    m.quad(f"srv_rear_{u}u", (x0, h - 0.004, z1 + 0.0005), (x1, h - 0.004, z1 + 0.0005), (x1, 0.004, z1 + 0.0005), (x0, 0.004, z1 + 0.0005),
+           ((0, 0), (1, 0), (1, 1), (0, 1)), outward=(0, 0, 1))
+    # slide rails / mounting ears on both sides
+    for xe in (0.13, 0.85):
+        m.add(box(xe, 0.01, 0.11, xe + 0.02, h - 0.01, 0.8, "steel"))
     return m
 
 
@@ -770,6 +816,38 @@ def derrick_block():
 def derrick_kelly():
     """Unit-length square kelly along +Y at the drill axis (stretched and spun by the renderer)."""
     return box(-0.045, 0, -0.045, 0.045, 1, 0.045, "steel")
+
+
+# ----------------------------------------------------------------------------- solar
+def solar_panel(cell):
+    """Tilted panel on a frame; the high edge is at the back (south)."""
+    m = Mesh()
+    panel = Mesh()
+    panel.add(box(0.03, 0.0, 0.04, 0.97, 0.06, 0.96, "steel", {"u": cell}))
+    m.add(panel.rotate_x(-22, (0.5, 0.0, 0.5)).translate(0, 0.3, 0))
+    for x in (0.12, 0.8):
+        m.add(box(x, 0.0, 0.1, x + 0.08, 0.2, 0.18, "steel_dark"))
+        m.add(box(x, 0.0, 0.82, x + 0.08, 0.46, 0.9, "steel_dark"))
+    m.add(box(0.1, 0.0, 0.1, 0.9, 0.04, 0.9, "steel_dark"))
+    return m
+
+
+def inverter():
+    """Facing north: AC output on the front, DC input terminals on top."""
+    m = Mesh()
+    m.add(box(0.1, 0.0, 0.14, 0.9, 0.72, 0.86, "plastic_white", {"n": "plastic_white"}))
+    for x in (0.06, 0.9):  # cooling fins on both sides
+        for k in range(8):
+            m.add(box(x, 0.06, 0.2 + k * 0.08, x + 0.04, 0.66, 0.24 + k * 0.08, "steel_dark"))
+    m.add(box(0.2, 0.3, 0.1, 0.8, 0.62, 0.14, "steel_dark", {"n": "screen"}))
+    for i, mat in enumerate(("led_green", "led_amber", "led_blue")):
+        m.add(box(0.22 + i * 0.07, 0.2, 0.1, 0.26 + i * 0.07, 0.24, 0.14, mat))
+    for x, mat in ((0.3, "paint_red"), (0.7, "rubber")):  # DC terminals
+        m.add(cylinder_y(x, 0.5, 0.05, 0.72, 0.8, 8, mat))
+    for x in (0.3, 0.5, 0.7):  # AC lugs on the front
+        m.add(along_z(cylinder_y(0.5, 0.5, 0.035, 0.0, 0.1, 8, "copper"), cy=0.1).translate(x - 0.5, 0, 0).translate(0, 0, 0.0))
+    m.add(box(0.4, 0.72, 0.4, 0.6, 0.76, 0.6, "steel"))
+    return m
 
 
 def mesh_bounds_px(mesh):

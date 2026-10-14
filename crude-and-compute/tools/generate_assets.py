@@ -93,9 +93,10 @@ def shaft_stub(direction):
 
 def server_rack_full():
     m = M.server_rack()
-    blade = M.gpu_blade()
-    for i in (0, 1, 2, 3, 5, 6):
-        m.add(blade.translate(0, i * M.RACK_BAY_H, 0))
+    u = 0
+    for size in (4, 2, 2, 1, 1, 1, 2):
+        m.add(M.server_chassis(size).translate(0, M.U0_ + u * M.U_H_, 0))
+        u += size
     return m
 
 
@@ -126,6 +127,12 @@ BLOCK_MODELS = {
     "power_cable_arm": (M.cable_arm, "rubber"),
     "server_rack": (M.server_rack, "steel_dark"),
     "gpu_blade": (M.gpu_blade, "gpu_side"),
+    "solar_panel": (lambda: M.solar_panel("solar_cell_poly"), "solar_cell_poly"),
+    "solar_panel_mono": (lambda: M.solar_panel("solar_cell_mono"), "solar_cell_mono"),
+    "inverter": (M.inverter, "plastic_white"),
+    "server_1u": (lambda: M.server_chassis(1), "steel_dark"),
+    "server_2u": (lambda: M.server_chassis(2), "steel_dark"),
+    "server_4u": (lambda: M.server_chassis(4), "steel_dark"),
     "cooling_unit": (lambda: M.cooling_unit(False), "plastic_white"),
     "cooling_unit_active": (lambda: M.cooling_unit(True), "plastic_white"),
     "cooling_unit_fan": (M.cooling_unit_anim, "fan_blade"),
@@ -162,12 +169,15 @@ ITEM_MODELS = {
     "ai_terminal": (M.ai_terminal, "plastic_dark"),
     "conveyor_belt": (lambda: M.conveyor_belt().add(M.conveyor_rib()).add(M.conveyor_rib().translate(0, 0, 0.25)).add(M.conveyor_rib().translate(0, 0, -0.25)), "steel_dark"),
     "oil_derrick": (lambda: M.oil_derrick().add(M.derrick_block().translate(0, 4.2, 0)), "paint_red"),
+    "solar_panel": (lambda: M.solar_panel("solar_cell_poly"), "solar_cell_poly"),
+    "solar_panel_mono": (lambda: M.solar_panel("solar_cell_mono"), "solar_cell_mono"),
+    "inverter": (M.inverter, "plastic_white"),
     "mechanical_pump": (lambda: M.mechanical_pump().add(M.mechanical_pump_gear()), "paint_green"),
     "battery": (M.battery, "battery_cell"),
     "chip_fab": (lambda: M.chip_fab().add(M.chip_fab_bridge()).add(M.chip_fab_head()).add(M.chip_fab_wafer()), "plastic_white"),
 }
 
-FLAT_ITEMS = ["wrench", "crude_oil_bucket", "diesel_bucket", "plastic", "silicon", "silicon_wafer", "circuit_board",
+FLAT_ITEMS = ["server_1u", "server_2u", "server_4u", "wrench", "crude_oil_bucket", "diesel_bucket", "plastic", "silicon", "silicon_wafer", "circuit_board",
               "gpu", "empty_model_drive", "trained_model_drive", "ai_overclock_chip"]
 
 
@@ -237,6 +247,9 @@ def blockstates():
     bs["conveyor_belt"] = horizontal_states(lambda p: "conveyor_belt")
     bs["oil_derrick"] = horizontal_states(lambda p: "oil_derrick", [("active", ["false", "true"])])
     bs["battery"] = horizontal_states(lambda p: "battery")
+    bs["solar_panel"] = simple("solar_panel")
+    bs["solar_panel_mono"] = simple("solar_panel_mono")
+    bs["inverter"] = horizontal_states(lambda p: "inverter")
     bs["chip_fab"] = horizontal_states(lambda p: "chip_fab", [("active", ["false", "true"])])
     bs["cooling_unit"] = {"variants": {"active=false": {"model": ns("block/cooling_unit")},
                                        "active=true": {"model": ns("block/cooling_unit_active")}}}
@@ -266,6 +279,9 @@ BLOCK_NAMES = {
     "cooling_unit": ("Cooling Unit", "Kühlaggregat"),
     "ai_terminal": ("AI Training Terminal", "KI-Trainingsterminal"),
     "multiblock_part": ("Machine Part", "Maschinenteil"),
+    "solar_panel": ("Solar Panel (poly)", "Solarmodul (poly)"),
+    "solar_panel_mono": ("Solar Panel (mono)", "Solarmodul (mono)"),
+    "inverter": ("Solar Inverter", "Wechselrichter"),
     "mechanical_pump": ("Mechanical Pump", "Mechanische Pumpe"),
     "battery": ("Battery Bank", "Akku-Block"),
     "conveyor_belt": ("Conveyor Belt", "Förderband"),
@@ -275,6 +291,9 @@ BLOCK_NAMES = {
 
 ITEM_NAMES = {
     "wrench": ("Wrench", "Schraubenschlüssel"),
+    "server_1u": ("Rack Server 1U", "Rack-Server 1U"),
+    "server_2u": ("Rack Server 2U", "Rack-Server 2U"),
+    "server_4u": ("Rack Server 4U", "Rack-Server 4U"),
     "crude_oil_bucket": ("Crude Oil Bucket", "Rohöleimer"),
     "diesel_bucket": ("Diesel Bucket", "Dieseleimer"),
     "plastic": ("Plastic Pellets", "Kunststoffgranulat"),
@@ -289,6 +308,104 @@ ITEM_NAMES = {
 
 MESSAGES = {
     # key: (english, german)
+    "hw.kind.motherboard": ('Mainboard', 'Mainboard'),
+    "hw.kind.cpu": ('CPU', 'CPU'),
+    "hw.kind.ram": ('RAM', 'RAM'),
+    "hw.kind.gpu": ('GPU / Accelerator', 'GPU / Beschleuniger'),
+    "hw.kind.storage": ('Storage', 'Speicher'),
+    "hw.kind.network": ('Network', 'Netzwerk'),
+    "hw.kind.psu": ('Power supply', 'Netzteil'),
+    "hw.kind.cooler": ('Cooling', 'Kühlung'),
+    "hw.kind.motherboard.short": ('Board', 'Board'),
+    "hw.kind.cpu.short": ('CPU', 'CPU'),
+    "hw.kind.ram.short": ('RAM', 'RAM'),
+    "hw.kind.gpu.short": ('GPU', 'GPU'),
+    "hw.kind.storage.short": ('Disk', 'Disk'),
+    "hw.kind.network.short": ('NIC', 'NIC'),
+    "hw.kind.psu.short": ('PSU', 'PSU'),
+    "hw.kind.cooler.short": ('Cool', 'Kühl'),
+    "hw.status.0": ('OFF / IDLE', 'AUS / LEERLAUF'),
+    "hw.status.1": ('ONLINE', 'ONLINE'),
+    "hw.status.2": ('THROTTLED', 'GEDROSSELT'),
+    "hw.status.3": ('OVERHEATED', 'ÜBERHITZT'),
+    "hw.status.4": ('NO POWER', 'KEIN STROM'),
+    "hw.status.5": ('CANNOT BOOT', 'BOOTET NICHT'),
+    "hw.err.mobo_too_large": ('This mainboard needs a chassis of at least %sU.', 'Dieses Mainboard braucht ein Gehäuse mit mindestens %sU.'),
+    "hw.err.needs_mobo": ('Install a mainboard first.', 'Zuerst ein Mainboard einbauen.'),
+    "hw.err.cpu_socket": ('CPU socket does not match the mainboard.', 'CPU-Sockel passt nicht zum Mainboard.'),
+    "hw.err.cpu_slots": ('The mainboard only has %s CPU socket(s).', 'Das Mainboard hat nur %s CPU-Sockel.'),
+    "hw.err.ram_type": ('This RAM standard is not supported by the mainboard.', 'Dieser RAM-Standard wird vom Mainboard nicht unterstützt.'),
+    "hw.err.ram_slots": ('All %s RAM slots are occupied.', 'Alle %s RAM-Steckplätze sind belegt.'),
+    "hw.err.gpu_too_big": ('This card does not fit: it needs a chassis of at least %sU.', 'Die Karte passt nicht: Sie braucht ein Gehäuse mit mindestens %sU.'),
+    "hw.err.pcie_slots": ('No free PCIe slot (the board has %s; GPUs and NICs share them).', 'Kein freier PCIe-Steckplatz (das Board hat %s; GPUs und NICs teilen sie).'),
+    "hw.err.m2_slots": ('No free NVMe slot (the board has %s).', 'Kein freier NVMe-Steckplatz (das Board hat %s).'),
+    "hw.err.bays": ('All %s drive bays of this chassis are full.', 'Alle %s Laufwerksschächte dieses Gehäuses sind belegt.'),
+    "hw.err.psu_slots": ('At most %s power supplies fit.', 'Es passen höchstens %s Netzteile.'),
+    "hw.err.psu_too_big": ('This power supply needs a chassis of at least %sU.', 'Dieses Netzteil braucht ein Gehäuse mit mindestens %sU.'),
+    "hw.err.psu_weak": ('Power supply too weak: the hardware can draw up to %s W.', 'Netzteil zu schwach: Die Hardware kann bis zu %s W ziehen.'),
+    "hw.err.cooler_too_big": ('This cooler needs a chassis of at least %sU.', 'Dieser Kühler braucht ein Gehäuse mit mindestens %sU.'),
+    "hw.err.remove_dependents": ('Cannot remove this: other parts depend on it.', 'Entfernen nicht möglich: Andere Teile hängen davon ab.'),
+    "hw.err.no_space": ('No room in the rack for a %sU server.', 'Im Rack ist kein Platz für einen %sU-Server.'),
+    "hw.err.not_found": ('Nothing to do here.', 'Hier gibt es nichts zu tun.'),
+    "hw.err.no_mobo": ('no mainboard', 'kein Mainboard'),
+    "hw.err.no_cpu": ('no CPU', 'keine CPU'),
+    "hw.err.no_ram": ('no RAM', 'kein RAM'),
+    "hw.err.no_psu": ('no power supply', 'kein Netzteil'),
+    "hw.err.no_cooler": ('no cooling', 'keine Kühlung'),
+    "hw.gui.done": ('Done.', 'Erledigt.'),
+    "hw.gui.back": ('Rack', 'Rack'),
+    "hw.gui.installed": ('Installed', 'Eingebaut'),
+    "hw.gui.rack_title": ('Rack – %s of %s U occupied', 'Rack – %s von %s U belegt'),
+    "hw.gui.rack_stats": ('Rack statistics', 'Rack-Statistik'),
+    "hw.gui.power": ('Power draw', 'Stromaufnahme'),
+    "hw.gui.heat": ('Waste heat', 'Abwärme'),
+    "hw.gui.inlet": ('Inlet air', 'Zuluft'),
+    "hw.gui.max_temp": ('Hottest server', 'Heißester Server'),
+    "hw.gui.cooling_load": ('Cooling load', 'Kühllast'),
+    "hw.gui.compute": ('Compute', 'Leistung'),
+    "hw.gui.buffer": ('Energy buffer', 'Energiepuffer'),
+    "hw.gui.status": ('Status', 'Status'),
+    "hw.gui.insert_held": ('Mount held server', 'Gehaltenen Server einbauen'),
+    "hw.gui.empty_chassis": ('empty chassis', 'leeres Gehäuse'),
+    "hw.gui.server_title": ('Server %sU at U%s – %s', 'Server %sU bei U%s – %s'),
+    "hw.gui.cpu": ('CPU', 'CPU'),
+    "hw.gui.gpu": ('GPU', 'GPU'),
+    "hw.gui.disk": ('Disk', 'Disk'),
+    "hw.gui.fan": ('Fans: %s rpm', 'Lüfter: %s U/min'),
+    "hw.gui.mode.0": ('OFF', 'AUS'),
+    "hw.gui.mode.1": ('IDLE', 'IDLE'),
+    "hw.gui.mode.2": ('NORM', 'NORM'),
+    "hw.gui.mode.3": ('FULL', 'VOLL'),
+    "hw.rack.summary": ('Rack: %s servers (%s/%s U) | %s kW heat | %s °C | %s', 'Rack: %s Server (%s/%s U) | %s kW Abwärme | %s °C | %s'),
+    "hw.item.size": ('%sU rack server', '%sU-Rack-Server'),
+    "hw.item.empty": ('Empty chassis – install parts in a rack', 'Leeres Gehäuse – Teile im Rack einbauen'),
+    "tooltip.crudecompute.server_rack": ('14U rack. Right-click with a server to mount it, empty hand opens the management UI, sneak shows a summary.', '14U-Rack. Rechtsklick mit Server baut ihn ein, leere Hand öffnet die Verwaltung, Schleichen zeigt eine Kurzinfo.'),
+    "tooltip.crudecompute.solar_panel": ('Produces power in daylight (polycrystalline, 15 %). Needs sky access and a touching inverter.', 'Erzeugt bei Tageslicht Strom (polykristallin, 15 %). Braucht freien Himmel und einen anliegenden Wechselrichter.'),
+    "tooltip.crudecompute.solar_panel_mono": ('Monocrystalline, 22 % efficiency. Needs sky access and a touching inverter.', 'Monokristallin, 22 % Wirkungsgrad. Braucht freien Himmel und einen anliegenden Wechselrichter.'),
+    "tooltip.crudecompute.inverter": ('Collects all touching solar panels (even in chains) and feeds the front side with 96 % efficiency.', 'Sammelt alle anliegenden Solarmodule (auch in Ketten) und speist vorne mit 96 % Wirkungsgrad ein.'),
+    "message.crudecompute.inverter": ('Inverter: %s panels | sun %s %% | %s kW DC → %s kW AC | buffer %s FE', 'Wechselrichter: %s Module | Sonne %s %% | %s kW DC → %s kW AC | Puffer %s FE'),
+    "dash.title": ('DATACENTER CONTROL', 'RECHENZENTRUM-STEUERUNG'),
+    "dash.solar": ('Solar', 'Solar'),
+    "dash.panels": ('panels', 'Module'),
+    "dash.consumption": ('Consumption', 'Verbrauch'),
+    "dash.cooling_part": ('cooling %s kW', 'Kühlung %s kW'),
+    "dash.balance": ('Balance', 'Bilanz'),
+    "dash.surplus": ('surplus', 'Überschuss'),
+    "dash.deficit": ('shortfall', 'Mangel'),
+    "dash.battery": ('Battery', 'Akku'),
+    "dash.no_battery": ('no battery found', 'kein Akku gefunden'),
+    "dash.chart_power": ('Power: solar (green) vs. consumption (red)', 'Leistung: Solar (grün) vs. Verbrauch (rot)'),
+    "dash.chart_temp": ('Hottest server (last 2 min)', 'Heißester Server (2 min)'),
+    "dash.datacenter": ('Datacenter', 'Rechenzentrum'),
+    "dash.racks": ('Racks: %s  GPUs: %s', 'Racks: %s  GPUs: %s'),
+    "dash.compute": ('Compute: %s PFLOPS', 'Rechenleistung: %s PFLOPS'),
+    "dash.pue": ('PUE: %s', 'PUE: %s'),
+    "dash.temps": ('Max %s °C | inlet %s °C', 'Max %s °C | Zuluft %s °C'),
+    "dash.training": ('AI model training', 'KI-Modelltraining'),
+    "dash.no_drive": ('insert a model drive', 'Laufwerk einlegen'),
+    "dash.done": ('MODEL READY', 'MODELL FERTIG'),
+    "dash.running": ('training... %s %%', 'Training... %s %%'),
+    "dash.eject": ('Eject drive', 'Laufwerk auswerfen'),
     "itemGroup.crudecompute": ("Crude & Compute", "Crude & Compute"),
     "fluid_type.crudecompute.crude_oil": ("Crude Oil", "Rohöl"),
     "fluid_type.crudecompute.diesel": ("Diesel", "Diesel"),
@@ -419,7 +536,7 @@ def lang():
 
 
 # =============================================================================== data
-DROPS_SELF = ["conveyor_belt", "oil_derrick", "mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
+DROPS_SELF = ["solar_panel", "solar_panel_mono", "inverter", "conveyor_belt", "oil_derrick", "mechanical_pump", "battery", "chip_fab", "oil_shale", "shaft", "gearbox", "hand_crank", "windmill", "diesel_engine", "generator", "pumpjack",
               "refinery", "fluid_pipe", "oil_tank", "power_cable", "server_rack", "cooling_unit", "ai_terminal"]
 
 
@@ -477,6 +594,12 @@ def recipes():
     shaped("server_rack", ["IBI", "ICI", "IBI"], {"I": I, "B": "minecraft:iron_bars", "C": B})
     shaped("cooling_unit", ["IPI", "PKP", "ICI"], {"I": I, "P": P, "K": "minecraft:packed_ice", "C": B})
     shaped("ai_terminal", ["GGG", "PCP", "PPP"], {"G": "minecraft:glass_pane", "P": P, "C": B})
+    shaped("server_1u", ["III", "PBP"], {"I": I, "P": P, "B": B})
+    shaped("server_2u", ["III", "PBP", "III"], {"I": I, "P": P, "B": B})
+    shaped("server_4u", ["IGI", "PBP", "IGI"], {"I": I, "P": P, "B": B, "G": ns("gpu")})
+    shaped("solar_panel", ["GGG", "SSS", "III"], {"G": "minecraft:glass_pane", "S": ns("silicon"), "I": I}, count=2)
+    shaped("solar_panel_mono", ["GGG", "WWW", "CCC"], {"G": "minecraft:glass_pane", "W": ns("silicon_wafer"), "C": C}, count=2)
+    shaped("inverter", ["ICI", "BRB", "III"], {"I": I, "C": C, "B": B, "R": "minecraft:redstone_block"})
     shaped("conveyor_belt", ["RRR", "ISI"], {"R": "minecraft:black_wool", "I": I, "S": S}, count=4)
     shaped("oil_derrick", ["ISI", "IWI", "PDP"], {"I": I, "S": S, "W": ns("gearbox"), "D": "minecraft:diamond", "P": ns("fluid_pipe")})
     shaped("mechanical_pump", ["CPC", " S "], {"C": C, "P": ns("fluid_pipe"), "S": S})

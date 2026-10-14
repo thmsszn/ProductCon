@@ -1,6 +1,8 @@
 package com.crudecompute.client;
 
 import com.crudecompute.datacenter.ServerRackBlockEntity;
+import com.crudecompute.datacenter.ServerRackBlockEntity.Slot;
+import com.crudecompute.hardware.ServerState;
 import com.crudecompute.util.HorizontalMachineBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -10,10 +12,11 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 
-/** Draws the installed GPU blades, their blinking status LEDs and the temperature display. */
+/** Draws the mounted servers with their live status LEDs and the rack's summary display. */
 public class ServerRackRenderer implements BlockEntityRenderer<ServerRackBlockEntity> {
     private final Font font;
 
@@ -25,38 +28,48 @@ public class ServerRackRenderer implements BlockEntityRenderer<ServerRackBlockEn
     public void render(ServerRackBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
         Direction facing = be.getBlockState().getValue(HorizontalMachineBlock.FACING);
         long time = be.getLevel() == null ? 0 : be.getLevel().getGameTime();
-        int status = be.getStatus();
         poseStack.pushPose();
         RenderUtil.rotateToFacing(poseStack, facing);
-        for (int i = 0; i < be.getGpus(); i++) {
+        for (Slot slot : be.getSlots()) {
+            float y = ServerRackBlockEntity.U0 + slot.u * ServerRackBlockEntity.U_H;
             poseStack.pushPose();
-            poseStack.translate(0, i * ModModels.RACK_BAY_H, 0);
-            RenderUtil.renderModel(poseStack, buffers, ModModels.GPU_BLADE, light, overlay);
+            poseStack.translate(0, y, 0);
+            ModelResourceLocation model = switch (slot.cfg.sizeU) {
+                case 1 -> ModModels.SERVER_1U;
+                case 2 -> ModModels.SERVER_2U;
+                default -> ModModels.SERVER_4U;
+            };
+            RenderUtil.renderModel(poseStack, buffers, model, light, overlay);
+            drawLeds(slot, poseStack, buffers, y, slot.cfg.sizeU * ServerRackBlockEntity.U_H, time);
             poseStack.popPose();
-            float y = ModModels.RACK_BAY0 + i * ModModels.RACK_BAY_H;
-            RenderUtil.glowQuad(poseStack, buffers, 0.24f, y + 0.07f, 0.28f, y + 0.11f, 0.079f, ledColor(status, time, i, 0));
-            RenderUtil.glowQuad(poseStack, buffers, 0.3f, y + 0.07f, 0.34f, y + 0.11f, 0.079f, ledColor(status, time, i, 1));
-            if (status == ServerRackBlockEntity.STATUS_ONLINE || status == ServerRackBlockEntity.STATUS_THROTTLED) {
-                float load = 0.4f + 0.6f * (float) Math.abs(Math.sin((time + partialTick) * 0.07 + i * 1.7));
-                RenderUtil.glowQuad(poseStack, buffers, 0.4f, y + 0.08f, 0.4f + 0.36f * load, y + 0.1f, 0.079f, 0xFF76B900);
-            }
         }
         drawDisplay(be, poseStack, buffers);
         poseStack.popPose();
     }
 
-    private static int ledColor(int status, long time, int slot, int led) {
-        return switch (status) {
-            case ServerRackBlockEntity.STATUS_ONLINE -> led == 0 ? 0xFF3CFF6E
-                    : (((time / 3 + slot * 7L) * 2654435761L >> 7) & 3) == 0 ? 0xFF1A3A22 : 0xFF46C8FF;
-            case ServerRackBlockEntity.STATUS_THROTTLED -> (time / 10 + slot) % 2 == 0 ? 0xFFFFB028 : 0xFF4A3410;
-            case ServerRackBlockEntity.STATUS_OVERHEATED -> (time / 5) % 2 == 0 ? 0xFFFF3020 : 0xFF400C08;
-            default -> 0xFF2A2A2E;
+    /** Power / activity / alert LED on the front of a server (front plane at z = 0.114). */
+    private void drawLeds(Slot slot, PoseStack poseStack, MultiBufferSource buffers, float baseY, float height, long time) {
+        int status = slot.st.status;
+        float ly = height - 0.04f;
+        int power = switch (status) {
+            case ServerState.OFF -> 0xFF2A2A2E;
+            case ServerState.NO_POWER -> 0xFF401010;
+            default -> 0xFF3CFF6E;
         };
+        boolean running = status == ServerState.ONLINE || status == ServerState.THROTTLED;
+        int activity = running && ((time / 2 + slot.u * 5L) * 2654435761L >> 6 & 3) != 0 ? 0xFF46C8FF : 0xFF10222C;
+        int alert = switch (status) {
+            case ServerState.THROTTLED, ServerState.NO_BOOT -> (time / 10) % 2 == 0 ? 0xFFFFB028 : 0xFF40300A;
+            case ServerState.OVERHEATED -> (time / 5) % 2 == 0 ? 0xFFFF3020 : 0xFF400C08;
+            default -> 0xFF1E1E22;
+        };
+        RenderUtil.glowQuad(poseStack, buffers, 0.256f, ly, 0.28f, ly + 0.022f, 0.1135f, power);
+        RenderUtil.glowQuad(poseStack, buffers, 0.223f, ly, 0.248f, ly + 0.022f, 0.1135f, activity);
+        RenderUtil.glowQuad(poseStack, buffers, 0.191f, ly, 0.215f, ly + 0.022f, 0.1135f, alert);
     }
 
     private void drawDisplay(ServerRackBlockEntity be, PoseStack poseStack, MultiBufferSource buffers) {
-        String text = String.format(Locale.ROOT, "%.0f°C  %d GPU", be.getTemperature(), be.getGpus());
+        String text = String.format(Locale.ROOT, "%.0f°C  %dU/%d  %.1f kW", be.getTemperature(), be.usedU(), ServerRackBlockEntity.RACK_U, be.getHeatW() / 1000f);
         int color = switch (be.getStatus()) {
             case ServerRackBlockEntity.STATUS_ONLINE -> 0xFF7CFFB0;
             case ServerRackBlockEntity.STATUS_THROTTLED -> 0xFFFFC040;
@@ -64,10 +77,9 @@ public class ServerRackRenderer implements BlockEntityRenderer<ServerRackBlockEn
             default -> 0xFF8090A0;
         };
         poseStack.pushPose();
-        // screen front face at z = 0.09, spanning x 0.12..0.88 and y 1.82..1.93; text faces north (-Z)
-        poseStack.translate(0.85, 1.905, 0.088);
+        poseStack.translate(0.8, 1.93, 0.085);
         poseStack.mulPose(Axis.YP.rotationDegrees(180));
-        float scale = 0.0075f;
+        float scale = 0.0068f;
         poseStack.scale(scale, -scale, scale);
         font.drawInBatch(text, 0, 0, color, false, poseStack.last().pose(), buffers, Font.DisplayMode.POLYGON_OFFSET, 0, LightTexture.FULL_BRIGHT);
         poseStack.popPose();
