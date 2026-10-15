@@ -1,5 +1,5 @@
 MODEL CHECK: 0 problem(s)
-scene built at -8, -60, 13
+scene built at 4, -60, 10
 screenshot: Saved screenshot as showcase_1_uebersicht.png
 screenshot: Saved screenshot as showcase_2_pferdekopfpumpe.png
 screenshot: Saved screenshot as showcase_3_rechenzentrum.png
@@ -9,7 +9,7 @@ screenshot: Saved screenshot as showcase_6_windrad.png
 screenshot: Saved screenshot as showcase_7_chipfabrik_akku.png
 screenshot: Saved screenshot as showcase_8_pumpe.png
 screenshot: Saved screenshot as showcase_9_foerderband.png
-POWER CHECK rack: status=1 buffer=59250 shed=0 draw=174
+POWER CHECK rack: status=1 buffer=59326 shed=0 draw=174
 POWER CHECK grid: cables=11 producers=2 consumers=5 batteries=1 produced=909 consumed=894 buffered=0 lost=15
 screenshot: Saved screenshot as showcase_10_bohrturm.png
 screenshot: Saved screenshot as showcase_11_gui_rack.png
