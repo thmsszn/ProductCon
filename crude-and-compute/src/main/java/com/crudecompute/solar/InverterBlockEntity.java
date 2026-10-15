@@ -38,12 +38,9 @@ public class InverterBlockEntity extends BlockEntity implements TickingBlockEnti
         super(ModBlockEntities.INVERTER.get(), pos, state);
     }
 
-    /** AC output: only the front face (where the cable plugs in) delivers energy. */
+    /** AC output: a cable on any face delivers the inverter's energy into its network. */
     @Nullable
     public IEnergyStorage getOutput(@Nullable Direction side) {
-        if (side != null && side != getBlockState().getValue(HorizontalMachineBlock.FACING)) {
-            return null;
-        }
         return output;
     }
 

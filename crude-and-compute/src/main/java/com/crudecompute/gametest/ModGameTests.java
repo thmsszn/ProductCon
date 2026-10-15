@@ -470,7 +470,7 @@ public final class ModGameTests {
         energyAt(helper, new BlockPos(1, 1, 1), Direction.UP).receiveEnergy(30_000, false);
         com.crudecompute.power.PowerGrid.tickNow(helper.getLevel());
         com.crudecompute.power.PowerGrid.Network net = com.crudecompute.power.PowerGrid.networkAt(helper.getLevel(), helper.absolutePos(new BlockPos(5, 1, 1)));
-        helper.assertTrue(net != null && net.cableCount() == 7, "seven cables form one network");
+        helper.assertTrue(net != null && net.cableCount() == 7, "seven cables form one network, found " + (net == null ? "no network" : String.valueOf(net.cableCount())));
         helper.assertTrue(net.bufferCount() == 1 && net.consumerCount() == 1, "one battery bank and one consumer are plugged in");
         helper.assertTrue(net.lossFraction() > 0.005 && net.lossFraction() < 0.05, "a short line loses a little: " + net.lossFraction());
         helper.assertTrue(net.consumed() > 0 && net.buffered() < 0, "the bank discharges into the cooler");

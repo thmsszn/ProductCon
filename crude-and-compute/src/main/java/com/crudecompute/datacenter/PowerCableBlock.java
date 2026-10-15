@@ -78,6 +78,20 @@ public class PowerCableBlock extends ConnectingBlock {
     }
 
     @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean moving) {
+        super.onPlace(state, level, pos, oldState, moving);
+        com.crudecompute.power.PowerGrid.add(level, pos);
+    }
+
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moving) {
+        if (!state.is(newState.getBlock())) {
+            com.crudecompute.power.PowerGrid.remove(level, pos);
+        }
+        super.onRemove(state, level, pos, newState, moving);
+    }
+
+    @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
         super.neighborChanged(state, level, pos, block, fromPos, moving);
         com.crudecompute.power.PowerGrid.markDirty(level);
