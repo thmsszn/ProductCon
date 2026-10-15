@@ -298,9 +298,6 @@ public final class ShowcaseAutomation {
             server.execute(() -> feedBelt(server));
         }
     }
-            }
-        });
-    }
 
     // ------------------------------------------------------------------ scene
     private static void set(ServerLevel level, BlockPos pos, BlockState state) {
