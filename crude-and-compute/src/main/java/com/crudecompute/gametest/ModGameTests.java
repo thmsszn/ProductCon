@@ -290,6 +290,26 @@ public final class ModGameTests {
         helper.succeed();
     }
 
+    /** Wind tower segments can be stacked by hand: right-clicking a tower with a tower item in hand places the next one on top. */
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void windTowerStacksByHand(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(3, 1, 3), ModBlocks.TOWER_BASE.get().defaultBlockState());
+        net.minecraft.server.level.ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.WIND_TOWER.get(), 8));
+        BlockPos base = helper.absolutePos(new BlockPos(3, 1, 3));
+        for (int i = 0; i < 3; i++) {
+            BlockPos target = base.above(i);
+            net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+                    net.minecraft.world.phys.Vec3.atCenterOf(target).add(0, 0.5, 0), Direction.UP, target, false);
+            player.gameMode.useItemOn(player, helper.getLevel(), player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND),
+                    net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+        }
+        for (int i = 1; i <= 3; i++) {
+            helper.assertTrue(helper.getLevel().getBlockState(base.above(i)).is(ModBlocks.WIND_TOWER.get()), "segment " + i + " should have been stacked");
+        }
+        helper.succeed();
+    }
+
     /** Solar output follows the time of day and only panels connected to an inverter count. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void solarFollowsDaytime(GameTestHelper helper) {
