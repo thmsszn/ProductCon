@@ -382,9 +382,9 @@ def pipe_arm():
 
 
 def cable_center():
-    """Moulded junction where cable arms meet."""
-    m = sphere(0.5, 0.5, 0.5, 0.1, 0.1, 0.1, 12, 8, "rubber")
-    m.add(torus_y(0.5, 0.5, 0.5, 0.098, 0.012, 14, 4, "steel_dark"))
+    """Moulded junction where cable arms meet, with a clamp ring."""
+    m = sphere(0.5, 0.5, 0.5, 0.082, 0.082, 0.082, 12, 8, "cable_black")
+    m.add(torus_y(0.5, 0.5, 0.5, 0.082, 0.012, 14, 4, "steel"))
     return m
 
 
@@ -393,24 +393,28 @@ def _to_north(mesh):
 
 
 def cable_arm():
-    """Cable run towards another cable: insulated core with ribs and a steel cable gland at the block edge."""
-    m = cylinder_y(0.5, 0.5, 0.068, 0.5, 1.0, 10, "rubber", cap_bottom=False, cap_top=False)
-    for y in (0.62, 0.74, 0.86):
-        m.add(torus_y(0.5, y, 0.5, 0.068, 0.011, 12, 4, "rubber"))
-    m.add(cylinder_y(0.5, 0.5, 0.088, 0.93, 1.0, 10, "steel_dark"))
-    m.add(torus_y(0.5, 0.945, 0.5, 0.088, 0.008, 12, 4, "brass"))
+    """Cable run towards another cable: braided jacket, saddle clips and a steel cable gland at the block edge."""
+    m = cylinder_y(0.5, 0.5, 0.052, 0.5, 1.0, 12, "cable_orange", cap_bottom=False, cap_top=False)
+    for y in (0.66, 0.84):
+        m.add(torus_y(0.5, y, 0.5, 0.054, 0.012, 14, 4, "steel"))
+        m.add(box(0.47, y - 0.012, 0.5 - 0.075, 0.53, y + 0.012, 0.5 - 0.045, "steel"))
+    m.add(cylinder_y(0.5, 0.5, 0.072, 0.94, 1.0, 12, "steel_dark"))
+    m.add(torus_y(0.5, 0.945, 0.5, 0.074, 0.007, 12, 4, "brass"))
     return _to_north(m)
 
 
 def cable_plug():
-    """Cable run ending in a plug that sits on the neighbouring machine: strain-relief boot, body, collar, prongs."""
-    m = cylinder_y(0.5, 0.5, 0.068, 0.5, 0.74, 10, "rubber", cap_bottom=False, cap_top=False)
-    m.add(frustum_y(0.5, 0.5, 0.07, 0.115, 0.72, 0.82, 10, "plastic_dark", cap_bottom=False, cap_top=False))
-    m.add(cylinder_y(0.5, 0.5, 0.125, 0.82, 0.95, 12, "plastic_dark"))
-    m.add(cylinder_y(0.5, 0.5, 0.135, 0.95, 0.975, 12, "steel"))
-    for dx, dz in ((-0.05, 0), (0.05, 0), (0, 0.05)):
-        m.add(cylinder_y(0.5 + dx, 0.5 + dz, 0.02, 0.975, 1.0, 6, "brass"))
-    m.add(box(0.46, 0.84, 0.61, 0.54, 0.9, 0.625, "led_green"))  # live indicator
+    """Cable run ending in a plug on the neighbouring machine: strain-relief boot, grey body, steel collar, two pins."""
+    m = cylinder_y(0.5, 0.5, 0.052, 0.5, 0.7, 12, "cable_orange", cap_bottom=False, cap_top=False)
+    m.add(torus_y(0.5, 0.64, 0.5, 0.054, 0.012, 14, 4, "steel"))
+    m.add(frustum_y(0.5, 0.5, 0.058, 0.092, 0.69, 0.8, 12, "rubber", cap_bottom=False, cap_top=False))
+    m.add(cylinder_y(0.5, 0.5, 0.105, 0.8, 0.93, 14, "plug_body"))
+    m.add(cylinder_y(0.5, 0.5, 0.113, 0.93, 0.955, 14, "steel"))
+    for dx in (-0.045, 0.045):
+        m.add(cylinder_y(0.5 + dx, 0.5, 0.016, 0.955, 1.0, 8, "brass"))
+    for dz in (-0.1, 0.1):
+        m.add(box(0.485, 0.93, 0.5 + dz - 0.012, 0.515, 0.98, 0.5 + dz + 0.012, "steel"))   # earth clips
+    m.add(box(0.47, 0.84, 0.5 + 0.1, 0.53, 0.88, 0.5 + 0.108, "led_green"))                    # live indicator
     return _to_north(m)
 
 
@@ -493,14 +497,28 @@ def server_rack():
             else:
                 m.add(box(x0 + 0.04, y, 0.22, x0 + 0.052, y + 0.018, 0.8, "steel"))
         m.add(box(x0 - 0.008 if x0 < 0.5 else x0 + 0.04, 0.1, 0.085, x0 + 0.0 if x0 < 0.5 else x0 + 0.048, 1.92, 0.1, "led_blue"))
-    m.add(box(0.04, 1.94, 0.04, 0.96, 2.0, 0.96, "steel_dark"))
-    m.add(box(0.02, 1.985, 0.02, 0.98, 2.0, 0.98, "steel"))                  # protruding top plate
+    def roof_layer(y0, y1, mat, inset):
+        """Roof slab with four fan openings (x centres 0.275 .. 0.725, z 0.62 .. 0.76) for the rear fan bay."""
+        lo, hi = 0.04 - inset, 0.96 + inset
+        m.add(box(lo, y0, lo, hi, y1, 0.62, mat))
+        m.add(box(lo, y0, 0.76, hi, y1, hi, mat))
+        m.add(box(lo, y0, 0.62, 0.205, y1, 0.76, mat))
+        m.add(box(0.795, y0, 0.62, hi, y1, 0.76, mat))
+        for x in (0.345, 0.495, 0.645):
+            m.add(box(x, y0, 0.62, x + 0.01, y1, 0.76, mat))
+
+    roof_layer(1.94, 1.985, "steel_dark", 0.0)
+    roof_layer(1.985, 2.0, "steel", 0.02)
     m.add(box(0.14, 1.9, 0.07, 0.86, 1.935, 0.09, "steel"))                 # front header bar
     m.add(box(0.14, 2.0, 0.025, 0.86, 2.012, 0.04, "led_white"))            # light bar on the roof edge
-    # roof fan tray
-    for x in (0.3, 0.7):
-        m.add(washer_y(x, 0.5, 0.0, 0.17, 2.0, 2.03, 16, "steel_dark", inner=False))
-        m.add(disc_y(x, 0.5, 0.15, 2.031, 16, "fan_grille", uv_r=0.5))
+    # fan bay: dark shaft below the roof, finger guards over the openings, service plate on the rear with slot handles
+    m.add(box(0.2, 1.92, 0.62, 0.8, 1.94, 0.76, "steel_dark"))
+    for cx in (0.275, 0.425, 0.575, 0.725):
+        m.add(box(cx - 0.07, 1.996, 0.685, cx + 0.07, 2.004, 0.695, "steel"))
+        m.add(box(cx - 0.005, 1.996, 0.62, cx + 0.005, 2.004, 0.76, "steel"))
+        m.add(box(cx - 0.04, 1.8, 0.93, cx + 0.04, 1.84, 0.96, "steel_dark"))
+        m.add(box(cx - 0.012, 1.87, 0.925, cx + 0.012, 1.884, 0.935, "led_green"))
+    m.add(box(0.2, 1.78, 0.88, 0.8, 1.9, 0.93, "steel"))
     # mounting rails (front with U numbers, rear plain)
     for x0 in (0.09, 0.85):
         m.add(box(x0, 0.07, 0.1, x0 + 0.06, 1.94, 0.12, "steel"))
@@ -518,10 +536,9 @@ def server_rack():
         m.add(box(x0, 0.1, 0.84, x0 + 0.04, 1.9, 0.9, "steel_dark"))
         for k in range(14):
             m.add(box(x0 - 0.02 if x0 < 0.5 else x0 + 0.04, 0.16 + k * U_H_, 0.84, x0 + 0.04 if x0 < 0.5 else x0 + 0.06, 0.2 + k * U_H_, 0.93, "steel"))
-    # cable bundles on top and down the rear managers
-    for i, (mat, x) in enumerate((("rubber", 0.3), ("paint_blue", 0.4), ("paint_yellow", 0.5), ("rubber", 0.62))):
-        m.add(bezier_tube((x, 2.03, 0.9), (x, 2.13 + 0.02 * i, 0.88), (x + 0.05, 2.1, 0.35), (x + 0.1, 2.03, 0.12), 0.028, 10, 6, mat))
-    m.add(box(0.25, 2.03, 0.1, 0.8, 2.06, 0.96, "grating"))
+    # cable bundles on top (kept clear of the fan openings)
+    for i, (mat, x) in enumerate((("rubber", 0.1), ("paint_blue", 0.14), ("paint_yellow", 0.88))):
+        m.add(bezier_tube((x, 2.0, 0.9), (x, 2.12 + 0.02 * i, 0.88), (x + 0.02, 2.1, 0.35), (x + 0.02, 2.0, 0.12), 0.026, 10, 6, mat))
     # open front door, hinged on the left edge (seen from the front)
     door = Mesh()
     door.add(box(0.09, 0.09, 0.05, 0.91, 1.93, 0.075, "rack_mesh"))
@@ -537,6 +554,33 @@ def server_rack():
     door.add(box(0.12, 1.86, 0.03, 0.88, 1.88, 0.08, "steel"))
     door.add(box(0.1, 0.09, 0.0, 0.9, 0.14, 0.05, "steel_dark"))
     m.add(door.rotate_y(-105, (0.93, 0.0, 0.0625)))
+    return m
+
+
+def rack_fan_frame(hp=False):
+    """Narrow 80 mm axial fan housing for the rack's rear fan bay; centred on (0.5, 0.5), 0.14 wide, base at y = 0."""
+    mat = "paint_blue" if hp else "steel_dark"
+    m = Mesh()
+    for (x0, z0, x1, z1) in ((0.43, 0.43, 0.57, 0.442), (0.43, 0.558, 0.57, 0.57), (0.43, 0.43, 0.442, 0.57), (0.558, 0.43, 0.57, 0.57)):
+        m.add(box(x0, 0.0, z0, x1, 0.045, z1, mat))
+    for x in (0.436, 0.564):
+        for z in (0.436, 0.564):
+            m.add(cylinder_y(x, z, 0.007, 0.045, 0.05, 6, "steel"))
+    m.add(cylinder_y(0.5, 0.5, 0.03, 0.0, 0.034, 12, "steel_dark"))
+    for ang in (30, 150, 270):
+        a = math.radians(ang)
+        m.add(beam((0.5, 0.01, 0.5), (0.5 + 0.06 * math.cos(a), 0.01, 0.5 + 0.06 * math.sin(a)), 0.01, 0.012, mat))
+    return m
+
+
+def rack_fan_rotor(hp=False):
+    """Rotor of the rear fan, spinning around the vertical axis through (0.5, 0.5)."""
+    m = Mesh()
+    n = 9 if hp else 7
+    b = blade(0.026, 0.066, 0.042, 0.03, 38, 20, 0.004, 3, "fan_blade").rotate_x(90)
+    for i in range(n):
+        m.add(b.rotate_y(i * 360 / n).translate(0.5, 0.022, 0.5))
+    m.add(cylinder_y(0.5, 0.5, 0.027, 0.012, 0.04, 12, "paint_red" if hp else "steel"))
     return m
 
 
@@ -689,29 +733,68 @@ def mechanical_pump_gear():
     return along_z(m.translate(0, 0, 0))
 
 
+def _terminal(m, pos, axis, sign, plus):
+    """Round terminal socket sitting in a cell face: ring, coloured rim (red +, blue -), copper stud."""
+    x, y, z = pos
+    d = {"x": (1, 0, 0), "y": (0, 1, 0), "z": (0, 0, 1)}[axis]
+    dx, dy, dz = (c * sign for c in d)
+
+    def at(t):
+        return (x + dx * t, y + dy * t, z + dz * t)
+
+    m.add(tube(at(-0.02), at(0.035), 0.115, 14, "steel_dark"))
+    m.add(tube(at(0.035), at(0.05), 0.1, 14, "paint_red" if plus else "paint_blue"))
+    m.add(tube(at(0.05), at(0.085), 0.05, 10, "copper"))
+    m.add(tube(at(0.085), at(0.095), 0.03, 8, "steel"))
+
+
 def battery():
-    """Facing north: the output terminal panel is on the north face."""
+    """2 x 2 x 2 battery bank, facing north: the display faces north (z = -1), terminals on top, sides and back."""
     m = Mesh()
-    m.add(box(0.03, 0, 0.03, 0.97, 0.08, 0.97, "steel_dark"))
-    for x in (0.27, 0.73):
-        for z in (0.29, 0.73):
-            m.add(cylinder_y(x, z, 0.18, 0.08, 0.8, 18, "battery_cell", cap_top=False))
-            m.add(sphere(x, 0.8, z, 0.18, 0.06, 0.18, 18, 4, "battery_cell", lat_from=0, lat_to=90))
-            m.add(cylinder_y(x - 0.07, z, 0.035, 0.84, 0.92, 8, "copper"))
-            m.add(cylinder_y(x + 0.07, z, 0.035, 0.84, 0.92, 8, "steel"))
-    m.add(box(0.15, 0.9, 0.27, 0.85, 0.93, 0.31, "copper"))
-    m.add(box(0.15, 0.9, 0.71, 0.85, 0.93, 0.75, "copper"))
-    for x0 in (0.02, 0.92):
-        for z0 in (0.02, 0.92):
-            m.add(box(x0, 0.0, z0, x0 + 0.06, 0.98, z0 + 0.06, "steel_dark"))
-    m.add(box(0.02, 0.94, 0.02, 0.98, 0.98, 0.08, "steel_dark"))
-    m.add(box(0.02, 0.94, 0.92, 0.98, 0.98, 0.98, "steel_dark"))
-    m.add(box(0.02, 0.94, 0.08, 0.08, 0.98, 0.92, "steel_dark"))
-    m.add(box(0.92, 0.94, 0.08, 0.98, 0.98, 0.92, "steel_dark"))
-    # front display + output plug
-    m.add(box(0.22, 0.2, 0.03, 0.78, 0.68, 0.08, "steel_dark", {"n": "screen"}))
-    m.add(box(0.4, 0.72, 0.04, 0.6, 0.8, 0.08, "paint_red"))
-    m.add(along_z(cylinder_y(0.5, 0.76, 0.03, 0.0, 0.04, 8, "copper"), cy=0.76))
+    # plinth + feet
+    m.add(box(0.02, 0.0, -0.98, 1.98, 0.14, 0.98, "steel_dark"))
+    for x in (0.12, 1.88):
+        for z in (-0.88, 0.88):
+            m.add(cylinder_y(x, z, 0.07, 0.0, 0.03, 8, "rubber"))
+    # housing with louvres on the sides and the back
+    m.add(box(0.05, 0.14, -0.95, 1.95, 1.78, 0.95, "steel_dark", {"n": "steel_dark", "s": "vent", "w": "vent", "e": "vent"}))
+    for k in range(14):
+        y = 0.3 + k * 0.1
+        m.add(box(0.03, y, -0.8, 0.05, y + 0.03, 0.8, "steel"))
+        m.add(box(1.95, y, -0.8, 1.97, y + 0.03, 0.8, "steel"))
+    # corner posts and top / bottom rails
+    for x in (0.0, 1.93):
+        for z in (-1.0, 0.93):
+            m.add(box(x, 0.1, z, x + 0.07, 1.82, z + 0.07, "paint_yellow"))
+    m.add(box(0.0, 1.78, -1.0, 2.0, 1.84, 1.0, "paint_yellow"))
+    m.add(box(0.0, 0.1, -1.0, 2.0, 0.16, 1.0, "paint_yellow"))
+    # top deck: 4 x 4 cells with caps, copper bus bars, hazard strip
+    for i in range(4):
+        for j in range(4):
+            x, z = 0.25 + i * 0.5, -0.75 + j * 0.5
+            m.add(cylinder_y(x, z, 0.16, 1.84, 1.98, 16, "battery_cell", cap_top=False))
+            m.add(sphere(x, 1.98, z, 0.16, 0.05, 0.16, 14, 4, "battery_cell", lat_from=0, lat_to=90))
+            m.add(cylinder_y(x - 0.05, z, 0.025, 2.0, 2.06, 8, "copper"))
+            m.add(cylinder_y(x + 0.05, z, 0.025, 2.0, 2.06, 8, "steel"))
+    for j in range(4):
+        m.add(box(0.12, 2.06, -0.75 + j * 0.5 - 0.018, 1.88, 2.085, -0.75 + j * 0.5 + 0.018, "copper"))
+    m.add(box(0.0, 1.84, 0.93, 2.0, 1.9, 1.0, "hazard"))
+    # front: display panel with ten-segment gauge area, status bar and plate
+    m.add(box(0.12, 0.28, -1.0, 1.88, 1.66, -0.95, "steel_dark"))
+    m.add(box(0.3, 0.38, -1.0, 1.7, 1.56, -0.97, "steel_dark", {"n": "screen"}))
+    m.add(box(0.3, 1.6, -1.0, 1.7, 1.66, -0.97, "paint_red"))
+    m.add(box(0.3, 0.3, -1.0, 1.7, 0.35, -0.97, "led_blue"))
+    for z in (-0.5, 0.5):
+        _terminal(m, (2.0, 0.5, z), "x", 1, True)
+        _terminal(m, (2.0, 1.5, z), "x", 1, False)
+        _terminal(m, (0.0, 0.5, z), "x", -1, True)
+        _terminal(m, (0.0, 1.5, z), "x", -1, False)
+    for x in (0.5, 1.5):
+        _terminal(m, (x, 0.5, 1.0), "z", 1, True)
+        _terminal(m, (x, 1.5, 1.0), "z", 1, False)
+    for x in (0.5, 1.5):
+        for z in (-0.5, 0.5):
+            _terminal(m, (x, 2.1, z), "y", 1, (x < 1) == (z < 0))
     return m
 
 

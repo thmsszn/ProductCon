@@ -147,6 +147,30 @@ def rubber():
     return img
 
 
+def cable_jacket(name, base, tracer):
+    """Braided cable jacket: diagonal weave plus a thin tracer stripe."""
+    rng = _rng(name)
+    img = new()
+    for y in range(16):
+        for x in range(16):
+            weave = 1.0 if ((x + y) % 4) < 2 else 0.8
+            img.putpixel((x, y), shade(base, weave * rng.uniform(0.96, 1.04)) + (255,))
+    for y in range(16):
+        for x in (3, 11):
+            img.putpixel((x, y), shade(tracer, 1.0 + 0.05 * rng.uniform(-1, 1)) + (255,))
+    return img
+
+
+def plug_body():
+    rng = _rng("plug_body")
+    img = new()
+    for y in range(16):
+        for x in range(16):
+            f = 0.78 if x % 4 == 0 else 1.0
+            img.putpixel((x, y), shade((96, 98, 104), f * rng.uniform(0.97, 1.03)) + (255,))
+    return img
+
+
 def wood():
     rng = _rng("wood")
     img = new()
@@ -671,6 +695,9 @@ def block_textures():
         "rust_steel": rust_steel(),
         "copper": metal("copper", (196, 110, 70), amount=0.07),
         "rubber": rubber(),
+        "cable_orange": cable_jacket("cable_orange", (226, 120, 30), (30, 30, 32)),
+        "cable_black": cable_jacket("cable_black", (40, 40, 44), (240, 200, 40)),
+        "plug_body": plug_body(),
         "concrete": concrete(),
         "grating": grating(),
         "hazard": hazard(),

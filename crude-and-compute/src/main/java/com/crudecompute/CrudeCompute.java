@@ -30,6 +30,7 @@ public class CrudeCompute {
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
         com.crudecompute.registry.ModMenus.MENUS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
+        com.crudecompute.registry.ModSounds.SOUNDS.register(modBus);
         modBus.addListener(ModCapabilities::register);
 
         NeoForge.EVENT_BUS.addListener(KineticNetworkManager::onLevelTick);

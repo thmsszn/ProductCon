@@ -78,6 +78,12 @@ public class PowerCableBlock extends ConnectingBlock {
     }
 
     @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean moving) {
+        super.neighborChanged(state, level, pos, block, fromPos, moving);
+        com.crudecompute.power.PowerGrid.markDirty(level);
+    }
+
+    @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof PowerCableBlockEntity cable) {
             cable.showStatus(player);

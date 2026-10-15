@@ -46,6 +46,25 @@ public final class ModGameTests {
         be.getFuelHandler().fill(new FluidStack(ModFluids.DIESEL.get(), 4000), IFluidHandler.FluidAction.EXECUTE);
     }
 
+    private static ServerRackBlockEntity placeRack(GameTestHelper helper, BlockPos pos, Direction dir) {
+        BlockState state = facing(ModBlocks.SERVER_RACK.get(), dir);
+        helper.setBlock(pos, state);
+        state.getBlock().setPlacedBy(helper.getLevel(), helper.absolutePos(pos), helper.getLevel().getBlockState(helper.absolutePos(pos)),
+                null, new ItemStack(ModItems.SERVER_RACK.get()));
+        return helper.getBlockEntity(pos);
+    }
+
+    private static void placeBank(GameTestHelper helper, BlockPos pos, Direction dir) {
+        BlockState state = facing(ModBlocks.BATTERY.get(), dir);
+        helper.setBlock(pos, state);
+        state.getBlock().setPlacedBy(helper.getLevel(), helper.absolutePos(pos), helper.getLevel().getBlockState(helper.absolutePos(pos)),
+                null, new ItemStack(ModItems.BATTERY.get()));
+    }
+
+    private static IEnergyStorage energyAt(GameTestHelper helper, BlockPos pos, Direction side) {
+        return helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(pos), side);
+    }
+
     /** Engine -> shaft -> shaft -> generator: the generator spins at engine speed and produces FE. */
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void engineDrivesGenerator(GameTestHelper helper) {
@@ -316,22 +335,19 @@ public final class ModGameTests {
         });
     }
 
-    /** The battery charges through its sides and only discharges through its front, into a cable. */
-    @GameTest(template = "empty", timeoutTicks = 60)
-    public static void batteryChargesAndDischargesFront(GameTestHelper helper) {
-        BlockPos battery = new BlockPos(3, 1, 4);
-        helper.setBlock(battery, facing(ModBlocks.BATTERY.get(), Direction.NORTH));
-        BlockPos cable = new BlockPos(3, 1, 3);
-        helper.setBlock(cable, ModBlocks.POWER_CABLE.get().defaultBlockState());
-        IEnergyStorage side = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(battery), Direction.EAST);
-        IEnergyStorage front = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(battery), Direction.NORTH);
-        helper.assertTrue(side != null && front != null, "battery should expose energy on all sides");
-        helper.assertTrue(side.receiveEnergy(50_000, false) == 8192, "side input is limited to 8192 FE per call");
-        helper.assertTrue(front.receiveEnergy(1000, true) == 0 && side.extractEnergy(1000, true) == 0, "front is output only, sides input only");
-        helper.succeedWhen(() -> {
-            IEnergyStorage cableEnergy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(cable), Direction.UP);
-            helper.assertTrue(cableEnergy != null && cableEnergy.getEnergyStored() > 0, "battery should discharge into the cable in front");
-        });
+    /** The 2x2x2 battery bank charges and discharges through any terminal of any of its cells. */
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void batteryBankHasTerminalsEverywhere(GameTestHelper helper) {
+        placeBank(helper, new BlockPos(3, 1, 4), Direction.SOUTH);
+        // controller (3,1,4); with facing south the other cells are at x 3..2, y 1..2, z 4..5
+        IEnergyStorage a = energyAt(helper, new BlockPos(3, 1, 4), Direction.UP);
+        IEnergyStorage b = energyAt(helper, new BlockPos(2, 2, 5), Direction.WEST);
+        helper.assertTrue(a != null && b != null, "every cell exposes energy on every side");
+        helper.assertTrue(a.receiveEnergy(100_000, false) == 32_768, "a terminal takes at most 32768 FE per call");
+        helper.assertTrue(b.getEnergyStored() == 32_768, "all terminals share the same bank");
+        helper.assertTrue(b.extractEnergy(1000, false) == 1000 && a.canReceive() && a.canExtract(), "and every terminal also discharges");
+        helper.assertTrue(b.getMaxEnergyStored() == 16_000_000, "the bank holds 16 MFE");
+        helper.succeed();
     }
 
     /** Engine -> tower base -> three tower segments -> gearbox on top: the axle carries rotation up the tower. */
@@ -371,11 +387,10 @@ public final class ModGameTests {
         });
     }
 
-    /** Battery -> three cables -> cooling unit: energy arrives, and the last cable ends in a plug on the machine. */
+    /** Bank -> three cables -> cooling unit: the grid delivers power, the last cable ends in a plug on the machine. */
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void cableChainDeliversPowerWithPlug(GameTestHelper helper) {
-        BlockPos battery = new BlockPos(3, 1, 6);
-        helper.setBlock(battery, facing(ModBlocks.BATTERY.get(), Direction.NORTH));
+        placeBank(helper, new BlockPos(3, 1, 6), Direction.SOUTH);
         com.crudecompute.datacenter.PowerCableBlock cableBlock = ModBlocks.POWER_CABLE.get();
         for (int z = 5; z >= 3; z--) {
             BlockPos pos = new BlockPos(3, 1, z);
@@ -383,7 +398,6 @@ public final class ModGameTests {
         }
         BlockPos cooler = new BlockPos(3, 1, 2);
         helper.setBlock(cooler, ModBlocks.COOLING_UNIT.get().defaultBlockState());
-        // re-evaluate the connections now that every neighbour exists
         for (int z = 5; z >= 3; z--) {
             BlockPos pos = new BlockPos(3, 1, z);
             BlockPos abs = helper.absolutePos(pos);
@@ -393,12 +407,74 @@ public final class ModGameTests {
         helper.assertTrue(last.getValue(com.crudecompute.datacenter.PowerCableBlock.PLUGS.get(Direction.NORTH)), "cable next to the machine must end in a plug");
         BlockState middle = helper.getLevel().getBlockState(helper.absolutePos(new BlockPos(3, 1, 4)));
         helper.assertFalse(middle.getValue(com.crudecompute.datacenter.PowerCableBlock.PLUGS.get(Direction.NORTH)), "cable-to-cable link has no plug");
-        IEnergyStorage side = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(battery), Direction.EAST);
-        side.receiveEnergy(8000, false);
+        energyAt(helper, new BlockPos(2, 2, 7), Direction.EAST).receiveEnergy(30_000, false);
         helper.succeedWhen(() -> {
-            IEnergyStorage energy = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(cooler), Direction.SOUTH);
+            IEnergyStorage energy = energyAt(helper, cooler, Direction.SOUTH);
             helper.assertTrue(energy != null && energy.getEnergyStored() > 0, "cooling unit should receive power through the cables");
         });
+    }
+
+    /** Engine -> generator -> cables -> server rack: the real production chain fills the rack's buffer and boots its server. */
+    @GameTest(template = "empty", timeoutTicks = 400)
+    public static void generatorPowersRackThroughCables(GameTestHelper helper) {
+        BlockPos engine = new BlockPos(1, 1, 6);
+        helper.setBlock(engine, facing(ModBlocks.DIESEL_ENGINE.get(), Direction.EAST));
+        helper.setBlock(new BlockPos(2, 1, 6), facing(ModBlocks.GENERATOR.get(), Direction.EAST));
+        fuel(helper, engine);
+        com.crudecompute.datacenter.PowerCableBlock cableBlock = ModBlocks.POWER_CABLE.get();
+        BlockPos[] cables = {new BlockPos(2, 1, 5), new BlockPos(2, 1, 4), new BlockPos(2, 1, 3)};
+        ServerRackBlockEntity rack = placeRack(helper, new BlockPos(3, 1, 3), Direction.NORTH);
+        rack.insert(com.crudecompute.hardware.ServerConfig.preset(1), -1);
+        for (BlockPos c : cables) {
+            helper.setBlock(c, cableBlock.defaultBlockState());
+        }
+        for (BlockPos c : cables) {
+            BlockPos abs = helper.absolutePos(c);
+            helper.getLevel().setBlock(abs, cableBlock.connectionState(helper.getLevel().getBlockState(abs), helper.getLevel(), abs), Block.UPDATE_ALL);
+        }
+        helper.succeedWhen(() -> {
+            helper.assertTrue(rack.getEnergyStored() > 500, "the rack buffer should fill from the generator, has " + rack.getEnergyStored());
+            helper.assertTrue(rack.getStatus() == ServerRackBlockEntity.STATUS_ONLINE, "the server should run, status " + rack.getStatus());
+        });
+    }
+
+    /** Fans can be mounted and removed, run only with power, and lower the temperature of every server. */
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public static void rackFanBayCoolsServers(GameTestHelper helper) {
+        ServerRackBlockEntity rack = placeRack(helper, new BlockPos(3, 1, 4), Direction.NORTH);
+        helper.assertTrue(rack.installFan(0, ServerRackBlockEntity.FAN_HIGH) && rack.getFan(0) == ServerRackBlockEntity.FAN_HIGH, "a fan fits an empty slot");
+        helper.assertTrue(!rack.installFan(0, ServerRackBlockEntity.FAN_STANDARD), "an occupied slot refuses a second fan");
+        helper.assertTrue(rack.removeFan(0) == ServerRackBlockEntity.FAN_HIGH && rack.getFan(0) == 0, "removing returns the fan type");
+        helper.assertTrue(rack.getFanScore() == 0, "fans without power do not move air");
+        com.crudecompute.hardware.ServerConfig cfg = com.crudecompute.hardware.ServerConfig.preset(2);
+        cfg.mode = com.crudecompute.hardware.ServerConfig.MODE_FULL;
+        com.crudecompute.hardware.ServerState plain = new com.crudecompute.hardware.ServerState();
+        com.crudecompute.hardware.ServerState fanned = new com.crudecompute.hardware.ServerState();
+        for (int i = 0; i < 900; i++) {
+            com.crudecompute.hardware.HardwareSim.step(cfg, plain, 24, true, 1.0, 0.0);
+            com.crudecompute.hardware.HardwareSim.step(cfg, fanned, 24, true, 1.0, 4.0);
+        }
+        helper.assertTrue(fanned.temp < plain.temp - 3, "rear fans must cool the servers: " + fanned.temp + " vs " + plain.temp);
+        helper.succeed();
+    }
+
+    /** All cables that touch form one network; longer networks lose more energy, and the numbers are exposed for the cable display. */
+    @GameTest(template = "empty", timeoutTicks = 60)
+    public static void powerGridMeasuresLossAndFlow(GameTestHelper helper) {
+        placeBank(helper, new BlockPos(1, 1, 1), Direction.SOUTH);
+        com.crudecompute.datacenter.PowerCableBlock cableBlock = ModBlocks.POWER_CABLE.get();
+        for (int x = 2; x <= 8; x++) {
+            helper.setBlock(new BlockPos(x, 1, 1), cableBlock.defaultBlockState());
+        }
+        helper.setBlock(new BlockPos(9, 1, 1), ModBlocks.COOLING_UNIT.get().defaultBlockState());
+        energyAt(helper, new BlockPos(1, 1, 1), Direction.UP).receiveEnergy(30_000, false);
+        com.crudecompute.power.PowerGrid.tickNow(helper.getLevel());
+        com.crudecompute.power.PowerGrid.Network net = com.crudecompute.power.PowerGrid.networkAt(helper.getLevel(), helper.absolutePos(new BlockPos(5, 1, 1)));
+        helper.assertTrue(net != null && net.cableCount() == 7, "seven cables form one network");
+        helper.assertTrue(net.bufferCount() == 1 && net.consumerCount() == 1, "one battery bank and one consumer are plugged in");
+        helper.assertTrue(net.lossFraction() > 0.005 && net.lossFraction() < 0.05, "a short line loses a little: " + net.lossFraction());
+        helper.assertTrue(net.consumed() > 0 && net.buffered() < 0, "the bank discharges into the cooler");
+        helper.succeed();
     }
 
     /** Solar panels linked to the inverter through a DC cable are counted, and the inverter's front exposes its output. */
@@ -412,7 +488,7 @@ public final class ModGameTests {
         helper.setBlock(new BlockPos(4, 1, 7), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
         IEnergyStorage front = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(inverter), Direction.NORTH);
         IEnergyStorage back = helper.getLevel().getCapability(Capabilities.EnergyStorage.BLOCK, helper.absolutePos(inverter), Direction.SOUTH);
-        helper.assertTrue(front != null && back == null, "inverter delivers through its front only");
+        helper.assertTrue(front != null && back != null, "inverter delivers on every side, cables decide where it goes");
         helper.succeedWhen(() -> {
             com.crudecompute.solar.InverterBlockEntity be = helper.getBlockEntity(inverter);
             helper.assertTrue(be.getPanels() == 2, "both panels behind the cable should be linked, found " + be.getPanels());

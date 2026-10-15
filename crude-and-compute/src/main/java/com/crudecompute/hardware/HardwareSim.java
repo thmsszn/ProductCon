@@ -50,6 +50,11 @@ public final class HardwareSim {
 
     /** Advances the server by {@code dt} seconds. {@code powered} is false during a rack-wide power failure. */
     public static void step(ServerConfig c, ServerState s, double inletC, boolean powered, double dt) {
+        step(c, s, inletC, powered, dt, 0.0);
+    }
+
+    /** {@code airflow} is the score of the rack's rear fans: it raises the passive heat exchange of every chassis. */
+    public static void step(ServerConfig c, ServerState s, double inletC, boolean powered, double dt, double airflow) {
         int sizeU = c.sizeU;
         double cth = 300.0 * sizeU;
         Part mb = c.moboPart();
@@ -122,7 +127,7 @@ public final class HardwareSim {
         s.psuEff = (float) c.psuEfficiencyAt(load);
         s.inputW = (float) (load / s.psuEff);
 
-        double g = passiveG(sizeU) + coolerG(c, s.fanDuty);
+        double g = passiveG(sizeU) * (1.0 + 0.18 * airflow) + coolerG(c, s.fanDuty);
         s.temp += (float) ((load - g * (s.temp - inletC)) / cth * dt);
         if (s.temp < (float) inletC - 5f) {
             s.temp = (float) inletC - 5f;

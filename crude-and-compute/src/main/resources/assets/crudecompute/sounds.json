@@ -1,0 +1,11 @@
+{
+  "rack_hum": {
+    "subtitle": "subtitles.crudecompute.rack_hum",
+    "sounds": [
+      {
+        "name": "crudecompute:rack_hum",
+        "attenuation_distance": 28
+      }
+    ]
+  }
+}

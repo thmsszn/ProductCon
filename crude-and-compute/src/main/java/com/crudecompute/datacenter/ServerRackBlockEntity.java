@@ -65,7 +65,19 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         }
     }
 
+    public static final int FAN_SLOTS = 4;
+    public static final int FAN_STANDARD = 1;
+    public static final int FAN_HIGH = 2;
+
     private final List<Slot> slots = new ArrayList<>();
+    private final int[] fans = new int[FAN_SLOTS];
+    private boolean fansRunning;
+    private float fanDuty;
+    // client animation
+    public float fanAngle;
+    public float prevFanAngle;
+    private float fanSpeed;
+    private Object noise;
     private final ModEnergyStorage energy = new ModEnergyStorage(200_000, 16_384, 0, this::setChanged);
     private boolean powered = true;
     private int status;
@@ -211,6 +223,89 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         return p;
     }
 
+    // ------------------------------------------------------------------ rear fan bay
+    public int getFan(int slot) {
+        return slot >= 0 && slot < FAN_SLOTS ? fans[slot] : 0;
+    }
+
+    public boolean installFan(int slot, int type) {
+        if (slot < 0 || slot >= FAN_SLOTS || fans[slot] != 0 || type < FAN_STANDARD || type > FAN_HIGH) {
+            return false;
+        }
+        fans[slot] = type;
+        sync();
+        return true;
+    }
+
+    /** Removes the fan from the slot and returns its type (0 = nothing there). */
+    public int removeFan(int slot) {
+        if (slot < 0 || slot >= FAN_SLOTS || fans[slot] == 0) {
+            return 0;
+        }
+        int type = fans[slot];
+        fans[slot] = 0;
+        sync();
+        return type;
+    }
+
+    /** Electrical power of one rack fan in watts. */
+    public static double fanWatts(int type) {
+        return type == FAN_HIGH ? 36.0 : type == FAN_STANDARD ? 12.0 : 0.0;
+    }
+
+    public int fanCount() {
+        int n = 0;
+        for (int f : fans) {
+            if (f != 0) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Airflow of the running fans (a standard fan counts 1, a high-performance fan 1.8). */
+    public double getFanScore() {
+        if (!fansRunning) {
+            return 0;
+        }
+        double score = 0;
+        for (int f : fans) {
+            score += f == FAN_HIGH ? 1.8 : f == FAN_STANDARD ? 1.0 : 0.0;
+        }
+        return score;
+    }
+
+    public boolean areFansRunning() {
+        return fansRunning;
+    }
+
+    /** 0..1 fan speed request: follows the hottest server. */
+    public float getFanDuty() {
+        return fanDuty;
+    }
+
+    /** Whether the rack currently runs servers (drives the noise). */
+    public boolean isNoisy() {
+        for (Slot s : slots) {
+            if (s.st.status == ServerState.ONLINE || s.st.status == ServerState.THROTTLED || s.st.status == ServerState.OVERHEATED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Loudness 0..1.6 of this rack: every running server and every rear fan adds to it. */
+    public float getNoiseLevel() {
+        int running = 0;
+        for (Slot s : slots) {
+            if (s.st.status == ServerState.ONLINE || s.st.status == ServerState.THROTTLED) {
+                running += s.cfg.sizeU;
+            }
+        }
+        float level = 0.55f + 0.05f * running + 0.35f * fanDuty + (fansRunning ? 0.04f * fanCount() * (0.4f + fanDuty) : 0f);
+        return Math.min(1.6f, level);
+    }
+
     // ------------------------------------------------------------------ aggregated values
     public int getGpus() {
         int n = 0;
@@ -310,6 +405,18 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         int available = energy.getEnergyStored();
         int used = 0;
         boolean all = true;
+        double fanW = 0;
+        for (int f : fans) {
+            fanW += fanWatts(f);
+        }
+        int fanNeed = (int) Math.ceil(fanW / HardwareSim.WATTS_PER_FE_TICK);
+        if (fanNeed > 0 && available >= fanNeed) {
+            available -= fanNeed;
+            used += fanNeed;
+            fansRunning = true;
+        } else {
+            fansRunning = false;
+        }
         for (Slot s : order) {
             double nominal = HardwareSim.nominalInputW(s.cfg);
             int need = (int) Math.ceil((s.powered ? s.st.inputW : nominal) / HardwareSim.WATTS_PER_FE_TICK);
@@ -362,12 +469,18 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         }
         float ambient = Math.max(8f, Math.min(40f, 12f + level.getBiome(worldPosition).value().getBaseTemperature() * 10f));
         cracCooling = CoolingUnitBlockEntity.coolingFor(level, worldPosition);
-        float recirc = 0.0012f * getHeatW();
+        double airflow = getFanScore();
+        float hottest = inletC;
+        for (Slot s : slots) {
+            hottest = Math.max(hottest, s.st.temp);
+        }
+        fanDuty = fansRunning || isNoisy() ? Math.max(0.3f, Math.min(1.0f, (hottest - 40f) / 40f)) : 0f;
+        float recirc = (float) (0.0012f * getHeatW() / (1.0 + 0.3 * airflow));
         inletC = Math.max(14f, Math.min(60f, ambient + recirc - Math.min(12f, cracCooling * 2f)));
         double removable = 0;
         for (Slot s : slots) {
             float localInlet = inletC + 0.12f * s.u;
-            HardwareSim.step(s.cfg, s.st, localInlet, s.powered, 1.0);
+            HardwareSim.step(s.cfg, s.st, localInlet, s.powered, 1.0, airflow);
             removable += (HardwareSim.passiveG(s.cfg.sizeU) + HardwareSim.coolerG(s.cfg, 1f)) * Math.max(1f, HardwareSim.THROTTLE_C - localInlet);
         }
         float heat = getHeatW();
@@ -411,6 +524,22 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         sync();
     }
 
+    @Override
+    public void clientTick() {
+        boolean noisy = isNoisy();
+        float target = noisy ? 28f * (0.35f + fanDuty) : 0f;
+        fanSpeed += (target - fanSpeed) * 0.04f;
+        prevFanAngle = fanAngle;
+        fanAngle += fanSpeed;
+        if (fanAngle > 3600f) {
+            fanAngle -= 3600f;
+            prevFanAngle -= 3600f;
+        }
+        if (noisy && level != null && level.isClientSide) {
+            noise = com.crudecompute.client.RackNoise.ensure(this, noise);
+        }
+    }
+
     public void showStatus(Player player) {
         Component line = Component.translatable("hw.rack.summary", slots.size(), usedU(), RACK_U, Lang.num(getHeatW() / 1000.0),
                 Lang.num(getTemperature()), Component.translatable("hw.status." + status));
@@ -437,6 +566,9 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         tag.putFloat("Inlet", inletC);
         tag.putFloat("CoolLoad", coolingLoad);
         tag.putFloat("Crac", cracCooling);
+        tag.putIntArray("Fans", fans);
+        tag.putBoolean("FansOn", fansRunning);
+        tag.putFloat("FanDuty", fanDuty);
         ListTag list = new ListTag();
         for (Slot s : slots) {
             CompoundTag e = new CompoundTag();
@@ -457,6 +589,12 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
         inletC = tag.contains("Inlet") ? tag.getFloat("Inlet") : 22f;
         coolingLoad = tag.getFloat("CoolLoad");
         cracCooling = tag.getFloat("Crac");
+        int[] f = tag.getIntArray("Fans");
+        for (int i = 0; i < FAN_SLOTS; i++) {
+            fans[i] = i < f.length ? Math.max(0, Math.min(FAN_HIGH, f[i])) : 0;
+        }
+        fansRunning = tag.getBoolean("FansOn");
+        fanDuty = tag.getFloat("FanDuty");
         slots.clear();
         for (Tag t : tag.getList("Servers", Tag.TAG_COMPOUND)) {
             CompoundTag e = (CompoundTag) t;

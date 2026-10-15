@@ -25,9 +25,10 @@ Kd 1.0 1.0 1.0
 Ka 1.0 1.0 1.0
 map_Kd crudecompute:block/led_white
 
-newmtl fan_grille
+newmtl led_green
 Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/fan_grille
+Ka 1.0 1.0 1.0
+map_Kd crudecompute:block/led_green
 
 newmtl rack_rail
 Kd 1.0 1.0 1.0
@@ -49,10 +50,6 @@ map_Kd crudecompute:block/paint_blue
 newmtl paint_yellow
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/paint_yellow
-
-newmtl grating
-Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/grating
 
 newmtl rack_mesh
 Kd 1.0 1.0 1.0

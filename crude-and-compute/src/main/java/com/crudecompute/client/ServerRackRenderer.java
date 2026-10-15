@@ -44,7 +44,26 @@ public class ServerRackRenderer implements BlockEntityRenderer<ServerRackBlockEn
             poseStack.popPose();
         }
         drawDisplay(be, poseStack, buffers);
+        drawFans(be, partialTick, poseStack, buffers, light, overlay);
         poseStack.popPose();
+    }
+
+    /** The slim fans of the rear fan bay: they sit in the roof openings and blow upwards. */
+    private void drawFans(ServerRackBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
+        float angle = net.minecraft.util.Mth.lerp(partialTick, be.prevFanAngle, be.fanAngle);
+        for (int i = 0; i < ServerRackBlockEntity.FAN_SLOTS; i++) {
+            int type = be.getFan(i);
+            if (type == 0) {
+                continue;
+            }
+            boolean hp = type == ServerRackBlockEntity.FAN_HIGH;
+            poseStack.pushPose();
+            poseStack.translate(0.275f + i * 0.15f - 0.5f, 1.945f, 0.69f - 0.5f);
+            RenderUtil.renderModel(poseStack, buffers, hp ? ModModels.RACK_FAN_FRAME_HP : ModModels.RACK_FAN_FRAME, light, overlay);
+            RenderUtil.spinY(poseStack, angle * (hp ? 1.4f : 1f));
+            RenderUtil.renderModel(poseStack, buffers, hp ? ModModels.RACK_FAN_ROTOR_HP : ModModels.RACK_FAN_ROTOR, light, overlay);
+            poseStack.popPose();
+        }
     }
 
     /** Power / activity / alert LED on the front of a server (front plane at z = 0.114). */

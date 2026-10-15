@@ -66,7 +66,7 @@ public final class ShowcaseAutomation {
             {4.6, 2.6, -1.6, 9, 1, 6},
             {9.2, 1.75, 1.75, 9.5, 0.8, 3.6},
             {1.2, 4.2, -9.2, -1, 2, -3},
-            {9.0, 4.0, -7.5, 4.8, 2.6, -3},
+            {10.5, 4.0, -8.0, 5.6, 2.2, -3},
             {2.3, 2.1, -0.4, 5, 0.6, 3.6},
             {-7.2, 3.0, -7.4, -4, 1.4, -4},
             {16.5, 3.0, 3.5, 13, 0.4, -1.5},
@@ -168,6 +168,19 @@ public final class ShowcaseAutomation {
         BlockPos rack = origin.offset(8, 0, 6);
         BlockPos terminal = origin.offset(9, 0, 3);
         if (timer == 1 && guiShot == 0) {
+            server.execute(() -> {
+                var level = server.overworld();
+                if (level.getBlockEntity(origin.offset(8, 0, 6)) instanceof ServerRackBlockEntity r) {
+                    REPORT.add("POWER CHECK rack: status=" + r.getStatus() + " buffer=" + r.getEnergyStored() + " shed=" + r.getShedCount()
+                            + " draw=" + r.getPowerDraw());
+                }
+                var net = com.crudecompute.power.PowerGrid.networkAt(level, origin.offset(9, 0, 5));
+                if (net != null) {
+                    REPORT.add("POWER CHECK grid: cables=" + net.cableCount() + " producers=" + net.producerCount() + " consumers=" + net.consumerCount()
+                            + " batteries=" + net.bufferCount() + " produced=" + net.produced() + " consumed=" + net.consumed()
+                            + " buffered=" + net.buffered() + " lost=" + net.lost());
+                }
+            });
             // the menus close when the player is too far away, so stand next to the rack first
             server.execute(() -> {
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
@@ -284,13 +297,7 @@ public final class ShowcaseAutomation {
         if (timer % 25 == 0) {
             server.execute(() -> feedBelt(server));
         }
-        server.execute(() -> {
-            ServerLevel level = server.overworld();
-            for (BlockPos p : BlockPos.betweenClosed(origin.offset(6, 0, 2), origin.offset(12, 1, 8))) {
-                IEnergyStorage energy = level.getCapability(Capabilities.EnergyStorage.BLOCK, p, Direction.UP);
-                if (energy != null && energy.canReceive()) {
-                    energy.receiveEnergy(4096, false);
-                }
+    }
             }
         });
     }
@@ -358,19 +365,22 @@ public final class ShowcaseAutomation {
         }
         set(level, o.offset(4, 5, -3), facing(ModBlocks.WINDMILL.get(), Direction.NORTH));
         set(level, o.offset(5, 0, -3), facing(ModBlocks.GENERATOR.get(), Direction.EAST));
-        set(level, o.offset(6, 0, -3), facing(ModBlocks.BATTERY.get(), Direction.NORTH));
-        for (int x = 5; x <= 6; x++) {
-            BlockPos cable = o.offset(x, 1, -3);
-            set(level, cable, ModBlocks.POWER_CABLE.get().connectionState(ModBlocks.POWER_CABLE.get().defaultBlockState(), level, cable));
-        }
+        multiblock(level, o.offset(8, 0, -3), facing(ModBlocks.BATTERY.get(), Direction.SOUTH), ModBlocks.BATTERY.get());
+        set(level, o.offset(6, 0, -3), ModBlocks.POWER_CABLE.get().defaultBlockState());
         // datacenter: engine -> generators -> cables -> racks + cooling, terminal in front
         set(level, o.offset(6, 0, 2), facing(ModBlocks.DIESEL_ENGINE.get(), Direction.SOUTH));
         fuel(level, o.offset(6, 0, 2));
         set(level, o.offset(6, 0, 3), facing(ModBlocks.GENERATOR.get(), Direction.SOUTH));
         set(level, o.offset(6, 0, 4), facing(ModBlocks.GENERATOR.get(), Direction.SOUTH));
-        for (int x = 7; x <= 11; x++) {
+        for (int x = 7; x <= 12; x++) {
             set(level, o.offset(x, 0, 5), ModBlocks.POWER_CABLE.get().defaultBlockState());
         }
+        for (int z = 6; z <= 9; z++) {
+            if (z != 9) {
+                set(level, o.offset(7, 0, z), ModBlocks.POWER_CABLE.get().defaultBlockState());
+            }
+        }
+        set(level, o.offset(7, 0, 9), ModBlocks.POWER_CABLE.get().defaultBlockState());
         set(level, o.offset(7, 0, 4), ModBlocks.POWER_CABLE.get().defaultBlockState());
         int[][] fill = {{4, 2, 1, 1}, {2, 2, 2}, {4, 1, 1, 1, 2}};
         for (int i = 0; i < 3; i++) {
@@ -389,9 +399,8 @@ public final class ShowcaseAutomation {
             set(level, o.offset(8 + dx, 0, 11), ModBlocks.SOLAR_PANEL.get().defaultBlockState());
         }
         set(level, o.offset(9, 0, 9), ModBlocks.SOLAR_PANEL_MONO.get().defaultBlockState());
-        set(level, o.offset(7, 0, 6), ModBlocks.COOLING_UNIT.get().defaultBlockState());
         set(level, o.offset(11, 0, 6), ModBlocks.COOLING_UNIT.get().defaultBlockState());
-        set(level, o.offset(9, 0, 7), ModBlocks.COOLING_UNIT.get().defaultBlockState());
+        set(level, o.offset(12, 0, 6), ModBlocks.COOLING_UNIT.get().defaultBlockState());
         set(level, o.offset(9, 0, 3), facing(ModBlocks.AI_TERMINAL.get(), Direction.NORTH));
         if (level.getBlockEntity(o.offset(9, 0, 3)) instanceof AITerminalBlockEntity terminal) {
             terminal.setDrive(new ItemStack(ModItems.EMPTY_MODEL_DRIVE.get()));
@@ -415,7 +424,7 @@ public final class ShowcaseAutomation {
             fab.insert(new ItemStack(ModItems.PLASTIC.get(), 32));
             fab.insert(new ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET, 32));
         }
-        set(level, o.offset(6, 0, 5), facing(ModBlocks.BATTERY.get(), Direction.WEST));
+        multiblock(level, o.offset(6, 0, 5), facing(ModBlocks.BATTERY.get(), Direction.SOUTH), ModBlocks.BATTERY.get());
         // update 1.2: oil derrick on its own shale field, conveyor belt line
         for (BlockPos p : BlockPos.betweenClosed(o.offset(9, -1, -5), o.offset(11, -1, -3))) {
             set(level, p, ModBlocks.OIL_SHALE.get().defaultBlockState());

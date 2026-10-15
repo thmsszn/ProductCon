@@ -1,12 +1,11 @@
 package com.crudecompute.datacenter;
 
+import com.crudecompute.multiblock.MultiblockCapabilities;
 import com.crudecompute.registry.ModBlockEntities;
-import com.crudecompute.util.HorizontalMachineBlock;
 import com.crudecompute.util.Lang;
 import com.crudecompute.util.ModEnergyStorage;
 import com.crudecompute.util.SyncedBlockEntity;
 import com.crudecompute.util.TickingBlockEntity;
-import com.crudecompute.util.Transfer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -16,13 +15,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
 
-public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBlockEntity {
-    public static final int CAPACITY = 2_000_000;
-    public static final int RATE = 8192;
+/** Battery bank: 16 MFE, bidirectional on every terminal. The cable network decides when it charges or discharges. */
+public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBlockEntity, MultiblockCapabilities {
+    public static final int CAPACITY = 16_000_000;
+    public static final int RATE = 32_768;
 
     private final ModEnergyStorage storage = new ModEnergyStorage(CAPACITY, 0, 0, this::setChanged);
-    private final IEnergyStorage input = new View(true);
-    private final IEnergyStorage output = new View(false);
+    private final IEnergyStorage terminal = new Terminal();
     private int lastSyncedLevel = -1;
     private int lastComparator = -1;
 
@@ -30,17 +29,16 @@ public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBloc
         super(ModBlockEntities.BATTERY.get(), pos, state);
     }
 
-    private Direction facing() {
-        return getBlockState().getValue(HorizontalMachineBlock.FACING);
-    }
-
-    /** Front = output only, every other side = input only. */
+    /** Every face of every cell is a terminal. */
     @Nullable
     public IEnergyStorage getEnergy(@Nullable Direction side) {
-        if (side == null) {
-            return input;
-        }
-        return side == facing() ? output : input;
+        return terminal;
+    }
+
+    @Nullable
+    @Override
+    public IEnergyStorage getEnergyStorage(int right, int up, int forward, @Nullable Direction side) {
+        return terminal;
     }
 
     public int getStoredEnergy() {
@@ -53,21 +51,18 @@ public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBloc
 
     @Override
     public void serverTick() {
-        if (level == null) {
+        if (level == null || level.getGameTime() % 10 != 0) {
             return;
         }
-        Transfer.pushEnergy(level, worldPosition, facing(), storage, RATE);
-        if (level.getGameTime() % 10 == 0) {
-            int bars = Math.round(getFill() * 100);
-            if (bars != lastSyncedLevel) {
-                lastSyncedLevel = bars;
-                sync();
-            }
-            int comparator = Math.round(getFill() * 15f);
-            if (comparator != lastComparator) {
-                lastComparator = comparator;
-                level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
-            }
+        int bars = Math.round(getFill() * 100);
+        if (bars != lastSyncedLevel) {
+            lastSyncedLevel = bars;
+            sync();
+        }
+        int comparator = Math.round(getFill() * 15f);
+        if (comparator != lastComparator) {
+            lastComparator = comparator;
+            level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
         }
     }
 
@@ -87,36 +82,24 @@ public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBloc
         storage.setEnergy(tag.getInt("Energy"));
     }
 
-    /** One-directional face of the battery. */
-    private final class View implements IEnergyStorage {
-        private final boolean in;
-
-        private View(boolean in) {
-            this.in = in;
-        }
-
+    /** Charges and discharges through the same terminal, each limited to {@link #RATE} per call. */
+    private final class Terminal implements IEnergyStorage {
         @Override
         public int receiveEnergy(int toReceive, boolean simulate) {
-            if (!in) {
-                return 0;
-            }
-            int accepted = Math.min(Math.min(RATE, toReceive), storage.getSpace());
-            if (!simulate) {
+            int accepted = Math.max(0, Math.min(Math.min(RATE, toReceive), storage.getSpace()));
+            if (!simulate && accepted > 0) {
                 storage.addInternal(accepted);
             }
-            return Math.max(0, accepted);
+            return accepted;
         }
 
         @Override
         public int extractEnergy(int toExtract, boolean simulate) {
-            if (in) {
-                return 0;
+            int out = Math.max(0, Math.min(Math.min(RATE, toExtract), storage.getEnergyStored()));
+            if (!simulate && out > 0) {
+                storage.removeInternal(out);
             }
-            int extracted = Math.min(Math.min(RATE, toExtract), storage.getEnergyStored());
-            if (!simulate) {
-                storage.removeInternal(extracted);
-            }
-            return Math.max(0, extracted);
+            return out;
         }
 
         @Override
@@ -131,12 +114,12 @@ public class BatteryBlockEntity extends SyncedBlockEntity implements TickingBloc
 
         @Override
         public boolean canExtract() {
-            return !in;
+            return true;
         }
 
         @Override
         public boolean canReceive() {
-            return in;
+            return true;
         }
     }
 }

@@ -32,6 +32,8 @@ public class RackMenu extends AbstractContainerMenu {
     public static final int A_INSERT_HELD = 6000;
     public static final int A_MOVE = 7000;
     public static final int A_PRIORITY = 8000;
+    /** 9000 + slot * 10 + type (type 0 removes the fan from the slot). */
+    public static final int A_FAN = 9000;
 
     public final BlockPos pos;
     private final ContainerData data = new SimpleContainerData(3);
@@ -109,6 +111,42 @@ public class RackMenu extends AbstractContainerMenu {
                     giveItem(player, new ItemStack(com.crudecompute.registry.ModItems.partItem(removed)));
                 }
                 feedback(problem);
+            }
+        } else if (id >= A_FAN && id < A_FAN + 10 * ServerRackBlockEntity.FAN_SLOTS) {
+            int slot = (id - A_FAN) / 10;
+            int type = (id - A_FAN) % 10;
+            boolean creative = player.getAbilities().instabuild;
+            if (type == 0) {
+                int removed = rack.removeFan(slot);
+                if (removed != 0) {
+                    if (!creative) {
+                        giveItem(player, new ItemStack(removed == ServerRackBlockEntity.FAN_HIGH
+                                ? com.crudecompute.registry.ModItems.RACK_FAN_HP.get() : com.crudecompute.registry.ModItems.RACK_FAN.get()));
+                    }
+                    feedback(null);
+                } else {
+                    feedback(new Problem(HwError.NOT_FOUND, 0));
+                }
+            } else {
+                net.minecraft.world.item.Item item = type == ServerRackBlockEntity.FAN_HIGH
+                        ? com.crudecompute.registry.ModItems.RACK_FAN_HP.get() : com.crudecompute.registry.ModItems.RACK_FAN.get();
+                ItemStack carried = ItemStack.EMPTY;
+                for (ItemStack stack : player.getInventory().items) {
+                    if (stack.is(item)) {
+                        carried = stack;
+                        break;
+                    }
+                }
+                if (carried.isEmpty() && !creative) {
+                    feedback(new Problem(HwError.NOT_OWNED, 0));
+                } else if (rack.installFan(slot, type)) {
+                    if (!creative) {
+                        carried.shrink(1);
+                    }
+                    feedback(null);
+                } else {
+                    feedback(new Problem(HwError.NOT_FOUND, 0));
+                }
             }
         } else if (id >= A_PRIORITY && id < A_PRIORITY + 3) {
             rack.setPriority(selectedU, id - A_PRIORITY);

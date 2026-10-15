@@ -8,6 +8,6 @@
   "ambientocclusion": false,
   "render_type": "minecraft:cutout",
   "textures": {
-    "particle": "crudecompute:block/rubber"
+    "particle": "crudecompute:block/cable_black"
   }
 }

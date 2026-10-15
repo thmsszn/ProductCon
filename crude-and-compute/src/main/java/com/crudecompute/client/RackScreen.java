@@ -274,13 +274,36 @@ public class RackScreen extends AbstractContainerScreen<RackMenu> {
         UiKit.bar(g, font, rx + 6, y, w - 12, 11, rack.usedU() / (float) ServerRackBlockEntity.RACK_U, ACCENT, rack.usedU() + " / " + ServerRackBlockEntity.RACK_U + " U");
         y += 16;
         y = stat(g, rx + 6, y, "hw.gui.power", Lang.num(rack.getPowerDraw() * HardwareSim.WATTS_PER_FE_TICK / 1000.0) + " kW", TEXT);
-        y = stat(g, rx + 6, y, "hw.gui.heat", Lang.num(rack.getHeatW() / 1000.0) + " kW", TEXT);
         y = stat(g, rx + 6, y, "hw.gui.inlet", Lang.num(rack.getInlet()) + " °C", TEXT);
         y = stat(g, rx + 6, y, "hw.gui.max_temp", Lang.num(rack.getTemperature()) + " °C", rack.getTemperature() > 80 ? BAD : TEXT);
-        y = stat(g, rx + 6, y, "hw.gui.compute", Lang.num(rack.getCompute()) + " PF", OK);
         float fill = rack.getEnergyStored() / (float) Math.max(1, rack.getEnergyCapacity());
         g.drawString(font, Component.translatable("hw.gui.buffer"), rx + 6, y, DIM, false);
         UiKit.bar(g, font, rx + 6, y + 10, w - 12, 11, fill, fill < 0.15f ? BAD : OK, Math.round(fill * 100) + " %");
+        y += 26;
+        // rear fan bay: four slots, click to mount (Shift = high-performance) or remove
+        g.drawString(font, Component.translatable("hw.gui.fan_bay"), rx + 6, y, DIM, false);
+        y += 11;
+        for (int i = 0; i < ServerRackBlockEntity.FAN_SLOTS; i++) {
+            int fx = rx + 6 + i * 29;
+            int slot = i;
+            int type = rack.getFan(i);
+            boolean hover = over(mx, my, fx, y, 27, 22);
+            UiKit.panel(g, fx, y, 27, 22, hover ? PANEL3 : PANEL2);
+            if (type != 0) {
+                UiKit.icon(g, new ItemStack(type == ServerRackBlockEntity.FAN_HIGH ? ModItems.RACK_FAN_HP.get() : ModItems.RACK_FAN.get()), fx + 5, y + 3);
+                g.fill(fx + 2, y + 18, fx + 25, y + 20, rack.areFansRunning() ? OK : BAD);
+            } else {
+                g.drawString(font, "+", fx + 12, y + 7, FAINT, false);
+            }
+            hit(fx, y, 27, 22, () -> send(RackMenu.A_FAN + slot * 10 + (type != 0 ? 0 : (hasShiftDown() ? 2 : 1))));
+            if (hover) {
+                tooltip.clear();
+                tooltip.add(Component.translatable("hw.gui.fan_bay").withStyle(ChatFormatting.AQUA));
+                tooltip.add(Component.translatable(type == 0 ? "hw.gui.fan_empty" : type == ServerRackBlockEntity.FAN_HIGH ? "hw.gui.fan_hp" : "hw.gui.fan_std")
+                        .withStyle(ChatFormatting.GRAY));
+                tooltip.add(Component.translatable("hw.gui.fan_tip").withStyle(ChatFormatting.DARK_GRAY));
+            }
+        }
         int by = top - 3 + h - 20;
         boolean hover = over(mx, my, rx + 6, by, w - 12, 15);
         UiKit.button(g, font, rx + 6, by, w - 12, 15, Component.translatable("hw.gui.insert_held").getString(), hover, false, true);

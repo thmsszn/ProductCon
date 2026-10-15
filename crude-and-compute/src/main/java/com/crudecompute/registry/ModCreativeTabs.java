@@ -51,6 +51,8 @@ public final class ModCreativeTabs {
                 }
                 output.accept(ModItems.SERVER_RACK.get());
                 output.accept(ModItems.COOLING_UNIT.get());
+                output.accept(ModItems.RACK_FAN.get());
+                output.accept(ModItems.RACK_FAN_HP.get());
                 output.accept(ModItems.AI_TERMINAL.get());
                 output.accept(ModItems.EMPTY_MODEL_DRIVE.get());
                 output.accept(ModItems.TRAINED_MODEL_DRIVE.get());

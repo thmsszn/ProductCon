@@ -24,6 +24,10 @@ public final class ModModels {
     public static final ModelResourceLocation CONVEYOR_RIB = model("conveyor_rib");
     public static final ModelResourceLocation DERRICK_BLOCK = model("derrick_block");
     public static final ModelResourceLocation DERRICK_KELLY = model("derrick_kelly");
+    public static final ModelResourceLocation RACK_FAN_FRAME = model("rack_fan_frame");
+    public static final ModelResourceLocation RACK_FAN_FRAME_HP = model("rack_fan_frame_hp");
+    public static final ModelResourceLocation RACK_FAN_ROTOR = model("rack_fan_rotor");
+    public static final ModelResourceLocation RACK_FAN_ROTOR_HP = model("rack_fan_rotor_hp");
     public static final ModelResourceLocation SERVER_1U = model("server_1u");
     public static final ModelResourceLocation SERVER_2U = model("server_2u");
     public static final ModelResourceLocation SERVER_4U = model("server_4u");
@@ -34,7 +38,7 @@ public final class ModModels {
 
     public static final List<ModelResourceLocation> ALL = List.of(SHAFT, SHAFT_HALF, HAND_CRANK_HANDLE, WINDMILL_ROTOR,
             ENGINE_FLYWHEEL, PUMPJACK_BEAM, PUMPJACK_CRANK, PUMPJACK_PITMAN, PUMPJACK_CABLE, PUMPJACK_ROD, GPU_BLADE, COOLING_FAN,
-            SERVER_1U, SERVER_2U, SERVER_4U, CONVEYOR_RIB, DERRICK_BLOCK, DERRICK_KELLY, PUMP_GEAR, CHIP_FAB_BRIDGE, CHIP_FAB_HEAD, CHIP_FAB_WAFER);
+            RACK_FAN_FRAME, RACK_FAN_FRAME_HP, RACK_FAN_ROTOR, RACK_FAN_ROTOR_HP, SERVER_1U, SERVER_2U, SERVER_4U, CONVEYOR_RIB, DERRICK_BLOCK, DERRICK_KELLY, PUMP_GEAR, CHIP_FAB_BRIDGE, CHIP_FAB_HEAD, CHIP_FAB_WAFER);
 
     // pumpjack geometry
     public static final float PJ_PIVOT_Y = 2.4f;

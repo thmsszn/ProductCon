@@ -123,12 +123,16 @@ BLOCK_MODELS = {
     "fluid_pipe_center": (M.pipe_center, "copper"),
     "fluid_pipe_arm": (M.pipe_arm, "copper"),
     "oil_tank": (M.oil_tank, "column_white"),
-    "power_cable_center": (M.cable_center, "rubber"),
+    "power_cable_center": (M.cable_center, "cable_black"),
     "power_cable_arm": (M.cable_arm, "rubber"),
     "power_cable_plug": (M.cable_plug, "rubber"),
     "wind_tower": (M.wind_tower, "column_white"),
     "tower_base": (M.tower_base, "concrete"),
     "server_rack": (M.server_rack, "steel_dark"),
+    "rack_fan_frame": (M.rack_fan_frame, "steel_dark"),
+    "rack_fan_frame_hp": (lambda: M.rack_fan_frame(True), "paint_blue"),
+    "rack_fan_rotor": (M.rack_fan_rotor, "steel"),
+    "rack_fan_rotor_hp": (lambda: M.rack_fan_rotor(True), "paint_red"),
     "gpu_blade": (M.gpu_blade, "gpu_side"),
     "solar_panel": (lambda: M.solar_panel("solar_cell_poly"), "solar_cell_poly"),
     "solar_panel_mono": (lambda: M.solar_panel("solar_cell_mono"), "solar_cell_mono"),
@@ -387,6 +391,17 @@ MESSAGES = {
     "hw.err.no_ram": ('no RAM', 'kein RAM'),
     "hw.err.no_psu": ('no power supply', 'kein Netzteil'),
     "hw.err.no_cooler": ('no cooling', 'keine Kühlung'),
+    "subtitles.crudecompute.rack_hum": ('Server rack whines', 'Server-Rack heult'),
+    "hw.gui.fan_bay": ('Rear fan bay', 'Lüfterfach hinten'),
+    "hw.gui.fan_tip": ('Click: mount fan (Shift: high-performance) / remove', 'Klick: Lüfter einbauen (Umschalt: Hochleistung) / entfernen'),
+    "hw.gui.fan_empty": ('empty slot', 'leerer Schacht'),
+    "hw.gui.fan_std": ('Rack fan 80 mm (12 W)', 'Rack-Lüfter 80 mm (12 W)'),
+    "hw.gui.fan_hp": ('High-performance fan (36 W, loud)', 'Hochleistungs-Lüfter (36 W, laut)'),
+    "tooltip.crudecompute.rack_fan": ('Slim 80 mm fan for the rear fan bay of a server rack. Blows the hot air upwards. 12 W.',
+                                      'Schmaler 80-mm-Lüfter für das hintere Lüfterfach eines Server-Racks. Bläst die Warmluft nach oben. 12 W.'),
+    "tooltip.crudecompute.rack_fan_hp": ('High-performance fan: 1.8x airflow, 36 W and louder.', 'Hochleistungs-Lüfter: 1,8-facher Luftstrom, 36 W und lauter.'),
+    "item.crudecompute.rack_fan": ('Rack Fan', 'Rack-Lüfter'),
+    "item.crudecompute.rack_fan_hp": ('High-Performance Rack Fan', 'Hochleistungs-Rack-Lüfter'),
     "hw.err.not_owned": ('You do not have this part in your inventory.', 'Dieses Teil hast du nicht im Inventar.'),
     "hw.item.install_hint": ('Install via the server rack screen.', 'Einbau über die Rack-Oberfläche.'),
     "itemGroup.crudecompute.hardware": ('Crude & Compute: Hardware', 'Crude & Compute: Hardware'),
@@ -496,7 +511,9 @@ MESSAGES = {
     "message.crudecompute.tank.empty": ("Oil tank: empty (capacity %s mB)", "Öltank: leer (Kapazität %s mB)"),
     "message.crudecompute.pipe": ("Pipe: %s %s mB", "Rohr: %s %s mB"),
     "message.crudecompute.pipe.empty": ("Pipe: empty", "Rohr: leer"),
-    "message.crudecompute.cable": ("Cable: %s / %s FE, flow %s FE/t", "Kabel: %s / %s FE, Durchfluss %s FE/t"),
+    "message.crudecompute.cable": ("Power network: %s cables (loss %s%%) | in %s kW, out %s kW | %s sources, %s consumers, %s batteries (%s kW)",
+                                   "Stromnetz: %s Kabel (Verlust %s %%) | Erzeugung %s kW, Verbrauch %s kW | %s Quellen, %s Verbraucher, %s Akkus (%s kW)"),
+    "message.crudecompute.cable.idle": ("Cable: not connected to anything yet.", "Kabel: noch mit nichts verbunden."),
     "message.crudecompute.rack": ("Server rack: %s GPUs | %s °C | %s | energy %s / %s FE | cooling %s °C/s",
                                   "Server-Rack: %s GPUs | %s °C | %s | Energie %s / %s FE | Kühlung %s °C/s"),
     "message.crudecompute.rack.online": ("ONLINE", "ONLINE"),
@@ -678,6 +695,8 @@ def recipes():
     shaped("hand_crank", ["WWW", "  S"], {"W": "#minecraft:planks", "S": S})
     shaped("wind_tower", ["I I", "ISI", "I I"], {"I": I, "S": S}, count=2)
     shaped("tower_base", [" S ", "IGI", "BBB"], {"I": I, "S": ns("wind_tower"), "G": ns("gearbox"), "B": "minecraft:stone_bricks"})
+    shaped("rack_fan", ["IPI", "PRP", "IPI"], {"I": I, "P": P, "R": "minecraft:redstone"})
+    shaped("rack_fan_hp", ["GPG", "PFP", "GPG"], {"G": G, "P": P, "F": ns("rack_fan")})
     shaped("windmill", [" W ", "WSW", " I "], {"W": "minecraft:white_wool", "S": S, "I": I})
     shaped("diesel_engine", ["IPI", "CFC", "ISI"], {"I": I, "P": "minecraft:piston", "C": C, "F": "minecraft:blast_furnace", "S": S})
     shaped("generator", ["CRC", "CSC", "III"], {"C": C, "R": "minecraft:redstone_block", "S": S, "I": I})
@@ -862,6 +881,18 @@ def main(preview=False):
         p = os.path.join(ASSETS, "textures", "item", f"{name}.png")
         os.makedirs(os.path.dirname(p), exist_ok=True)
         img.save(p)
+
+    # item icons of the rack fans (rendered from their 3D models)
+    from preview import render as _render
+    for name, hp in (("rack_fan", False), ("rack_fan_hp", True)):
+        icon = _render(M.rack_fan_frame(hp).add(M.rack_fan_rotor(hp)).scale(5.0), tex_block, size=32, yaw=148, pitch=52, supersample=6)
+        icon.save(os.path.join(ASSETS, "textures", "item", f"{name}.png"))
+        os.makedirs(os.path.join(ASSETS, "models", "item"), exist_ok=True)
+        write_json(os.path.join(ASSETS, "models", "item", f"{name}.json"),
+                   {"parent": "minecraft:item/generated", "textures": {"layer0": ns(f"item/{name}")}})
+    write_json(os.path.join(ASSETS, "sounds.json"),
+               {"rack_hum": {"subtitle": "subtitles.crudecompute.rack_hum",
+                             "sounds": [{"name": "crudecompute:rack_hum", "attenuation_distance": 28}]}})
 
     used = set()
     for name, (factory, particle) in BLOCK_MODELS.items():

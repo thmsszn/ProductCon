@@ -64,6 +64,11 @@ public final class ModItems {
     public static final DeferredItem<Item> AI_OVERCLOCK_CHIP = ITEMS.register("ai_overclock_chip",
             () -> new OverclockChipItem(new Item.Properties().rarity(Rarity.EPIC)));
 
+    public static final DeferredItem<Item> RACK_FAN = ITEMS.register("rack_fan",
+            () -> new TooltipItem(new Item.Properties().stacksTo(16), "tooltip.crudecompute.rack_fan"));
+    public static final DeferredItem<Item> RACK_FAN_HP = ITEMS.register("rack_fan_hp",
+            () -> new TooltipItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON), "tooltip.crudecompute.rack_fan_hp"));
+
     public static final DeferredItem<Item> SERVER_1U = ITEMS.register("server_1u", () -> new com.crudecompute.item.ServerItem(new Item.Properties().stacksTo(1), 1));
     public static final DeferredItem<Item> SERVER_2U = ITEMS.register("server_2u", () -> new com.crudecompute.item.ServerItem(new Item.Properties().stacksTo(1), 2));
     public static final DeferredItem<Item> SERVER_4U = ITEMS.register("server_4u", () -> new com.crudecompute.item.ServerItem(new Item.Properties().stacksTo(1), 4));

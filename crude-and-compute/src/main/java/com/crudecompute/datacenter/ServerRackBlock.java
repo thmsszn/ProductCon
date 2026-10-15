@@ -106,6 +106,13 @@ public class ServerRackBlock extends MultiblockControllerBlock {
                 Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                         ServerItem.make(ModItems.serverItem(slot.cfg.sizeU), slot.cfg));
             }
+            for (int i = 0; i < ServerRackBlockEntity.FAN_SLOTS; i++) {
+                int type = rack.getFan(i);
+                if (type != 0) {
+                    Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5,
+                            new ItemStack(type == ServerRackBlockEntity.FAN_HIGH ? ModItems.RACK_FAN_HP.get() : ModItems.RACK_FAN.get()));
+                }
+            }
         }
     }
 

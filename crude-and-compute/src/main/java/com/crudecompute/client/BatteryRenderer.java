@@ -7,14 +7,14 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 
-/** Ten-segment charge gauge on the front display of the battery bank. */
+/** Charge gauge on the front display of the battery bank. */
 public class BatteryRenderer implements BlockEntityRenderer<BatteryBlockEntity> {
-    private static final int SEGMENTS = 10;
-    private static final float X0 = 0.3f;
-    private static final float X1 = 0.7f;
-    private static final float Y0 = 0.25f;
-    private static final float Y1 = 0.63f;
-    private static final float Z = 0.027f;
+    private static final int SEGMENTS = 14;
+    private static final float X0 = 0.4f;
+    private static final float X1 = 1.6f;
+    private static final float Y0 = 0.44f;
+    private static final float Y1 = 1.5f;
+    private static final float Z = -1.004f;
 
     public BatteryRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -40,5 +40,10 @@ public class BatteryRenderer implements BlockEntityRenderer<BatteryBlockEntity> 
             }
         }
         poseStack.popPose();
+    }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(BatteryBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(2.0);
     }
 }

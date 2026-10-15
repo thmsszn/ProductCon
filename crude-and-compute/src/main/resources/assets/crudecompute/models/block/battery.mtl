@@ -3,6 +3,22 @@ newmtl steel_dark
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/steel_dark
 
+newmtl rubber
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/rubber
+
+newmtl vent
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/vent
+
+newmtl steel
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/steel
+
+newmtl paint_yellow
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/paint_yellow
+
 newmtl battery_cell
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/battery_cell
@@ -11,9 +27,9 @@ newmtl copper
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/copper
 
-newmtl steel
+newmtl hazard
 Kd 1.0 1.0 1.0
-map_Kd crudecompute:block/steel
+map_Kd crudecompute:block/hazard
 
 newmtl screen
 Kd 1.0 1.0 1.0
@@ -23,4 +39,13 @@ map_Kd crudecompute:block/screen
 newmtl paint_red
 Kd 1.0 1.0 1.0
 map_Kd crudecompute:block/paint_red
+
+newmtl led_blue
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+map_Kd crudecompute:block/led_blue
+
+newmtl paint_blue
+Kd 1.0 1.0 1.0
+map_Kd crudecompute:block/paint_blue
 
