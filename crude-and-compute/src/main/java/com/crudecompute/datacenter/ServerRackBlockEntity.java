@@ -553,8 +553,53 @@ public class ServerRackBlockEntity extends SyncedBlockEntity implements TickingB
     @Nullable
     @Override
     public IEnergyStorage getEnergyStorage(int right, int up, int forward, @Nullable Direction side) {
-        return energy;
+        return intake;
     }
+
+    /**
+     * The rack asks the grid only for what it needs: about two to four times its current draw (more while the buffer is
+     * low), so that a power network shares its output between racks in proportion to their real consumption.
+     */
+    private final IEnergyStorage intake = new IEnergyStorage() {
+        private int limit() {
+            double drawFE = requestedW(false) / HardwareSim.WATTS_PER_FE_TICK;
+            for (int f : fans) {
+                drawFE += fanWatts(f) / HardwareSim.WATTS_PER_FE_TICK;
+            }
+            double factor = energy.getEnergyStored() < energy.getMaxEnergyStored() / 2 ? 4.0 : 2.0;
+            return (int) Math.max(16, Math.min(16_384, Math.ceil(drawFE * factor) + 16));
+        }
+
+        @Override
+        public int receiveEnergy(int toReceive, boolean simulate) {
+            return energy.receiveEnergy(Math.min(toReceive, limit()), simulate);
+        }
+
+        @Override
+        public int extractEnergy(int toExtract, boolean simulate) {
+            return 0;
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return energy.getEnergyStored();
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return energy.getMaxEnergyStored();
+        }
+
+        @Override
+        public boolean canExtract() {
+            return false;
+        }
+
+        @Override
+        public boolean canReceive() {
+            return true;
+        }
+    };
 
     // ------------------------------------------------------------------ persistence
     @Override

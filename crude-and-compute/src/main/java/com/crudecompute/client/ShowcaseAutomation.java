@@ -379,7 +379,7 @@ public final class ShowcaseAutomation {
         }
         set(level, o.offset(7, 0, 9), ModBlocks.POWER_CABLE.get().defaultBlockState());
         set(level, o.offset(7, 0, 4), ModBlocks.POWER_CABLE.get().defaultBlockState());
-        int[][] fill = {{4, 2, 1, 1}, {2, 2, 2}, {4, 1, 1, 1, 2}};
+        int[][] fill = {{2, 1, 1, 1}, {2, 2}, {4}};
         for (int i = 0; i < 3; i++) {
             BlockPos rack = o.offset(8 + i, 0, 6);
             multiblock(level, rack, facing(ModBlocks.SERVER_RACK.get(), Direction.NORTH), ModBlocks.SERVER_RACK.get());
